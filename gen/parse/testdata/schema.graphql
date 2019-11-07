@@ -1,0 +1,48 @@
+# GraphQL schema example
+#
+# https://gqlgen.com/getting-started/
+
+## TODO: Ensure these are not needed as a preamble.
+directive @search(
+  by: [String]
+) on FIELD_DEFINITION | ENUM_VALUE
+
+directive @hasInverse(
+  field: String
+) on FIELD_DEFINITION | ENUM_VALUE
+
+type Todo {
+  id: ID!
+  text: String! @search(by: [term])
+  done: Boolean!
+  user: User!
+}
+
+type User {
+  ##Should these even be needed?
+  id: ID!
+  name: String!
+}
+
+
+type Character {
+  name: String!
+  appearsIn: [Episode!]!
+}
+
+type Episode {
+  name: String!
+}
+
+type Query {
+ todos: [Todo!]!
+}
+
+##input NewTodo {
+##  text: String!
+##  userId: String!
+##}
+
+##type Mutation {
+##  createTodo(input: NewTodo!): Todo!
+##}

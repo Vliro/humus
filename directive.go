@@ -1,4 +1,4 @@
-package ngraph
+package mulbase
 
 type Directive string
 

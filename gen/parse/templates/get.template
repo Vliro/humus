@@ -1,7 +1,7 @@
 
 
 func (r *{{.Parent}}) Get{{.Parent}}{{.Name}} (count int, filter int) {{.Type}}{
-    for _
+    for
 }
 
 func (r *{{.Parent}}) Add{{.Parent}}{{.Name}} input {{.Type}} {

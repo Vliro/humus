@@ -1,7 +1,6 @@
 package mulbase
 
 import (
-	"encoding/json"
 	"fmt"
 	"os"
 	"strconv"

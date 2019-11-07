@@ -1,9 +1,11 @@
 
 
 func (r *{{.Parent}}) Get{{.Parent}}{{.Name}} (count int, filter int) {{.Type}}{
-    for
+
 }
 
-func (r *{{.Parent}}) Add{{.Parent}}{{.Name}} input {{.Type}} {
+func (r *{{.Parent}}) Add{{.Parent}}{{.Name}}(input *{{.Type}}) {
+    if input.UID() == "" {
 
+    }
 }

@@ -9,6 +9,9 @@ import (
 	"github.com/pkg/errors"
 )
 
+//A list of Fields associated with an object.
+type FieldList []Field
+
 //TODO: offset
 type CountType string
 
@@ -33,12 +36,18 @@ type Count struct {
 }
 
 // Field is a recursive data struct which represents a GraphQL query field.
-// Predicate
 type Field struct {
 	Name        string
 	SchemaField *SchemaField
 	Fields      []Field
 	Facet       bool
+}
+
+// MakeField constructs a Field of given name and returns the Field.
+func MakeField(name string) Field {
+	//TODO: better facet support
+	fac := strings.Contains(name, "|")
+	return Field{Name: name, SchemaField: getSchemaField(name), Facet: fac}
 }
 
 type FieldHolder struct {
@@ -171,7 +180,7 @@ func (f *Field) setFields(fs []Field) {
 
 // String returns read only string token channel or an error.
 // It checks if there is a circle.
-func (f *Field) String(q *Query, parent string, sb *bytes.Buffer) error {
+func (f *Field) String(q *GeneratedQuery, parent string, sb *bytes.Buffer) error {
 	if err := f.check(q); err != nil {
 		// return a closed channel instead of nil for receiving from nil blocks forever, hard to debug and confusing to users.
 		return errors.WithStack(err)
@@ -196,7 +205,7 @@ func (f *Field) getName() string {
 // The different being the public method checks the validity of the Field structure
 // while the private counterpart assumes the validity.
 // Returns whether this field is a facet field.
-func (f *Field) string(q *Query, parent string, sb *bytes.Buffer) bool {
+func (f *Field) string(q *GeneratedQuery, parent string, sb *bytes.Buffer) bool {
 	if f.SchemaField == nil {
 		f.SchemaField = getSchemaField(f.getName()	)
 		if f.SchemaField == nil {
@@ -281,16 +290,10 @@ func (f *Field) string(q *Query, parent string, sb *bytes.Buffer) bool {
 	return false
 }
 
-func (f *Field) check(q *Query) error {
+func (f *Field) check(q *GeneratedQuery) error {
 	return nil
 }
 
-// MakeField constructs a Field of given name and returns the Field.
-func MakeField(name string) Field {
-	//TODO: better facet support
-	fac := strings.Contains(name, "|")
-	return Field{Name: name, SchemaField: getSchemaField(name), Facet: fac}
-}
 
 func MakeFields(s ...string) []Field {
 	var f []Field

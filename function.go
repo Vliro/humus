@@ -42,7 +42,7 @@ type Ordering struct {
 }
 
 func (o Ordering) String() string {
-	s := bytes.Buffer{}
+	var s strings.Builder
 	s.WriteString(string(o.Type))
 	s.WriteString(": ")
 	s.WriteString(o.Predicate.String())
@@ -126,7 +126,7 @@ func (f *Function) AddPredMultiple(name string, t VarType, v ...interface{}) *Fu
 	return f
 }
 
-func (f *Function) mapVariables(q *Query) {
+func (f *Function) mapVariables(q *GeneratedQuery) {
 	f.mapValues = make([]string, 0, 2)
 	var slice []string
 	for _, v := range f.Variables {
@@ -148,8 +148,8 @@ func (f *Function) mapVariables(q *Query) {
 		}
 		//Build the variable using the integer from the query.
 		var cc = q.GetNextVariable()
-		str := "$" + strconv.Itoa(int(cc))
-		m := VarObject{}
+		str := "$" + strconv.Itoa(cc)
+		var m VarObject
 		m.varType = v.Type
 		m.val = v.Value
 		q.VarMap[str] = m
@@ -158,7 +158,7 @@ func (f *Function) mapVariables(q *Query) {
 	f.mapValues = slice
 }
 
-func (f *Function) string(q *Query, parent string, sb *bytes.Buffer) {
+func (f *Function) string(q *GeneratedQuery, parent string, sb *bytes.Buffer) {
 	if f == nil {
 		return
 	}
@@ -199,7 +199,7 @@ func NewFunctionError(t functionType) FunctionError {
 	return FunctionError{t}
 }
 
-func (f *Function) check(q *Query) error {
+func (f *Function) check(q *GeneratedQuery) error {
 	if f == nil {
 		return fmt.Errorf("no function")
 	}

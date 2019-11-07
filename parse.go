@@ -1,7 +1,7 @@
 package mulbase
 
 import (
-	"encoding/json"
+	"PR2Server/core/logger"
 	"errors"
 	"reflect"
 	"strconv"
@@ -41,8 +41,8 @@ func GetResponse(res []byte, inp interface{}) {
 	}
 	return
 }
-
-func HandleResponseArray(res []byte, params []interface{}) error {
+/*
+	func HandleResponseArray(res []byte, params []interface{}) error {
 	p := fastjson.Parser{}
 	val, err := p.ParseBytes(res)
 	if err != nil {
@@ -59,7 +59,7 @@ func HandleResponseArray(res []byte, params []interface{}) error {
 	}
 	return nil
 }
-
+*/
 //singleResponse parses one response from dgraph into the pointer at inp.
 func singleResponse(temp *fastjson.Value, inp interface{}) error {
 	r, err := temp.Array()
@@ -125,8 +125,8 @@ func singleResponse(temp *fastjson.Value, inp interface{}) error {
 	}
 	return nil
 }
-
-func HandleResponse(res []byte, inp interface{}) error {
+//HandleResponse handles the input from a query..
+func HandleResponse(res []byte, inp []interface{}) error {
 	p := fastjson.Parser{}
 	v, err := p.ParseBytes(res)
 	if err != nil {
@@ -136,6 +136,13 @@ func HandleResponse(res []byte, inp interface{}) error {
 	if err != nil {
 		return err
 	}
-	temp := d.Get("q")
-	return singleResponse(temp, inp)
+	if d.Len() != len(inp) {
+		return errInvalidLength
+	}
+	for k,v := range inp {
+		err = singleResponse(d.Get("q" + strconv.Itoa(k)), v)
+		if err != nil {
+			return errParsing
+		}
+	}
 }

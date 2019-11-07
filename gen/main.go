@@ -16,6 +16,8 @@ func main() {
 			panic(r)
 		}
 	}()
-
+	if *in == "" || *out == "" {
+		panic("missing input and/or output")
+	}
 	parse.Parse(*in, *out)
 }

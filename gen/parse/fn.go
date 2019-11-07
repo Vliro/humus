@@ -6,7 +6,6 @@ import (
 	"io/ioutil"
 	"mulbase/gen/graphql-go/common"
 	"mulbase/gen/graphql-go/schema"
-	"os"
 )
 
 type GetTemplate struct {
@@ -24,7 +23,7 @@ func getTemplate(name string) *template.Template {
 	if !ok {
 		return nil
 	}
-	byt, err := ioutil.ReadFile(file)
+	byt, err := ioutil.ReadFile("parse/"+file)
 	if err != nil {
 		return nil
 	}
@@ -38,16 +37,16 @@ func getTemplate(name string) *template.Template {
 
 /*
 	processFunctions is the entrypoint for declaring all predeclared functions
- */
+*/
+
 func processFunctions(sch *schema.Schema, writer io.Writer) {
 	obj := sch.Objects()
-
 	for _,v := range obj {
-		createFieldGetter(v)
+		createFieldGetter(v, writer)
 	}
 }
 
-func createFieldGetter(obj *schema.Object) string {
+func createFieldGetter(obj *schema.Object, w io.Writer) string {
 	templ := getTemplate("Get")
 	if templ == nil {
 		panic("missing get template")
@@ -67,10 +66,10 @@ func createFieldGetter(obj *schema.Object) string {
 		}
 		if val,ok := typ.(*schema.Object); ok {
 			var data GetTemplate
-			data.Type = val.Name
+			data.Type = val.GetName()
 			data.Name = v.GetName()
-			data.Parent = obj.Name
-			templ.Execute(os.Stdout, data)
+			data.Parent = obj.GetName()
+			templ.Execute(w, data)
 		}
 	}
 	return ""

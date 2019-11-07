@@ -14,7 +14,7 @@ func MakeFilter(f *Function) *Filter {
 	return fil
 }
 
-func (f *Filter) stringChan(q *Query, parent string, sb *bytes.Buffer) {
+func (f *Filter) stringChan(q *GeneratedQuery, parent string, sb *bytes.Buffer) {
 	if f != nil && f.Function != nil {
 		sb.WriteString(tokenFilter)
 		sb.WriteString(tokenLP)
@@ -25,7 +25,7 @@ func (f *Filter) stringChan(q *Query, parent string, sb *bytes.Buffer) {
 	}
 }
 
-func (f *Filter) check(q *Query) error {
+func (f *Filter) check(q *GeneratedQuery) error {
 	// check query
 	err := f.Function.check(q)
 	if err != nil {

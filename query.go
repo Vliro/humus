@@ -2,19 +2,24 @@ package mulbase
 
 import (
 	"bytes"
-	"context"
-	"fmt"
 	"strconv"
-
-	"github.com/dgraph-io/dgo"
 
 	"github.com/pkg/errors"
 )
 
 /**
 	UID represents the primary UID class used in communication with DGraph.
+	This is used in code generation.
  */
 type UID string
+
+func (u UID) Int() int64 {
+	val, err := strconv.ParseInt(string(u), 16, 64)
+	if err != nil {
+		return -1
+	}
+	return val
+}
 
 type H map[string]interface{}
 
@@ -22,52 +27,10 @@ type DNode interface {
 	UID() string
 	SetUID(uid string)
 	SetType()
-	//Use this to recursively get uids to properly perform deletion.
-	DeleteUIDS() map[string]interface{}
+	Fields() FieldList
+	//Serializes all the scalar values that are not hidden.
+	Values() string
 }
-
-type BaseNode struct {
-	Uid  string   `json:"uid"`
-	Type []string `json:"dgraph.type,omitempty"`
-}
-
-func (b *BaseNode) SetUID(uid string) {
-	b.Uid = uid
-}
-
-func (b *BaseNode) AddType(typ string) {
-	if b.Uid != "" {
-		return
-	}
-	b.Type = append(b.Type, typ)
-}
-
-func (b *BaseNode) GetAllInfo() map[string]interface{} {
-	return makeUIDMap(b.Uid)
-}
-
-func (b *BaseNode) GetRelativeInfo() map[string]interface{} {
-	return makeUIDMap(b.Uid)
-}
-
-func (b *BaseNode) DeleteUIDS() map[string]interface{} {
-	return makeUIDMap(b.Uid)
-}
-
-func (b *BaseNode) UID() string {
-	return b.Uid
-}
-
-func (b *BaseNode) SetType() {
-}
-
-type operationType string
-
-// 2 types of operation.
-const (
-	TypeQuery  operationType = "query"
-	TypeMutate operationType = "mutation"
-)
 
 const (
 	// syntax tokens
@@ -81,15 +44,12 @@ const (
 	tokenFilter = "@filter"
 )
 
-var (
-//json = jsoniter.ConfigCompatibleWithStandardLibrary
-)
-
+/*
 type Queries struct {
-	Queries []*Query
+	Queries []*GeneratedQuery
 }
 
-func (q *Queries) Append(qu *Query) *Queries {
+func (q *Queries) Append(qu *GeneratedQuery) *Queries {
 	q.Queries = append(q.Queries, qu)
 	return q
 }
@@ -97,7 +57,7 @@ func (q *Queries) Append(qu *Query) *Queries {
 func (q *Queries) Execute(params ...interface{}) error {
 	return PerformQueries(q, params)
 }
-
+/*
 func (q *Queries) Stringify() (string, error) {
 	queryStr := bytes.Buffer{}
 	final := bytes.Buffer{}
@@ -149,7 +109,7 @@ func (q *Queries) Stringify() (string, error) {
 	final.WriteString("}")
 	return final.String(), nil
 }
-
+*/
 type VarObject struct {
 	val     interface{}
 	varType VarType
@@ -162,31 +122,27 @@ type aggregateValues struct {
 
 //The Field maps include a path for the predicate.
 //Root is "", all sub are /Predicate1/Predicate2...
-type Query struct {
-	Type           operationType // The operation type is either query, mutation, or subscription.
-	Function       *Function
-	JSONMutation   []byte
+type GeneratedQuery struct {
+	//The root function.
+	Function       Function
+	//All sub parts of the query.
 	FieldFunctions map[string]Function
 	FieldOrderings map[string][]Ordering
 	FieldCount     map[string][]Count
 	FieldAggregate map[string]aggregateValues
 	FieldFilters   map[string]Filter
+
 	VarMap         map[string]VarObject
 	VarFunc        func() uint32
-	Filter         *Filter
+	Filter         Filter
 	Language       Language
-	Mutations      []Mutation
 	Directives     []Directive
 	Deserialize    bool
-	Name           string //= q usually
 	Fields         []Field
-	varCounter     uint32
-	getMutateType  MutationType
-	single         bool
-	activeTxn      *dgo.Txn
+	varCounter int
 }
 
-func (q *Query) SetSubOrdering(t OrderType, path string, pred string) *Query {
+func (q *GeneratedQuery) SetSubOrdering(t OrderType, path string, pred string) *GeneratedQuery {
 	if q.FieldOrderings == nil {
 		q.FieldOrderings = make(map[string][]Ordering)
 	}
@@ -213,26 +169,8 @@ func (m *Mutation) AddValue(val interface{}) *Mutation {
 	return m
 }
 
-func (q *Query) getAllDelete() []Mutation {
-	var m []Mutation
-	for _, v := range q.Mutations {
-		if v.Type == MutateDelete {
-			m = append(m, v)
-		}
-	}
-	return m
-}
-func (q *Query) getAllSet() []Mutation {
-	var m []Mutation
-	for _, v := range q.Mutations {
-		if v.Type == MutateSet {
-			m = append(m, v)
-		}
-	}
-	return m
-}
 
-func (q *Query) Create() ([]byte, error) {
+func (q *GeneratedQuery) Create() ([]byte, error) {
 	if err := q.check(); err != nil {
 		return nil, errors.WithStack(err)
 	}
@@ -247,122 +185,15 @@ func (q *Query) Create() ([]byte, error) {
 	return q.create().Bytes(), nil
 }
 
-type TxnQuery struct {
-	Queries []*Query
-	txn     *dgo.Txn
-	counter int
-}
-
-func (t *TxnQuery) ExecuteLatest(ctx context.Context, inp interface{}) (map[string]string, error) {
-	if len(t.Queries) < t.counter {
-		defer t.txn.Discard(context.Background())
-		panic("invalid txnQuery")
-	}
-	q := t.Queries[t.counter]
-	t.counter++
-	q.activeTxn = t.txn
-	return q.runQuery(ctx, inp)
-}
-
-func (t *TxnQuery) AddQuery(q *Query) *TxnQuery {
-	t.Queries = append(t.Queries, q)
-	return t
-}
-
-//Finish up the query and commits the transaction.
-func (t *TxnQuery) Finish(discard bool, ctx context.Context) error {
-	if ctx == nil {
-		ctx = context.Background()
-	}
-	for k := range t.Queries {
-		t.Queries[k] = nil
-	}
-	if discard {
-		return t.txn.Discard(ctx)
-	}
-	return t.txn.Commit(ctx)
-}
-
-func (t *TxnQuery) AddMutation(m Mutation) *TxnQuery {
-	q := NewMutate()
-	q.Mutations = append(q.Mutations, m)
-	return t.AddQuery(q)
-}
-
-func (t *TxnQuery) AddManyMutations(m ...Mutation) *TxnQuery {
-	q := NewMutate()
-	for k := range m {
-		q.Mutations = append(q.Mutations, m[k])
-	}
-	return t.AddQuery(q)
-}
-
-//CreateTxn creates a new transaction to use
-//for multiple queries/mutations.
-//All upcoming mutations/queries on the query acts
-//using this transaction instead of the default
-//one Txn per operation.
-func (q *Query) CreateTxn() *TxnQuery {
-	t := TxnQuery{}
-	t.Queries = append(t.Queries, q)
-	t.txn = getClient().NewTxn()
-	return &t
-}
-
-func (q *Query) mutateChan(sb *bytes.Buffer) {
-	var f []Mutation
-	if q.getMutateType == MutateSet {
-		f = q.getAllSet()
-	} else {
-		f = q.getAllDelete()
-	}
-	for k, v := range f {
-		if k != 0 {
-			sb.WriteByte(',')
-		}
-		str := Serialize(v.Object)
-		sb.WriteString(str)
-	}
-}
-
-func (q *Query) setMutateGet(m MutationType) *Query {
-	q.getMutateType = m
-	return q
-}
-
-func (q *Query) create() *bytes.Buffer {
+func (q *GeneratedQuery) create() *bytes.Buffer {
 	var sb = &bytes.Buffer{}
-	if q.Type == TypeMutate {
-		//TODO: this is ugly
-		if len(q.Mutations) == 0 {
-			return sb
-		}
-		if len(q.Mutations) > 1 {
-			sb.WriteString("[")
-		}
-		q.mutateChan(sb)
-		if len(q.Mutations) > 1 {
-			sb.WriteString("]")
-		}
-		return sb
-	}
-	if q.single {
-		sb.WriteString(tokenLB)
-	}
-	if q.Name != "" {
-		sb.WriteString(tokenSpace)
-		sb.WriteString(q.Name)
-	} else {
-		sb.WriteString("q")
-	}
-	if q.Type == TypeQuery {
-		sb.WriteString(tokenLP)
-		sb.WriteString("func")
-		sb.WriteString(tokenColumn)
-		sb.WriteString(tokenSpace)
-		q.Function.string(q, "", sb)
-		sb.WriteString(tokenRP)
-	}
+	sb.WriteString("{q")
+	sb.WriteString(tokenLP)
+	sb.WriteString("func")
+	sb.WriteString(tokenColumn)
+	sb.WriteString(tokenSpace)
+	q.Function.string(q, "", sb)
+	sb.WriteString(tokenRP)
 	//optional filter
 	q.Filter.stringChan(q, "", sb)
 	for _, v := range q.Directives {
@@ -379,44 +210,33 @@ func (q *Query) create() *bytes.Buffer {
 	sb.WriteString("uid")
 	sb.WriteString(tokenSpace)
 	sb.WriteString(tokenRB)
-	if q.single {
-		sb.WriteString(tokenRB)
-	}
+	sb.WriteString(tokenRB)
 	return sb
 }
 
-func (q *Query) check() error {
-	if q.Type == TypeQuery {
-		if err := q.Function.check(q); err != nil {
+func (q *GeneratedQuery) check() error {
+	if err := q.Function.check(q); err != nil {
+		return err
+	}
+	for _, v := range q.FieldFunctions {
+		if err := v.check(q); err != nil {
 			return err
 		}
-		for _, v := range q.FieldFunctions {
-			if err := v.check(q); err != nil {
-				return err
-			}
-		}
-		for _, v := range q.FieldFilters {
-			if err := v.check(q); err != nil {
-				return err
-			}
-		}
-		if err := q.Function.check(q); err != nil {
+	}
+	for _, v := range q.FieldFilters {
+		if err := v.check(q); err != nil {
 			return err
 		}
+	}
+	if err := q.Function.check(q); err != nil {
+		return err
 	}
 	// check query
 	return nil
 }
 
-func (q *Query) checkName() error {
-	if q.Name == "" && q.Type == TypeQuery {
-		return nil //	return fmt.Errorf("naming error")
-	}
-	return nil
-}
-
 //Adds a count to a predicate.
-func (q *Query) AddSubCount(t CountType, path string, value int) *Query {
+func (q *GeneratedQuery) AddSubCount(t CountType, path string, value int) *GeneratedQuery {
 	c := Count{Type: t, Value: value}
 	if q.FieldCount == nil {
 		q.FieldCount = make(map[string][]Count)
@@ -428,7 +248,7 @@ func (q *Query) AddSubCount(t CountType, path string, value int) *Query {
 }
 
 //Adds a subfilter to a predicate.
-func (q *Query) AddSubFilter(f *Function, path string, logical ...string) *Query {
+func (q *GeneratedQuery) AddSubFilter(f *Function, path string, logical ...string) *GeneratedQuery {
 	if q.FieldFilters == nil {
 		q.FieldFilters = make(map[string]Filter)
 	}
@@ -447,34 +267,13 @@ func (q *Query) AddSubFilter(f *Function, path string, logical ...string) *Query
 
 //SetLanguage sets the language for the query to apply to all fields.
 //Default english.
-func (q *Query) SetLanguage(l Language) *Query {
+func (q *GeneratedQuery) SetLanguage(l Language) *GeneratedQuery {
 	q.Language = l
 	return q
 }
 
-// MakeQuery constructs a performQuery of the given type and returns a pointer of it.
-func makeQuery(Type operationType) *Query {
-	return &Query{Type: Type, Deserialize: true, single: true} /*	FieldFunctions: make(map[string]Function), FieldCount: make(map[string][]Count),
-		FieldAggregate: make(map[string]aggregateValues),
-		FieldFilters:   make(map[string]Filter),
-		FieldOrderings: make(map[string][]Ordering)*/
-}
-
-func NewQuery() *Query {
-	return makeQuery(TypeQuery)
-}
-
-func NewMutate() *Query {
-	return makeQuery(TypeMutate)
-}
-
-func (q *Query) ExecuteFixed(query string, vars map[string]string, inp ...interface{}) error {
-	err := executeFix(inp, query, vars)
-	return err
-}
-
 // Returns all the query variables for this query in string form.
-func (q *Query) Variables() string {
+func (q *GeneratedQuery) Variables() string {
 	sb := bytes.Buffer{}
 	i := 0
 	for k, v := range q.VarMap {
@@ -493,7 +292,7 @@ func (q *Query) Variables() string {
 }
 
 //The alias is to avoid count(predicate) as name.
-func (q *Query) SetSubAggregate(path string, alias string, aggregate AggregateType) *Query {
+func (q *GeneratedQuery) SetSubAggregate(path string, alias string, aggregate AggregateType) *GeneratedQuery {
 	if q.FieldAggregate == nil {
 		q.FieldAggregate = make(map[string]aggregateValues)
 	}
@@ -501,7 +300,7 @@ func (q *Query) SetSubAggregate(path string, alias string, aggregate AggregateTy
 	return q
 }
 
-func (q *Query) createVariableString() string {
+func (q *GeneratedQuery) createVariableString() string {
 	if len(q.VarMap) == 0 {
 		return ""
 	}
@@ -512,17 +311,15 @@ func (q *Query) createVariableString() string {
 	return sb.String()
 }
 
-func (q *Query) GetNextVariable() uint32 {
-	if q.VarFunc != nil {
-		return q.VarFunc()
-	}
+func (q *GeneratedQuery) GetNextVariable() int {
 	q.varCounter++
 	return q.varCounter - 1
 }
 
 // JSON returns a json string with "query" field.
 // shouldVar tells if it should print out the GraphQL variable string.
-func (q *Query) JSON(shouldVar bool) ([]byte, error) {
+/*
+func (q *GeneratedQuery) JSON(shouldVar bool) ([]byte, error) {
 	if q.VarMap == nil {
 		q.VarMap = make(map[string]VarObject)
 	}
@@ -546,110 +343,26 @@ func (q *Query) JSON(shouldVar bool) ([]byte, error) {
 		return buf.Bytes(), err
 	}
 	return s, err
-}
+}*/
 
-func (q *Query) SetFunction(function *Function) *Query {
+func (q *GeneratedQuery) SetFunction(function Function) *GeneratedQuery {
 	q.Function = function
 	return q
 }
 
 //TODO: Multiple filters.
-func (q *Query) SetFilter(filter *Filter) *Query {
+func (q *GeneratedQuery) SetFilter(filter Filter) *GeneratedQuery {
 	q.Filter = filter
 	return q
 }
 
 // ShouldDeserialize defines if either an interface{} is returned or it is deserialized to the proper object.
-func (q *Query) ShouldDeserialize(b bool) *Query {
+func (q *GeneratedQuery) ShouldDeserialize(b bool) *GeneratedQuery {
 	q.Deserialize = b
 	return q
 }
 
-func (q *Query) SetFieldsBasic(str []string) *Query {
-	for _, v := range str {
-		t := Field{}
-		t.Name = v
-		q.Fields = append(q.Fields, t)
-	}
-	return q
-}
-
-// SetFields sets the Fields field of this performQuery.
-// If q.Fields already contains data, they will be replaced.
-func (q *Query) SetFields(fields ...Field) *Query {
-	q.Fields = fields
-	return q
-}
-
-func (q *Query) SetByName(str ...string) *Query {
-	for _, v := range str {
-		t := MakeField(v)
-		q.Fields = append(q.Fields, t)
-	}
-	return q
-}
-
-func (q *Query) SetField(f *FieldHolder) *Query {
-	q.Fields = f.Fields
-	return q
-}
-
-func (q *Query) AddMutation(val interface{}, t MutationType) *Query {
-	m := Mutation{}
-	m.Object = val
-	m.Type = t
-	q.Mutations = append(q.Mutations, m)
-	return q
-}
-
-func (q *Query) AppendMutation(m Mutation) *Query {
-	q.Mutations = append(q.Mutations, m)
-	return q
-}
-
-func (q *Query) MakeMutation(val interface{}, t MutationType) *Query {
-	m := Mutation{Type: t}
-	m.Object = val
-	q.Mutations = append(q.Mutations, m)
-	return q
-}
-
-func ExecuteFixedQuery(query string, vars map[string]string, input ...interface{}) error {
-	err := executeFix(input, query, vars)
-	return err
-}
-
-func (q *Query) SetFieldsArray(fields []Field) *Query {
-	q.Fields = fields
-	return q
-}
-
-// AddFields adds to the Fields field of this performQuery.
-func (q *Query) AddFields(fields ...Field) *Query {
-	q.Fields = append(q.Fields, fields...)
-	return q
-}
-
-//Make sure a pointer is passed here.
-func (q *Query) Execute(ctx context.Context, v interface{}) (map[string]string, error) {
-	if err := q.check(); err != nil {
-		return nil, err
-	}
-	return q.runQuery(ctx, v)
-}
-
-func (q *Query) ExecuteAsync(ctx context.Context, v interface{}) <-chan error {
-	if err := q.check(); err != nil {
-		return nil
-	}
-	ch := make(chan error)
-	go func() {
-		_, err := q.runQuery(ctx, v)
-		ch <- err
-	}()
-	return ch
-}
-
+/*
 func DeleteDNode(d DNode, ctx context.Context, sync bool, txn *TxnQuery) (map[string]string, error) {
 	m := Mutation{}
 	m.Object = d.DeleteUIDS()
@@ -726,7 +439,7 @@ func GetRootUID(ma map[string]string) string {
 	return v
 }
 
-func (q *Query) AddDNode(d DNode, new bool, typ MutationType) *Query {
+func (q *GeneratedQuery) AddDNode(d DNode, new bool, typ MutationType) *GeneratedQuery {
 	if new || d.UID() == "" {
 		d.SetType()
 	}
@@ -742,7 +455,7 @@ func (q *Query) AddDNode(d DNode, new bool, typ MutationType) *Query {
 	return q
 }
 
-func (q *Query) AddDirective(dir Directive) *Query {
+func (q *GeneratedQuery) AddDirective(dir Directive) *GeneratedQuery {
 	for _, v := range q.Directives {
 		if v == dir {
 			return q
@@ -751,14 +464,7 @@ func (q *Query) AddDirective(dir Directive) *Query {
 	q.Directives = append(q.Directives, dir)
 	return q
 }
-
+*/
 /*
 Returns a Queries object which can be used for multiple queries.
 */
-func (q *Query) Append(qu *Query) *Queries {
-	if qu == nil {
-		panic("Null query sent into Append.")
-	}
-	arr := &Queries{}
-	return arr.Append(q).Append(qu)
-}

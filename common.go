@@ -5,6 +5,15 @@ import (
 	"strconv"
 )
 
+type Node struct {
+	Uid UID
+	Type []string
+}
+
+func (n *Node) UID() UID {
+	return n.Uid
+}
+
 func makeUIDMap(u string) map[string]interface{} {
 	m := make(map[string]interface{})
 	m["uid"] = u
@@ -13,7 +22,7 @@ func makeUIDMap(u string) map[string]interface{} {
 
 //Returns if the object exists
 //Needs a []interface{} argument
-func ExistsByPredicate(pred string, val string, varType VarType) *Query {
+func ExistsByPredicate(pred string, val string, varType VarType) *GeneratedQuery {
 	q := NewQuery().SetFunction(MakeFunction(FunctionEquals).
 		AddValue(pred, TypePred).AddValue(val, varType)).SetFieldsBasic([]string{pred})
 	return q
@@ -147,21 +156,21 @@ func deleteUIDMutation(root string, pred string) map[string]interface{} {
 }
 
 //Find object by uid.
-func Find(uid string, f *FieldHolder) *Query {
+func Find(uid string, f *FieldHolder) *GeneratedQuery {
 	q := NewQuery().
 		SetFunction(MakeFunction("uid").AddValue(uid, TypeUid)).
 		SetField(f)
 	return q
 }
 
-func FindHas(pred string, f *FieldHolder) *Query {
+func FindHas(pred string, f *FieldHolder) *GeneratedQuery {
 	q := NewQuery().
 		SetFunction(MakeFunction(FunctionHas).AddPred(pred)).SetField(f)
 	return q
 }
 
 //v slice.
-func FindNEqualsOrder(predicate string, value string, n int, orderpred string, t OrderType, f *FieldHolder, offset int) *Query {
+func FindNEqualsOrder(predicate string, value string, n int, orderpred string, t OrderType, f *FieldHolder, offset int) *GeneratedQuery {
 	q := NewQuery().
 		SetFunction(MakeFunction(FunctionEquals).AddPredValue(predicate, value, TypeStr).AddOrdering(t, orderpred)).AddSubCount(CountFirst, "", n)
 	if offset > 0 {
@@ -222,14 +231,14 @@ func UidToIntString(uid string) string {
 }
 
 //Finds N Values following the predicate and by the order specified. Needs a slice.
-func FindNHasOrder(predicate string, n int, orderpred string, t OrderType, f *FieldHolder) *Query {
+func FindNHasOrder(predicate string, n int, orderpred string, t OrderType, f *FieldHolder) *GeneratedQuery {
 	q := NewQuery().
 		SetFunction(MakeFunction(FunctionHas).AddPred(predicate).AddOrdering(t, orderpred)).AddSubCount(CountFirst, "", n)
 	return q
 }
 
 //Finds by predicate, that is takes a predicate value to search for.
-func FindByPredicate(pred string, t VarType, f *FieldHolder, val ...interface{}) *Query {
+func FindByPredicate(pred string, t VarType, f *FieldHolder, val ...interface{}) *GeneratedQuery {
 	if t == TypePred {
 		panic("avoid sql injections, typepred used incorrectly.")
 	}

@@ -99,6 +99,10 @@ type Object struct {
 	interfaceNames []string
 }
 
+func (o *Object) GetName() string {
+	return o.Name
+}
+
 // Interface types represent a list of named fields and their arguments.
 //
 // GraphQL objects can then implement these interfaces which requires that the object type will

@@ -1,8 +1,3 @@
-# GraphQL schema example
-#
-# https://gqlgen.com/getting-started/
-
-## TODO: Ensure these are not needed as a preamble.
 directive @search(
   by: [String]
 ) on FIELD_DEFINITION | ENUM_VALUE
@@ -19,11 +14,9 @@ type Todo {
 }
 
 type User {
-  ##Should these even be needed?
   id: ID!
   name: String!
 }
-
 
 type Character {
   name: String!
@@ -35,14 +28,6 @@ type Episode {
 }
 
 type Query {
- todos: [Todo!]!
+  todos: [Todo!]!
 }
 
-##input NewTodo {
-##  text: String!
-##  userId: String!
-##}
-
-##type Mutation {
-##  createTodo(input: NewTodo!): Todo!
-##}

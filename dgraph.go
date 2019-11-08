@@ -195,9 +195,9 @@ func (t *Txn) query(ctx context.Context, q Query, objs []interface{}) error{
 //RunQuery executes the GraphQL+- query.
 //If q is a mutation query I expect objs to be supplied in q.
 func (t *Txn) RunQuery(ctx context.Context, q Query, objs ...interface{}) error {
-	if t.txn == nil {
-		return Error(errTransaction)
-	}
+	//if t.txn == nil {
+	//	return Error(errTransaction)
+	//}
 	t.Queries = append(t.Queries, q)
 	t.counter++
 	switch q.Type() {

@@ -145,4 +145,5 @@ func HandleResponse(res []byte, inp []interface{}) error {
 			return errParsing
 		}
 	}
+	return nil
 }

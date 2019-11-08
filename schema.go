@@ -1,14 +1,8 @@
 package mulbase
 
 import (
-	"crypto/tls"
-	"io/ioutil"
-	"net/http"
-	"strconv"
 	"strings"
 	"sync"
-
-	"github.com/valyala/fastjson"
 )
 
 type SchemaField struct {
@@ -27,7 +21,7 @@ var wg = sync.WaitGroup{}
 //This function runs really early, so check if config has been init.
 func initSchema() map[string]SchemaField {
 	//TODO: fix this
-
+/*
 	if len(schema) > 0 {
 		wg.Wait()
 		return schema
@@ -86,6 +80,7 @@ func initSchema() map[string]SchemaField {
 		schema[name] = s
 	}
 	wg.Done()
+*/
 	return schema
 }
 

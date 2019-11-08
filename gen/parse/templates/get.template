@@ -1,11 +1,17 @@
 
 
-func (r *{{.Parent}}) Get{{.Parent}}{{.Name}} (count int, filter int) {{.Type}}{
-
-}
-
-func (r *{{.Parent}}) Add{{.Parent}}{{.Name}}(input *{{.Type}}) {
-    if input.UID() == "" {
-
+{{range .Fields}}
+    //Populates the field of r.
+    func (r *{{.Parent}}) Get{{.Parent}}{{.Name}} (count int, filter int) error{
+        if r.UID() == "" {
+            return mulbase.ErrUID
+        }
+        return mulbase.GetChild(r, GetField("{{.Name}}"), &r.{{.Name}})
     }
-}
+
+    func (r *{{.Parent}}) Add{{.Parent}}{{.Name}}(input *{{.Type}}) error {
+        if input.UID() == "" {
+            return mulbase.ErrUID
+        }
+    }
+{{end}}

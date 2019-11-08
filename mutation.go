@@ -17,7 +17,7 @@ type MutationQuery struct {
 }
 
 func (m *MutationQuery) Process() (string, map[string]string, error) {
-
+	return "", nil, nil
 }
 
 

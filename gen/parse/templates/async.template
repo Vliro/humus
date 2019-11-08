@@ -1,0 +1,17 @@
+{{range .Fields}}
+
+    type async{{.Parent}}{{.Name}} struct {
+        Err error
+        Value {{.Type}}
+    }
+
+    func Async{{.Parent}}{{.Name}}(q mulbase.Query, input *{{.Type}}, txn *mulbase.Txn) error {
+        ch := make(chan async{{.Parent}}{{.Name}}, 1)
+        go func(){
+            var obj {{.Type}}
+            err := txn.RunQuery(context.Background(), q, &obj)
+            ch <- async{{.Parent}}{{.Name}}{err, obj}
+        }()
+    }
+
+{{end}}

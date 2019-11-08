@@ -1,8 +1,6 @@
 package mulbase
 
 import (
-	"context"
-	"strconv"
 )
 
 type Node struct {
@@ -13,7 +11,7 @@ type Node struct {
 func (n *Node) UID() UID {
 	return n.Uid
 }
-
+/*
 func makeUIDMap(u string) map[string]interface{} {
 	m := make(map[string]interface{})
 	m["uid"] = u
@@ -248,3 +246,4 @@ func FindByPredicate(pred string, t VarType, f *FieldHolder, val ...interface{})
 		SetField(f)
 	return q
 }
+*/

@@ -8,42 +8,42 @@ import (
 type Todo struct {
 	//This line declares basic properties for a database node.
 	mulbase.Node
-	Text string `json:"todoText"`
-	Done bool   `json:"todoDone"`
-	User *User  `json:"todoUser"`
+	Text string `json:"Todo.text"`
+	Done bool   `json:"Todo.done"`
+	User *User  `json:"Todo.user"`
 }
 
-var TodoFields mulbase.FieldList = []mulbase.Field{mulbase.MakeField(""), mulbase.MakeField("todoText"), mulbase.MakeField("todoDone"), mulbase.MakeField("todoUser")}
+var TodoFields mulbase.FieldList = []mulbase.Field{MakeField("Todo.text"), MakeField("Todo.done"), MakeField("Todo.user")}
 
 type User struct {
 	//This line declares basic properties for a database node.
 	mulbase.Node
-	Name string `json:"userName"`
+	Name string `json:"User.name"`
 }
 
-var UserFields mulbase.FieldList = []mulbase.Field{mulbase.MakeField(""), mulbase.MakeField("userName")}
+var UserFields mulbase.FieldList = []mulbase.Field{MakeField("User.name")}
 
 type Character struct {
 	//This line declares basic properties for a database node.
 	mulbase.Node
-	Name      string     `json:"characterName"`
-	AppearsIn []*Episode `json:"characterAppearsIn"`
+	Name      string     `json:"Character.name"`
+	AppearsIn []*Episode `json:"Character.appearsIn"`
 }
 
-var CharacterFields mulbase.FieldList = []mulbase.Field{mulbase.MakeField("characterName"), mulbase.MakeField("characterAppearsIn")}
+var CharacterFields mulbase.FieldList = []mulbase.Field{MakeField("Character.name"), MakeField("Character.appearsIn")}
 
 type Episode struct {
 	//This line declares basic properties for a database node.
 	mulbase.Node
-	Name string `json:"episodeName"`
+	Name string `json:"Episode.name"`
 }
 
-var EpisodeFields mulbase.FieldList = []mulbase.Field{mulbase.MakeField("episodeName")}
+var EpisodeFields mulbase.FieldList = []mulbase.Field{MakeField("Episode.name")}
 
 type Query struct {
 	//This line declares basic properties for a database node.
 	mulbase.Node
-	Todos []*Todo `json:"queryTodos"`
+	Todos []*Todo `json:"Query.todos"`
 }
 
-var QueryFields mulbase.FieldList = []mulbase.Field{mulbase.MakeField("queryTodos")}
+var QueryFields mulbase.FieldList = []mulbase.Field{MakeField("Query.todos")}

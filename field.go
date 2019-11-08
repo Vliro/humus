@@ -43,11 +43,14 @@ type Field struct {
 	Facet       bool
 }
 
+
+
 // MakeField constructs a Field of given name and returns the Field.
 func MakeField(name string) Field {
 	//TODO: better facet support
 	fac := strings.Contains(name, "|")
-	return Field{Name: name, SchemaField: getSchemaField(name), Facet: fac}
+	var x = Field{Name: name, SchemaField: getSchemaField(name), Facet: fac}
+	return x
 }
 
 type FieldHolder struct {

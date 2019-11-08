@@ -142,6 +142,15 @@ type GeneratedQuery struct {
 	varCounter int
 }
 
+func (q *GeneratedQuery) Process() ([]byte, map[string]string, error) {
+	b := q.create().Bytes()
+	return b, nil , nil
+}
+
+func (q *GeneratedQuery) Type() QueryType {
+	return QueryRegular
+}
+
 func (q *GeneratedQuery) SetSubOrdering(t OrderType, path string, pred string) *GeneratedQuery {
 	if q.FieldOrderings == nil {
 		q.FieldOrderings = make(map[string][]Ordering)
@@ -206,11 +215,7 @@ func (q *GeneratedQuery) create() *bytes.Buffer {
 		}
 		field.String(q, field.Name, sb)
 	}
-	sb.WriteString(tokenSpace)
-	sb.WriteString("uid")
-	sb.WriteString(tokenSpace)
-	sb.WriteString(tokenRB)
-	sb.WriteString(tokenRB)
+	sb.WriteString(tokenSpace + "uid" + tokenSpace + tokenRB + tokenRB)
 	return sb
 }
 

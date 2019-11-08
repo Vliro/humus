@@ -26,7 +26,9 @@ const bottomLine = "}\n"
 
 const fieldDecl = "var %vFields mulbase.FieldList = []mulbase.Field{%s} "
 
-const makeFieldName = "mulbase.MakeField(%s)"
+const makeFieldName = "MakeField(%s)"
+
+const fieldReceiver = "func (r *%s) "
 
 type Field struct {
 	Tag string
@@ -35,6 +37,7 @@ type Field struct {
 }
 
 //genFields generates the actual fields for the go definition.
+//the model generation does not use templates.
 func makeGoStruct(o *schema.Object) *bytes.Buffer {
 	var sb bytes.Buffer
 	var fields []Field
@@ -48,11 +51,14 @@ func makeGoStruct(o *schema.Object) *bytes.Buffer {
 	makeFieldList(o.Name, fields, &sb)
 	return &sb
 }
-
+//makeFieldList generates the field declarations, ie var Name FieldList = ...
 func makeFieldList(name string, fi []Field, sb *bytes.Buffer) {
 	var isb bytes.Buffer
 	for k,v := range fi {
 		if v.Type == "UID" {
+			continue
+		}
+		if v.Name == "" {
 			continue
 		}
 		isb.WriteString(fmt.Sprintf(makeFieldName, "\""+v.Tag+"\""))
@@ -73,17 +79,18 @@ func writeField(root *schema.Object, name string, typ string, sb *bytes.Buffer, 
 	}
 	isb.WriteString(typ)
 	var fi Field
-	var dbName = strings.ToLower(root.Name)+name
+	var dbName = root.Name+"."+name
 	fi.Tag = dbName
 	sb.WriteString(fmt.Sprintf(lineDeclaration,
-		name,
+		//Ensure it is capitalized for export.
+		strings.Title(name),
 		isb.String(),
 		dbName))
 	fi.Name = name
 	fi.Type = typ
 	return fi
 }
-//Returns the field name relevant for the database.
+//Returns the field name relevant for the database. Iterates over non-null & list and marks flags.
 func iterate(obj *schema.Object, data *schema.Field, field common.Type, sb *bytes.Buffer, f flags) Field {
 	var typ string
 	switch a := field.(type) {
@@ -115,7 +122,7 @@ func iterate(obj *schema.Object, data *schema.Field, field common.Type, sb *byte
 		/*
 			Do not allow unexported fields in database declarations.
 		 */
-		var name = data.GetName()
+		var name = data.Name
 		return writeField(obj, name, typ, sb, f)
 	}
 	return Field{}

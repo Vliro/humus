@@ -1,12 +1,9 @@
 package mulbase
 
 import (
-	"fmt"
-	"os"
-	"strconv"
-	"testing"
-)
 
+)
+/*
 var basicFields = MakeFieldHolder([]string{
 	"value",
 	"value2",
@@ -342,3 +339,4 @@ func TestDeleteUIDS(t *testing.T) {
 		t.Fail()
 	}
 }
+*/

@@ -7,6 +7,7 @@ import (
 	"google.golang.org/grpc/encoding/gzip"
 	"io/ioutil"
 	"strconv"
+	"sync"
 
 	"github.com/dgraph-io/dgo"
 	"github.com/dgraph-io/dgo/protos/api"
@@ -122,10 +123,12 @@ func connect(ip string, port int, dotls bool, paths []string) *DB{
 //TODO: Should it be thread-safe?
 type Txn struct {
 	//All queries performed by this transaction.
+	//Allows for safe storage in Queries.
+	mutex sync.Mutex
 	Queries []Query
+	counter uint32
 	//The actual dgraph transaction.
 	txn     *dgo.Txn
-	counter int
 }
 
 func (t *Txn) Commit(ctx context.Context) error {
@@ -198,8 +201,10 @@ func (t *Txn) RunQuery(ctx context.Context, q Query, objs ...interface{}) error 
 	//if t.txn == nil {
 	//	return Error(errTransaction)
 	//}
+	t.mutex.Lock()
 	t.Queries = append(t.Queries, q)
 	t.counter++
+	t.mutex.Unlock()
 	switch q.Type() {
 	case QueryRegular:
 		return Error(t.query(ctx, q, objs))

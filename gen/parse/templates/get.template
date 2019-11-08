@@ -13,5 +13,11 @@
         if input.UID() == "" {
             return mulbase.ErrUID
         }
+        return nil
     }
 {{end}}
+
+func (r *{{.Name}}) Fields() mulbase.FieldList {
+    return {{.Name}}Fields
+}
+

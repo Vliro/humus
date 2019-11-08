@@ -24,12 +24,12 @@ func (u UID) Int() int64 {
 type H map[string]interface{}
 
 type DNode interface {
-	UID() string
+	UID() UID
 	SetUID(uid string)
-	SetType()
+	SetType(...string)
 	Fields() FieldList
 	//Serializes all the scalar values that are not hidden.
-	Values() string
+	Values() map[string]interface{}
 }
 
 const (

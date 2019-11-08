@@ -12,6 +12,7 @@
             err := txn.RunQuery(context.Background(), q, &obj)
             ch <- async{{.Parent}}{{.Name}}{err, obj}
         }()
+        return nil
     }
 
 {{end}}

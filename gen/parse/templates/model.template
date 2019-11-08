@@ -1,0 +1,15 @@
+//SaveValues saves the node values that
+//do not contain any references to other objects.
+func (r *{{.Name}}) SaveValues(ctx context.Context, txn *mulbase.Txn) error {
+    mut := mulbase.CreateMutation(r.Values(), mulbase.QuerySet)
+    return txn.RunQuery(ctx, mut)
+}
+
+//TODO: This is lazy af.
+func (r *{{.Name}}) Values() map[string]interface{} {
+   var m = make(map[string]interface{})
+   {{range .ScalarFields -}}
+       m["{{.Tag}}"] = r.{{.Name}}
+       {{end -}}
+   return m
+}

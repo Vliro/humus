@@ -2,13 +2,17 @@ package mulbase
 
 type SingleMutation struct {
 	Object interface{}
-	Type MutationType
+	QueryType QueryType
 }
 
-func (m SingleMutation) Process() (string, map[string]string, error) {
-	panic("do not process a single mutation")
-	//b, _ := json.Marshal(m.Object)
-	//return bytesToStringUnsafe(b), nil, nil
+func (m SingleMutation) Type() QueryType {
+	return m.QueryType
+}
+
+func (m SingleMutation) Process() ([]byte, map[string]string, error) {
+	//panic("do not process a single mutation")
+	b, _ := json.Marshal(m.Object)
+	return b, nil, nil
 }
 
 type MutationQuery struct {

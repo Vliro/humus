@@ -1,80 +1,57 @@
 package parse
 
 import (
-	"github.com/gobuffalo/packr/v2"
 	"io"
 	"mulbase/gen/graphql-go/common"
 	"mulbase/gen/graphql-go/schema"
-	"text/template"
 )
 
 type fieldTemplate struct {
-	Name string
+	Name   string
 	Parent string
-	Type string
+	Type   string
 }
 
 type GetTemplate struct {
 	Fields []fieldTemplate
+	Name   string
 }
 
-var templates = map[string]string {
-	"Get": "get.template",
-	"Field": "field.template",
-	"Async": "async.template",
+var fnImports = []string{
+	"mulbase",
+	"context",
 }
-//The box relevant for embedding assets.
-var box = packr.New("templates", "./templates")
-
-func getTemplate(name string) *template.Template {
-	file, ok := templates[name]
-	if !ok {
-		return nil
-	}
-	str, err := box.FindString(file)
-	if err != nil {
-		panic(err)
-	}
-	//byt, err := ioutil.ReadFile("parse/"+file)
-	if err != nil {
-		return nil
-	}
-	templ, err := template.New(name).Parse(str)
-	if err != nil {
-		return nil
-	}
-	return templ
-
-}
-
 /*
 	processFunctions is the entrypoint for declaring all predeclared functions
 */
 
 func processFunctions(sch *schema.Schema, writer io.Writer) {
 	obj := sch.Objects()
-	for _,v := range obj {
+	writeImports(fnImports, writer)
+	for _, v := range obj {
 		processFieldTemplates(v, writer)
 	}
 	makeGlobals(writer)
 }
-
+//creates global field functions.
 func makeGlobals(writer io.Writer) {
 	templ := getTemplate("Field")
 	if templ == nil {
 		panic("mising field template")
 	}
-	templ.Execute(writer, nil)
+	_ = templ.Execute(writer, nil)
 }
+
 //generates using the get.template.
-func processFieldTemplates(obj *schema.Object, w io.Writer)  {
+//these functions are for individual fields that are also database objects.
+func processFieldTemplates(obj *schema.Object, w io.Writer) {
 	var output GetTemplate
 	templ := getTemplate("Get")
 	asyncTempl := getTemplate("Async")
 	if templ == nil {
 		panic("missing get template")
 	}
-	for _,v := range obj.Fields {
+	for _, v := range obj.Fields {
 		var typ common.Type = v.Type
 		for {
 			if val, ok := typ.(*common.NonNull); ok {
@@ -87,7 +64,7 @@ func processFieldTemplates(obj *schema.Object, w io.Writer)  {
 			}
 			break
 		}
-		if val,ok := typ.(*schema.Object); ok {
+		if val, ok := typ.(*schema.Object); ok {
 			var data fieldTemplate
 			data.Type = val.GetName()
 			data.Name = v.GetName()
@@ -95,8 +72,8 @@ func processFieldTemplates(obj *schema.Object, w io.Writer)  {
 			output.Fields = append(output.Fields, data)
 		}
 	}
+	output.Name = obj.Name
 	//write to the writer!
 	_ = templ.Execute(w, output)
 	_ = asyncTempl.Execute(w, output)
 }
-

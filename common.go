@@ -3,13 +3,31 @@ package mulbase
 import (
 )
 
+//The common node type that is inherited. This differs from the DNode which is an interface.
 type Node struct {
-	Uid UID
-	Type []string
+	Uid UID `json:"uid"`
+	Type []string `json:"dgraph.type"`
+}
+
+func (n *Node) SetUID(uid string) {
+	n.Uid = UID(uid)
+}
+
+func (n *Node) SetType(types ...string) {
+	n.Type = types
 }
 
 func (n *Node) UID() UID {
 	return n.Uid
+}
+//CreateMutation is a short-hand for creating
+//a single mutation query object.
+//TODO: Only allow DNodes? Not likely.
+func CreateMutation(obj interface{}, typ QueryType) SingleMutation {
+	return SingleMutation{
+		Object: obj,
+		QueryType:   typ,
+	}
 }
 /*
 func makeUIDMap(u string) map[string]interface{} {

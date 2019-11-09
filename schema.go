@@ -5,6 +5,8 @@ import (
 	"sync"
 )
 
+type schemaList map[string]*SchemaField
+
 type SchemaField struct {
 	Type    VarType `json:"type,omitempty"`
 	List    bool    `json:"list,omitempty"`

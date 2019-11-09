@@ -24,6 +24,7 @@ func (r *Todo) SaveValues(ctx context.Context, txn *mulbase.Txn) error {
 }
 
 //TODO: This is lazy af.
+//Values creates a map of all the scalar values.
 func (r *Todo) Values() map[string]interface{} {
 	var m = make(map[string]interface{})
 	m["Todo.text"] = r.Text
@@ -47,6 +48,7 @@ func (r *User) SaveValues(ctx context.Context, txn *mulbase.Txn) error {
 }
 
 //TODO: This is lazy af.
+//Values creates a map of all the scalar values.
 func (r *User) Values() map[string]interface{} {
 	var m = make(map[string]interface{})
 	m["User.name"] = r.Name
@@ -70,6 +72,7 @@ func (r *Character) SaveValues(ctx context.Context, txn *mulbase.Txn) error {
 }
 
 //TODO: This is lazy af.
+//Values creates a map of all the scalar values.
 func (r *Character) Values() map[string]interface{} {
 	var m = make(map[string]interface{})
 	m["Character.name"] = r.Name
@@ -92,6 +95,7 @@ func (r *Episode) SaveValues(ctx context.Context, txn *mulbase.Txn) error {
 }
 
 //TODO: This is lazy af.
+//Values creates a map of all the scalar values.
 func (r *Episode) Values() map[string]interface{} {
 	var m = make(map[string]interface{})
 	m["Episode.name"] = r.Name
@@ -114,6 +118,7 @@ func (r *Query) SaveValues(ctx context.Context, txn *mulbase.Txn) error {
 }
 
 //TODO: This is lazy af.
+//Values creates a map of all the scalar values.
 func (r *Query) Values() map[string]interface{} {
 	var m = make(map[string]interface{})
 	return m

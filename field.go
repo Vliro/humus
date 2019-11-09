@@ -9,7 +9,7 @@ import (
 	"github.com/pkg/errors"
 )
 
-//A list of Fields associated with an object.
+//FieldList is a list of Fields associated with a generated object.
 type FieldList []Field
 
 //TODO: offset
@@ -42,8 +42,6 @@ type Field struct {
 	Fields      []Field
 	Facet       bool
 }
-
-
 
 // MakeField constructs a Field of given name and returns the Field.
 func MakeField(name string) Field {

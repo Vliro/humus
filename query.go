@@ -3,8 +3,6 @@ package mulbase
 import (
 	"bytes"
 	"strconv"
-
-	"github.com/pkg/errors"
 )
 
 /**
@@ -110,11 +108,13 @@ func (q *Queries) Stringify() (string, error) {
 	return final.String(), nil
 }
 */
+
 type VarObject struct {
 	val     interface{}
 	varType VarType
 }
 
+//An aggregate value i.e. sum as well as what alias to name it as.
 type aggregateValues struct {
 	Type  AggregateType
 	Alias string
@@ -124,7 +124,7 @@ type aggregateValues struct {
 //Root is "", all sub are /Predicate1/Predicate2...
 type GeneratedQuery struct {
 	//The root function.
-	Function       Function
+	Function       *Function
 	//All sub parts of the query.
 	FieldFunctions map[string]Function
 	FieldOrderings map[string][]Ordering
@@ -134,8 +134,9 @@ type GeneratedQuery struct {
 
 	VarMap         map[string]VarObject
 	VarFunc        func() uint32
-	Filter         Filter
+	Filter         *Filter
 	Language       Language
+	//Which directives to apply on this query.
 	Directives     []Directive
 	Deserialize    bool
 	Fields         []Field
@@ -143,8 +144,7 @@ type GeneratedQuery struct {
 }
 
 func (q *GeneratedQuery) Process() ([]byte, map[string]string, error) {
-	b := q.create().Bytes()
-	return b, nil , nil
+	return q.create()
 }
 
 func (q *GeneratedQuery) Type() QueryType {
@@ -178,24 +178,12 @@ func (m *Mutation) AddValue(val interface{}) *Mutation {
 	return m
 }
 
-
-func (q *GeneratedQuery) Create() ([]byte, error) {
-	if err := q.check(); err != nil {
-		return nil, errors.WithStack(err)
+func (q *GeneratedQuery) create() ([]byte, map[string]string, error) {
+	if err := q.check(); q != nil {
+		return nil, nil, err
 	}
-	for _, f := range q.Fields {
-		if len(f.Name) == 0 {
-			return nil, errors.New("error no name")
-		}
-		if err := f.check(q); err != nil {
-			return nil, err
-		}
-	}
-	return q.create().Bytes(), nil
-}
-
-func (q *GeneratedQuery) create() *bytes.Buffer {
 	var sb = &bytes.Buffer{}
+	//Write query header.
 	sb.WriteString("{q")
 	sb.WriteString(tokenLP)
 	sb.WriteString("func")
@@ -213,10 +201,20 @@ func (q *GeneratedQuery) create() *bytes.Buffer {
 		if i != 0 {
 			sb.WriteString(tokenSpace)
 		}
-		field.String(q, field.Name, sb)
+		err := field.String(q, field.Name, sb)
+		if err != nil {
+			return nil, nil, err
+		}
 	}
 	sb.WriteString(tokenSpace + "uid" + tokenSpace + tokenRB + tokenRB)
-	return sb
+	//TODO: Write variable header and create the var map.
+	var varString = q.Variables()
+	var result = make([]byte, len(varString) + len(sb.Bytes()))
+	//Copy the query into result.
+	copy(result, varString)
+	copy(result[len(varString):], sb.Bytes())
+
+	return result, nil, nil
 }
 
 func (q *GeneratedQuery) check() error {
@@ -350,13 +348,13 @@ func (q *GeneratedQuery) JSON(shouldVar bool) ([]byte, error) {
 	return s, err
 }*/
 
-func (q *GeneratedQuery) SetFunction(function Function) *GeneratedQuery {
+func (q *GeneratedQuery) SetFunction(function *Function) *GeneratedQuery {
 	q.Function = function
 	return q
 }
 
 //TODO: Multiple filters.
-func (q *GeneratedQuery) SetFilter(filter Filter) *GeneratedQuery {
+func (q *GeneratedQuery) SetFilter(filter *Filter) *GeneratedQuery {
 	q.Filter = filter
 	return q
 }

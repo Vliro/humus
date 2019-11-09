@@ -1,3 +1,4 @@
+{{/* This template is for the model accessing all scalar values and all values. If you want to create relations between objects write them in get.template */}}
 //SaveValues saves the node values that
 //do not contain any references to other objects.
 func (r *{{.Name}}) SaveValues(ctx context.Context, txn *mulbase.Txn) error {
@@ -6,6 +7,7 @@ func (r *{{.Name}}) SaveValues(ctx context.Context, txn *mulbase.Txn) error {
 }
 
 //TODO: This is lazy af.
+//Values creates a map of all the scalar values.
 func (r *{{.Name}}) Values() map[string]interface{} {
    var m = make(map[string]interface{})
    {{range .ScalarFields -}}

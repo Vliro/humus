@@ -68,7 +68,9 @@ const (
 )
 
 type Query interface {
+	//Process the query type in order to send to the database.
 	Process() ([]byte, map[string]string, error)
+	//What type of query is this? Mutation(set/delete), regular query?
 	Type() QueryType
 }
 
@@ -166,7 +168,7 @@ func (t *Txn) Upsert(ctx context.Context, q Query, m []*api.Mutation, obj ...int
 		return Error(err)
 	}
 	var req = api.Request{
-		//TODO: Dont use string(b) as that performs unnecessary allocations. We do not perform any changes to b.
+		//TODO: Dont use string(b) as that performs unnecessary allocations. We do not perform any changes to b which should not cause any issues.
 		Query:                bytesToStringUnsafe(b),
 		Vars:                 ma,
 		Mutations:            m,
@@ -201,9 +203,9 @@ func (t *Txn) RunQuery(ctx context.Context, q Query, objs ...interface{}) error 
 	//if t.txn == nil {
 	//	return Error(errTransaction)
 	//}
+	//Allow thread-safe appending of queries.
 	t.mutex.Lock()
 	t.Queries = append(t.Queries, q)
-	t.counter++
 	t.mutex.Unlock()
 	switch q.Type() {
 	case QueryRegular:

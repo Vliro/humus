@@ -1,21 +1,8 @@
-directive @search(
-  by: [String]
-) on FIELD_DEFINITION | ENUM_VALUE
-
-directive @hasInverse(
-  field: String
-) on FIELD_DEFINITION | ENUM_VALUE
-
 type Todo {
   id: ID!
   text: String! @search(by: [term])
   done: Boolean!
   user: User!
-}
-
-type User {
-  id: ID!
-  name: String!
 }
 
 type Character {
@@ -25,9 +12,5 @@ type Character {
 
 type Episode {
   name: String!
-}
-
-type Query {
-  todos: [Todo!]!
 }
 

@@ -4,7 +4,54 @@ package mulgen
 import (
 	"context"
 	"mulbase"
+	"time"
 )
+
+type Level struct {
+	//This line declares basic properties for a database node.
+	mulbase.Node
+	Name      string    `json:"Level.Name"`
+	Password  string    `json:"Level.Password"`
+	Hash      string    `json:"Level.Hash"`
+	Owner     *User     `json:"Level.Owner"`
+	Size      int       `json:"Level.Size"`
+	Updated   time.Time `json:"Level.Updated"`
+	PlayCount int       `json:"Level.PlayCount"`
+	Live      bool      `json:"Level.Live"`
+	Rating    float64   `json:"Level.Rating"`
+}
+
+var LevelFields mulbase.FieldList = []mulbase.Field{MakeField("Level.Name", 0), MakeField("Level.Password", 0), MakeField("Level.Hash", 0), MakeField("Level.Owner", 0|mulbase.MetaObject), MakeField("Level.Size", 0), MakeField("Level.Updated", 0), MakeField("Level.PlayCount", 0), MakeField("Level.Live", 0), MakeField("Level.Rating", 0)}
+
+//SaveValues saves the node values that
+//do not contain any references to other objects.
+func (r *Level) SaveValues(ctx context.Context, txn *mulbase.Txn) error {
+	mut := mulbase.CreateMutation(r.Values(), mulbase.QuerySet)
+	return txn.RunQuery(ctx, mut)
+}
+
+//TODO: This is lazy af.
+//Values creates a map of all the scalar values.
+//This includes the UID.
+func (r *Level) Values() map[string]interface{} {
+	var m = make(map[string]interface{})
+	m["Level.Name"] = r.Name
+	m["Level.Password"] = r.Password
+	m["Level.Hash"] = r.Hash
+	m["Level.Size"] = r.Size
+	m["Level.Updated"] = r.Updated
+	m["Level.PlayCount"] = r.PlayCount
+	m["Level.Live"] = r.Live
+	m["Level.Rating"] = r.Rating
+	m["uid"] = r.Uid
+	return m
+}
+
+func (r *Level) SetType() {
+	r.Type = []string{
+		"Level",
+	}
+}
 
 type Todo struct {
 	//This line declares basic properties for a database node.
@@ -14,7 +61,7 @@ type Todo struct {
 	User *User  `json:"Todo.user"`
 }
 
-var TodoFields mulbase.FieldList = []mulbase.Field{MakeField("Todo.text"), MakeField("Todo.done"), MakeField("Todo.user")}
+var TodoFields mulbase.FieldList = []mulbase.Field{MakeField("Todo.text", 0), MakeField("Todo.done", 0), MakeField("Todo.user", 0|mulbase.MetaObject)}
 
 //SaveValues saves the node values that
 //do not contain any references to other objects.
@@ -25,34 +72,19 @@ func (r *Todo) SaveValues(ctx context.Context, txn *mulbase.Txn) error {
 
 //TODO: This is lazy af.
 //Values creates a map of all the scalar values.
+//This includes the UID.
 func (r *Todo) Values() map[string]interface{} {
 	var m = make(map[string]interface{})
 	m["Todo.text"] = r.Text
 	m["Todo.done"] = r.Done
+	m["uid"] = r.Uid
 	return m
 }
 
-type User struct {
-	//This line declares basic properties for a database node.
-	mulbase.Node
-	Name string `json:"User.name"`
-}
-
-var UserFields mulbase.FieldList = []mulbase.Field{MakeField("User.name")}
-
-//SaveValues saves the node values that
-//do not contain any references to other objects.
-func (r *User) SaveValues(ctx context.Context, txn *mulbase.Txn) error {
-	mut := mulbase.CreateMutation(r.Values(), mulbase.QuerySet)
-	return txn.RunQuery(ctx, mut)
-}
-
-//TODO: This is lazy af.
-//Values creates a map of all the scalar values.
-func (r *User) Values() map[string]interface{} {
-	var m = make(map[string]interface{})
-	m["User.name"] = r.Name
-	return m
+func (r *Todo) SetType() {
+	r.Type = []string{
+		"Todo",
+	}
 }
 
 type Character struct {
@@ -62,7 +94,7 @@ type Character struct {
 	AppearsIn []Episode `json:"Character.appearsIn"`
 }
 
-var CharacterFields mulbase.FieldList = []mulbase.Field{MakeField("Character.name"), MakeField("Character.appearsIn")}
+var CharacterFields mulbase.FieldList = []mulbase.Field{MakeField("Character.name", 0), MakeField("Character.appearsIn", 0|mulbase.MetaObject)}
 
 //SaveValues saves the node values that
 //do not contain any references to other objects.
@@ -73,10 +105,18 @@ func (r *Character) SaveValues(ctx context.Context, txn *mulbase.Txn) error {
 
 //TODO: This is lazy af.
 //Values creates a map of all the scalar values.
+//This includes the UID.
 func (r *Character) Values() map[string]interface{} {
 	var m = make(map[string]interface{})
 	m["Character.name"] = r.Name
+	m["uid"] = r.Uid
 	return m
+}
+
+func (r *Character) SetType() {
+	r.Type = []string{
+		"Character",
+	}
 }
 
 type Episode struct {
@@ -85,7 +125,7 @@ type Episode struct {
 	Name string `json:"Episode.name"`
 }
 
-var EpisodeFields mulbase.FieldList = []mulbase.Field{MakeField("Episode.name")}
+var EpisodeFields mulbase.FieldList = []mulbase.Field{MakeField("Episode.name", 0)}
 
 //SaveValues saves the node values that
 //do not contain any references to other objects.
@@ -96,30 +136,86 @@ func (r *Episode) SaveValues(ctx context.Context, txn *mulbase.Txn) error {
 
 //TODO: This is lazy af.
 //Values creates a map of all the scalar values.
+//This includes the UID.
 func (r *Episode) Values() map[string]interface{} {
 	var m = make(map[string]interface{})
 	m["Episode.name"] = r.Name
+	m["uid"] = r.Uid
 	return m
 }
 
-type Query struct {
-	//This line declares basic properties for a database node.
-	mulbase.Node
-	Todos []Todo `json:"Query.todos"`
+func (r *Episode) SetType() {
+	r.Type = []string{
+		"Episode",
+	}
 }
 
-var QueryFields mulbase.FieldList = []mulbase.Field{MakeField("Query.todos")}
+type User struct {
+	//This line declares basic properties for a database node.
+	mulbase.Node
+	Name         string    `json:"User.Name"`
+	Email        string    `json:"User.Email"`
+	Password     string    `json:"User.Password"`
+	Registered   time.Time `json:"User.Registered"`
+	Rank         int       `json:"User.Rank"`
+	Exp          int       `json:"User.Exp"`
+	Active       bool      `json:"User.Active"`
+	LastLogin    time.Time `json:"User.LastLogin"`
+	Speed        int       `json:"User.Speed"`
+	Jump         int       `json:"User.Jump"`
+	Acceleration int       `json:"User.Acceleration"`
+	Power        int       `json:"User.Power"`
+	Hats         []int     `json:"User.Hats"`
+	Heads        []int     `json:"User.Heads"`
+	Bodies       []int     `json:"User.Bodies"`
+	Feets        []int     `json:"User.Feets"`
+	Hat          int       `json:"User.Hat"`
+	Head         int       `json:"User.Head"`
+	Body         int       `json:"User.Body"`
+	Feet         int       `json:"User.Feet"`
+	Levels       []Level   `json:"User.Levels"`
+}
+
+var UserFields mulbase.FieldList = []mulbase.Field{MakeField("User.Name", 0), MakeField("User.Email", 0), MakeField("User.Password", 0), MakeField("User.Registered", 0), MakeField("User.Rank", 0), MakeField("User.Exp", 0), MakeField("User.Active", 0), MakeField("User.LastLogin", 0), MakeField("User.Speed", 0), MakeField("User.Jump", 0), MakeField("User.Acceleration", 0), MakeField("User.Power", 0), MakeField("User.Hats", 0), MakeField("User.Heads", 0), MakeField("User.Bodies", 0), MakeField("User.Feets", 0), MakeField("User.Hat", 0), MakeField("User.Head", 0), MakeField("User.Body", 0), MakeField("User.Feet", 0), MakeField("User.Levels", 0|mulbase.MetaObject)}
 
 //SaveValues saves the node values that
 //do not contain any references to other objects.
-func (r *Query) SaveValues(ctx context.Context, txn *mulbase.Txn) error {
+func (r *User) SaveValues(ctx context.Context, txn *mulbase.Txn) error {
 	mut := mulbase.CreateMutation(r.Values(), mulbase.QuerySet)
 	return txn.RunQuery(ctx, mut)
 }
 
 //TODO: This is lazy af.
 //Values creates a map of all the scalar values.
-func (r *Query) Values() map[string]interface{} {
+//This includes the UID.
+func (r *User) Values() map[string]interface{} {
 	var m = make(map[string]interface{})
+	m["User.Name"] = r.Name
+	m["User.Email"] = r.Email
+	m["User.Password"] = r.Password
+	m["User.Registered"] = r.Registered
+	m["User.Rank"] = r.Rank
+	m["User.Exp"] = r.Exp
+	m["User.Active"] = r.Active
+	m["User.LastLogin"] = r.LastLogin
+	m["User.Speed"] = r.Speed
+	m["User.Jump"] = r.Jump
+	m["User.Acceleration"] = r.Acceleration
+	m["User.Power"] = r.Power
+	m["User.Hats"] = r.Hats
+	m["User.Heads"] = r.Heads
+	m["User.Bodies"] = r.Bodies
+	m["User.Feets"] = r.Feets
+	m["User.Hat"] = r.Hat
+	m["User.Head"] = r.Head
+	m["User.Body"] = r.Body
+	m["User.Feet"] = r.Feet
+	m["uid"] = r.Uid
 	return m
+}
+
+func (r *User) SetType() {
+	r.Type = []string{
+		"User",
+	}
 }

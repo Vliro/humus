@@ -8,10 +8,18 @@ func (r *{{.Name}}) SaveValues(ctx context.Context, txn *mulbase.Txn) error {
 
 //TODO: This is lazy af.
 //Values creates a map of all the scalar values.
+//This includes the UID.
 func (r *{{.Name}}) Values() map[string]interface{} {
    var m = make(map[string]interface{})
    {{range .ScalarFields -}}
        m["{{.Tag}}"] = r.{{.Name}}
        {{end -}}
+   m["uid"] = r.Uid
    return m
+}
+
+func (r *{{.Name}}) SetType() {
+    r.Type = []string {
+        "{{.Name}}",
+    }
 }

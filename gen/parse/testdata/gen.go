@@ -7,11 +7,45 @@ import (
 )
 
 //Populates the field of r.
-func (r *Todo) GetTodoUser(count int, filter int) error {
+func (r *Level) GetLevelOwner(count int, filter int, txn *mulbase.Txn) error {
 	if r.UID() == "" {
 		return mulbase.ErrUID
 	}
-	return mulbase.GetChild(r, GetField("User"), &r.User)
+	return mulbase.GetChild(r, "Level.Owner", UserFields, txn, &r.Owner)
+}
+
+func (r *Level) AddLevelOwner(input *User) error {
+	if input.UID() == "" {
+		return mulbase.ErrUID
+	}
+	return nil
+}
+
+func (r *Level) Fields() mulbase.FieldList {
+	return LevelFields
+}
+
+type asyncLevelOwner struct {
+	Err   error
+	Value User
+}
+
+func AsyncLevelOwner(q mulbase.Query, input *User, txn *mulbase.Txn) error {
+	ch := make(chan asyncLevelOwner, 1)
+	go func() {
+		var obj User
+		err := txn.RunQuery(context.Background(), q, &obj)
+		ch <- asyncLevelOwner{err, obj}
+	}()
+	return nil
+}
+
+//Populates the field of r.
+func (r *Todo) GetTodoUser(count int, filter int, txn *mulbase.Txn) error {
+	if r.UID() == "" {
+		return mulbase.ErrUID
+	}
+	return mulbase.GetChild(r, "Todo.User", UserFields, txn, &r.User)
 }
 
 func (r *Todo) AddTodoUser(input *User) error {
@@ -40,16 +74,12 @@ func AsyncTodoUser(q mulbase.Query, input *User, txn *mulbase.Txn) error {
 	return nil
 }
 
-func (r *User) Fields() mulbase.FieldList {
-	return UserFields
-}
-
 //Populates the field of r.
-func (r *Character) GetCharacterAppearsIn(count int, filter int) error {
+func (r *Character) GetCharacterAppearsIn(count int, filter int, txn *mulbase.Txn) error {
 	if r.UID() == "" {
 		return mulbase.ErrUID
 	}
-	return mulbase.GetChild(r, GetField("AppearsIn"), &r.AppearsIn)
+	return mulbase.GetChild(r, "Character.AppearsIn", EpisodeFields, txn, &r.AppearsIn)
 }
 
 func (r *Character) AddCharacterAppearsIn(input *Episode) error {
@@ -83,49 +113,54 @@ func (r *Episode) Fields() mulbase.FieldList {
 }
 
 //Populates the field of r.
-func (r *Query) GetQueryTodos(count int, filter int) error {
+func (r *User) GetUserLevels(count int, filter int, txn *mulbase.Txn) error {
 	if r.UID() == "" {
 		return mulbase.ErrUID
 	}
-	return mulbase.GetChild(r, GetField("Todos"), &r.Todos)
+	return mulbase.GetChild(r, "User.Levels", LevelFields, txn, &r.Levels)
 }
 
-func (r *Query) AddQueryTodos(input *Todo) error {
+func (r *User) AddUserLevels(input *Level) error {
 	if input.UID() == "" {
 		return mulbase.ErrUID
 	}
 	return nil
 }
 
-func (r *Query) Fields() mulbase.FieldList {
-	return QueryFields
+func (r *User) Fields() mulbase.FieldList {
+	return UserFields
 }
 
-type asyncQueryTodos struct {
+type asyncUserLevels struct {
 	Err   error
-	Value Todo
+	Value Level
 }
 
-func AsyncQueryTodos(q mulbase.Query, input *Todo, txn *mulbase.Txn) error {
-	ch := make(chan asyncQueryTodos, 1)
+func AsyncUserLevels(q mulbase.Query, input *Level, txn *mulbase.Txn) error {
+	ch := make(chan asyncUserLevels, 1)
 	go func() {
-		var obj Todo
+		var obj Level
 		err := txn.RunQuery(context.Background(), q, &obj)
-		ch <- asyncQueryTodos{err, obj}
+		ch <- asyncUserLevels{err, obj}
 	}()
 	return nil
 }
 
+//Beginning of field.template. General functions.
 var globalFields = make(map[string]mulbase.Field)
 
 func GetField(name string) mulbase.Field {
 	return globalFields[name]
 }
 
-func MakeField(name string) mulbase.Field {
-	var field = mulbase.MakeField(name)
+func MakeField(name string, flags mulbase.FieldMeta) mulbase.Field {
+	var field = mulbase.MakeField(name, flags)
 	if _, ok := globalFields[name]; !ok {
 		globalFields[name] = field
 	}
 	return field
+}
+
+func GetGlobalFields() map[string]mulbase.Field {
+	return globalFields
 }

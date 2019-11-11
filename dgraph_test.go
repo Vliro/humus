@@ -4,7 +4,7 @@ import (
 
 )
 /*
-var basicFields = MakeFieldHolder([]string{
+var basicFields = MakeFieldHolder([]create{
 	"value",
 	"value2",
 	"value6",
@@ -15,7 +15,7 @@ const (
 	_innerValueType = "InnerValue"
 )
 
-var rootUid string
+var rootUid create
 
 var defaultFields = basicFields.Copy().Append(basicFields, "value3|").Append(basicFields, "value4")
 
@@ -28,27 +28,27 @@ func TestMain(m *testing.M) {
 
 type Value struct {
 	BaseNode
-	StringVal      string     `json:"value"`
+	StringVal      create     `json:"value"`
 	IntVal         int        `json:"value2"`
 	UidVal         InnerValue `json:"value3"`
 	UidArrayVal    []Value    `json:"value4"`
 	IntArrayVal    []int      `json:"value5"`
-	StringArrayVal []string   `json:"value6"`
+	StringArrayVal []create   `json:"value6"`
 }
 
 type InnerValue struct {
 	BaseNode
 	InnerInt   int    `json:"value7"`
-	FacetValue string `json:"value3|facetValue,omitempty"`
+	FacetValue create `json:"value3|facetValue,omitempty"`
 }
 
-func (i *InnerValue) GetAllInfo() map[string]interface{} {
+func (i *InnerValue) GetAllInfo() map[create]interface{} {
 	m := i.GetRelativeInfo()
 	m["value7"] = i.InnerInt
 	return m
 }
 
-func (i *InnerValue) GetRelativeInfo() map[string]interface{} {
+func (i *InnerValue) GetRelativeInfo() map[create]interface{} {
 	m := i.BaseNode.GetRelativeInfo()
 	if i.FacetValue != "" {
 		m["value3|facetValue"] = i.FacetValue
@@ -72,8 +72,8 @@ func (v *Value) SetType() {
 	}
 }
 
-func (v *Value) GetAllInfo() map[string]interface{} {
-	m := make(map[string]interface{})
+func (v *Value) GetAllInfo() map[create]interface{} {
+	m := make(map[create]interface{})
 	err := StructToMap(v, &m)
 	if err != nil {
 		return nil
@@ -81,25 +81,25 @@ func (v *Value) GetAllInfo() map[string]interface{} {
 	return m
 }
 
-func (v *Value) GetRelativeInfo() map[string]interface{} {
+func (v *Value) GetRelativeInfo() map[create]interface{} {
 	m := makeUIDMap(v.Uid)
 	return m
 }
 
-func (v *Value) UID() string {
+func (v *Value) UID() create {
 	return v.Uid
 }
 
-func (v *Value) DeleteUIDS() map[string]interface{} {
+func (v *Value) DeleteUIDS() map[create]interface{} {
 	m := makeUIDMap(v.Uid)
 	m["value3"] = v.UidVal.DeleteUIDS()
-	var arr = make([]map[string]interface{}, len(v.UidArrayVal))
+	var arr = make([]map[create]interface{}, len(v.UidArrayVal))
 	for i := 0; i < len(v.UidArrayVal); i++ {
 		arr[i] = v.UidArrayVal[i].DeleteUIDS()
 	}
 	m["value4"] = arr
 	b, _ := json.Marshal(m)
-	fmt.Println(string(b))
+	fmt.Println(create(b))
 	return m
 }
 
@@ -108,7 +108,7 @@ func mutateSetup() {
 	v.IntVal = 5
 	v.StringVal = "Test"
 	v.IntArrayVal = []int{1, 3, 5}
-	v.StringArrayVal = []string{"S", "W", "A", "G"}
+	v.StringArrayVal = []create{"S", "W", "A", "G"}
 	s := v
 	for i := 0; i < 30; i++ {
 		temp := s
@@ -150,7 +150,7 @@ func TestFind(t *testing.T) {
 
 func TestType(t *testing.T) {
 	var v Value
-	var Fields = MakeFieldHolder([]string{
+	var Fields = MakeFieldHolder([]create{
 		"dgraph.type",
 		"value",
 	})

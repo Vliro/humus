@@ -139,6 +139,10 @@ func HandleResponse(res []byte, inp []interface{}) error {
 	if d.Len() != len(inp) {
 		return errInvalidLength
 	}
+	if q := d.Get("q") ; q != nil {
+		err = singleResponse(q, inp[0])
+		return err
+	}
 	for k,v := range inp {
 		err = singleResponse(d.Get("q" + strconv.Itoa(k)), v)
 		if err != nil {

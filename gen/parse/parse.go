@@ -14,11 +14,23 @@ import (
 	"strings"
 	"text/template"
 )
-
+//Scalar builtin types.
 var builtins = map[string]string{
 	"String": "string",
 	"Int":    "int",
 	"Boolean": "bool",
+	"DateTime": "time.Time",
+	"Float": "float64",
+	//Uid handled separately.
+	"ID": "",
+}
+
+func getBuiltIn(key string) (string, bool) {
+	val,ok := builtins[key]
+	if arr := strings.Split(val, "."); len(arr) > 1 {
+		modelImports = addImport(arr[0], modelImports)
+	}
+	return val, ok
 }
 
 const (
@@ -35,6 +47,15 @@ func writeHeader(w *bytes.Buffer) {
 	_, _ = w.WriteString(preamble)
 	_ = w.WriteByte('\n')
 
+}
+
+func addImport(imp string, imports []string) []string {
+	for _,v := range imports {
+		if v == imp {
+			return imports
+		}
+	}
+	return append(imports, imp)
 }
 
 func writeImports(imports []string, w io.Writer) {
@@ -89,6 +110,9 @@ func Parse(input, output string) {
 	/*
 		Walk the directory.
 	 */
+
+	var resultingFile bytes.Buffer
+	resultingFile.WriteString(header)
 	err = filepath.Walk(input, func(path string, info os.FileInfo, err error) error {
 		if err != nil {
 			panic(err)
@@ -102,11 +126,17 @@ func Parse(input, output string) {
 			/*
 			Use graphQL parser for the schema.
 			 */
-			sc := graphql.MustParseSchema(string(fd), nil)
-			generate(sc.Schema, &modelBuffer, &fnBuffer)
+			//
+			if fp := filepath.Ext(info.Name()); fp != ".graphql" {
+				return nil
+			}
+			resultingFile.Write(fd)
+			//Ensure we add the proper header.
 		}
 		return nil
 	})
+	sc := graphql.MustParseSchema(resultingFile.String(), nil)
+	generate(sc.Schema, &modelBuffer, &fnBuffer)
 	if err != nil {
 		panic(err)
 	}
@@ -151,7 +181,7 @@ func createModel(s *schema.Schema, output io.Writer) {
 
 var templates = map[string]string {
 	"Get": "get.template",
-	"Field": "field.template",
+	"Field": "global.template",
 	"Async": "async.template",
 	"Model": "model.template",
 }

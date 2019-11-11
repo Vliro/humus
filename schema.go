@@ -1,12 +1,7 @@
 package mulbase
 
-import (
-	"strings"
-	"sync"
-)
-
-type schemaList map[string]*SchemaField
-
+type schemaList map[string]Field
+/*
 type SchemaField struct {
 	Type    VarType `json:"type,omitempty"`
 	List    bool    `json:"list,omitempty"`
@@ -15,14 +10,8 @@ type SchemaField struct {
 	Uid     bool
 	Skip    bool
 }
+*/
 
-var basic = &SchemaField{Skip: true}
-var schema = make(map[string]SchemaField)
-var wg = sync.WaitGroup{}
-
-//This function runs really early, so check if config has been init.
-func initSchema() map[string]SchemaField {
-	//TODO: fix this
 /*
 	if len(schema) > 0 {
 		wg.Wait()
@@ -83,23 +72,3 @@ func initSchema() map[string]SchemaField {
 	}
 	wg.Done()
 */
-	return schema
-}
-
-func getSchemaField(name string) *SchemaField {
-	str := strings.Split(name, "|")
-	if len(str) > 1 {
-		return basic
-	}
-	if name == "uid" {
-		return &SchemaField{}
-	} else {
-		s := schema
-		val, ok := s[name]
-		if ok {
-			return &val
-		} else {
-			return nil
-		}
-	}
-}

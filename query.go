@@ -3,6 +3,7 @@ package mulbase
 import (
 	"bytes"
 	"strconv"
+	"strings"
 )
 
 /**
@@ -24,7 +25,7 @@ type H map[string]interface{}
 type DNode interface {
 	UID() UID
 	SetUID(uid string)
-	SetType(...string)
+	SetType()
 	Fields() FieldList
 	//Serializes all the scalar values that are not hidden.
 	Values() map[string]interface{}
@@ -42,9 +43,17 @@ const (
 	tokenFilter = "@filter"
 )
 
-/*
+
 type Queries struct {
 	Queries []*GeneratedQuery
+}
+
+func (q *Queries) Process(schemaList) ([]byte, map[string]string, error) {
+	return q.create()
+}
+
+func (q *Queries) Type() QueryType {
+	return QueryRegular
 }
 
 func (q *Queries) Append(qu *GeneratedQuery) *Queries {
@@ -52,65 +61,60 @@ func (q *Queries) Append(qu *GeneratedQuery) *Queries {
 	return q
 }
 
-func (q *Queries) Execute(params ...interface{}) error {
-	return PerformQueries(q, params)
+func mapMerge(m1,m2 map[string]string) {
+	for k,v := range m2 {
+		m1[k] = v
+	}
 }
-/*
-func (q *Queries) Stringify() (string, error) {
+
+func (q *Queries) create() ([]byte,map[string]string, error) {
 	queryStr := bytes.Buffer{}
 	final := bytes.Buffer{}
 	//The query variable information.
 	final.WriteString("query t")
 	//The global variable counter.
-	var varCounter uint32
-	varFunc := func() uint32 {
+	var varCounter int
+	//closure
+	varFunc := func() int {
 		varCounter++
 		return varCounter - 1
 	}
-	var e []error
+	var e error
+	var output = make(map[string]string)
 	for k, qu := range q.Queries {
-		if qu.Type != TypeQuery {
-			return "", errors.Errorf("Queries should only contain TypeQueries")
+		e = qu.check()
+		if e != nil {
+			return nil, nil, e
 		}
-		qu.Name = "q" + strconv.Itoa(k)
-		qu.single = false
+		qu.index = k + 1
+		qu.VarMap = output
 		qu.VarFunc = varFunc
-		js, err := qu.JSON(false)
+		str, _, err := qu.create()
 		if err != nil {
-			e = append(e, err)
+			return nil, nil, err
 		}
-		queryStr.Write(js)
+		queryStr.Write(str)
 	}
-	if len(e) > 0 {
-		return "", e[0]
-	}
-	first := true
+	final.WriteString("(")
 	for k, qu := range q.Queries {
-		str := qu.Variables()
+		str := qu.Variables(false)
 		if str == "" {
 			continue
 		}
 		if len(q.Queries) > 1 && k > 0 {
 			final.WriteByte(',')
 		}
-		if first {
-			final.WriteString("(")
-			first = !first
-		}
 		final.WriteString(str)
 	}
-	if !first {
-		final.WriteByte(')')
-	}
+	final.WriteString(")")
 	final.WriteString("{")
 	final.WriteString(queryStr.String())
 	final.WriteString("}")
-	return final.String(), nil
+	return final.Bytes(), output, nil
 }
-*/
 
 type VarObject struct {
-	val     interface{}
+	val     string
 	varType VarType
 }
 
@@ -131,9 +135,9 @@ type GeneratedQuery struct {
 	FieldCount     map[string][]Count
 	FieldAggregate map[string]aggregateValues
 	FieldFilters   map[string]Filter
-
-	VarMap         map[string]VarObject
-	VarFunc        func() uint32
+	varBuilder 	   strings.Builder
+	VarMap         map[string]string
+	VarFunc        func() int
 	Filter         *Filter
 	Language       Language
 	//Which directives to apply on this query.
@@ -141,9 +145,24 @@ type GeneratedQuery struct {
 	Deserialize    bool
 	Fields         []Field
 	varCounter int
+	schema schemaList
+	//For multiple queries.
+	index int
 }
 
-func (q *GeneratedQuery) Process() ([]byte, map[string]string, error) {
+func (q *GeneratedQuery) SetFields(f []Field) *GeneratedQuery {
+	q.Fields = f
+	return q
+}
+
+func NewQuery() *GeneratedQuery {
+	return &GeneratedQuery{
+		VarMap: make(map[string]string),
+	}
+}
+
+func (q *GeneratedQuery) Process(sch schemaList) ([]byte, map[string]string, error) {
+	q.schema = sch
 	return q.create()
 }
 
@@ -179,20 +198,23 @@ func (m *Mutation) AddValue(val interface{}) *Mutation {
 }
 
 func (q *GeneratedQuery) create() ([]byte, map[string]string, error) {
-	if err := q.check(); q != nil {
+	if err := q.check(); err != nil {
 		return nil, nil, err
 	}
 	var sb = &bytes.Buffer{}
 	//Write query header.
 	sb.WriteString("{q")
+	if q.index != 0 {
+		sb.WriteString(strconv.Itoa(q.index))
+	}
 	sb.WriteString(tokenLP)
 	sb.WriteString("func")
 	sb.WriteString(tokenColumn)
 	sb.WriteString(tokenSpace)
-	q.Function.string(q, "", sb)
+	q.Function.create(q, "", sb)
 	sb.WriteString(tokenRP)
 	//optional filter
-	q.Filter.stringChan(q, "", sb)
+	q.Filter.create(q, "", sb)
 	for _, v := range q.Directives {
 		sb.WriteString("@" + string(v))
 	}
@@ -208,13 +230,13 @@ func (q *GeneratedQuery) create() ([]byte, map[string]string, error) {
 	}
 	sb.WriteString(tokenSpace + "uid" + tokenSpace + tokenRB + tokenRB)
 	//TODO: Write variable header and create the var map.
-	var varString = q.Variables()
+	var varString = q.Variables(true)
 	var result = make([]byte, len(varString) + len(sb.Bytes()))
 	//Copy the query into result.
 	copy(result, varString)
 	copy(result[len(varString):], sb.Bytes())
 
-	return result, nil, nil
+	return result, q.VarMap, nil
 }
 
 func (q *GeneratedQuery) check() error {
@@ -275,10 +297,12 @@ func (q *GeneratedQuery) SetLanguage(l Language) *GeneratedQuery {
 	return q
 }
 
-// Returns all the query variables for this query in string form.
-func (q *GeneratedQuery) Variables() string {
-	sb := bytes.Buffer{}
+// Returns all the query variables for this query in create form.
+//single for single query
+func (q *GeneratedQuery) Variables(single bool) string {
+	/*sb := bytes.Buffer{}
 	i := 0
+	sb.WriteString("query test(")
 	for k, v := range q.VarMap {
 
 		if v.varType == TypeStr || v.varType == TypeInt {
@@ -291,7 +315,11 @@ func (q *GeneratedQuery) Variables() string {
 		}
 		i++
 	}
-	return sb.String()
+	sb.WriteByte(')')*/
+	if single {
+		return "query test(" + q.varBuilder.String() + ")"
+	}
+	return q.varBuilder.String()
 }
 
 //The alias is to avoid count(predicate) as name.
@@ -303,28 +331,30 @@ func (q *GeneratedQuery) SetSubAggregate(path string, alias string, aggregate Ag
 	return q
 }
 
-func (q *GeneratedQuery) createVariableString() string {
-	if len(q.VarMap) == 0 {
-		return ""
+//It does not build it concurrently so just increment a counter.
+func (q *GeneratedQuery) registerVariable(typ VarType, value string) string {
+	if q.varBuilder.Len() != 0 {
+		q.varBuilder.WriteByte(',')
 	}
-	sb := bytes.Buffer{}
-	sb.WriteString("query test(")
-	sb.WriteString(q.Variables())
-	sb.WriteByte(')')
-	return sb.String()
+	var val int
+	if q.VarFunc != nil {
+		val = q.VarFunc()
+	} else {
+		val = q.varCounter
+		q.varCounter++
+	}
+	var key = "$"+strconv.Itoa(val)
+	q.varBuilder.WriteString(key+":"+string(typ))
+	q.VarMap[key] = value
+	return key
 }
 
-func (q *GeneratedQuery) GetNextVariable() int {
-	q.varCounter++
-	return q.varCounter - 1
-}
-
-// JSON returns a json string with "query" field.
-// shouldVar tells if it should print out the GraphQL variable string.
+// JSON returns a json create with "query" field.
+// shouldVar tells if it should print out the GraphQL variable create.
 /*
 func (q *GeneratedQuery) JSON(shouldVar bool) ([]byte, error) {
 	if q.VarMap == nil {
-		q.VarMap = make(map[string]VarObject)
+		q.VarMap = make(map[create]VarObject)
 	}
 	if q.Type == TypeMutate {
 		if len(q.Mutations) == 0 {
@@ -366,19 +396,19 @@ func (q *GeneratedQuery) ShouldDeserialize(b bool) *GeneratedQuery {
 }
 
 /*
-func DeleteDNode(d DNode, ctx context.Context, sync bool, txn *TxnQuery) (map[string]string, error) {
+func DeleteDNode(d DNode, ctx context.Context, sync bool, txn *TxnQuery) (map[create]create, error) {
 	m := Mutation{}
 	m.Object = d.DeleteUIDS()
 	m.Type = MutateDelete
 	return MutateMany(ctx, sync, nil, m)
 }
 
-func CreateDNode(js DNode, sync bool, txn *TxnQuery) (map[string]string, error) {
+func CreateDNode(js DNode, sync bool, txn *TxnQuery) (map[create]create, error) {
 	js.SetType()
 	return saveNodeInternal(js, sync, txn)
 }
 
-func saveInterface(ctx context.Context, txn *TxnQuery, v interface{}) (map[string]string, error) {
+func saveInterface(ctx context.Context, txn *TxnQuery, v interface{}) (map[create]create, error) {
 	m := Mutation{}
 	m.Type = MutateSet
 	m.Object = v
@@ -399,14 +429,14 @@ func deleteInterfaceBuffer(sync bool, txn *TxnQuery, val interface{}) {
 	MutateMany(context.Background(), false, txn, m)
 }
 
-func saveNodeInternal(js DNode, sync bool, txn *TxnQuery) (map[string]string, error) {
+func saveNodeInternal(js DNode, sync bool, txn *TxnQuery) (map[create]create, error) {
 	m := Mutation{}
 	m.Object = js.GetAllInfo(true)
 	m.Type = MutateSet
 	return MutateMany(context.Background(), sync, nil, m)
 }
 
-func SaveMultiplePreds(uid string, pred []string, ctx context.Context, sync bool, txn *TxnQuery, vals ...interface{}) error {
+func SaveMultiplePreds(uid create, pred []create, ctx context.Context, sync bool, txn *TxnQuery, vals ...interface{}) error {
 	if len(pred) != len(vals) {
 		return errors.New("saveMultiple: invalid pred to vals len")
 	}
@@ -420,7 +450,7 @@ func SaveMultiplePreds(uid string, pred []string, ctx context.Context, sync bool
 	return err
 }
 
-func SaveDNodes(sync bool, txn *TxnQuery, js ...DNode) (map[string]string, error) {
+func SaveDNodes(sync bool, txn *TxnQuery, js ...DNode) (map[create]create, error) {
 	var m = make([]Mutation, len(js))
 	for k, v := range js {
 		v.SetType()
@@ -437,7 +467,7 @@ func SaveDNodes(sync bool, txn *TxnQuery, js ...DNode) (map[string]string, error
 }
 
 //Returns UID for the "root" node mutation, they are of the form "blank-I", i order of mutation.
-func GetRootUID(ma map[string]string) string {
+func GetRootUID(ma map[create]create) create {
 	v, _ := ma["blank-0"]
 	return v
 }

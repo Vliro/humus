@@ -232,9 +232,10 @@ func (s *Schema) exec(ctx context.Context, queryString string, operationName str
 }
 
 func (s *Schema) validateSchema() error {
+	//Input from Vliro: Not needed for just a schema. Commented out.
 	// https://graphql.github.io/graphql-spec/June2018/#sec-Root-Operation-Types
 	// > The query root operation type must be provided and must be an Object type.
-	if err := validateRootOp(s.Schema, "query", true); err != nil {
+	/*if err := validateRootOp(s.Schema, "query", true); err != nil {
 		return err
 	}
 	// > The mutation root operation type is optional; if it is not provided, the service does not support mutations.
@@ -246,7 +247,7 @@ func (s *Schema) validateSchema() error {
 	// > support subscriptions. If it is provided, it must be an Object type.
 	if err := validateRootOp(s.Schema, "subscription", false); err != nil {
 		return err
-	}
+	}*/
 	return nil
 }
 

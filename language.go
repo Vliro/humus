@@ -2,6 +2,8 @@ package mulbase
 
 type Language string
 
+//A list of possible languages.
+//TODO: Do not make these static constants?
 const (
 	LanguageDefault = "en"
 	LanguageSwedish = "se"

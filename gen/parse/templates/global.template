@@ -1,0 +1,19 @@
+{{/* Global fields. */}}
+//Beginning of field.template. General functions.
+var globalFields = make(map[string]mulbase.Field)
+
+func GetField(name string) mulbase.Field {
+	return globalFields[name]
+}
+
+func MakeField(name string, flags mulbase.FieldMeta) mulbase.Field {
+    var field = mulbase.MakeField(name, flags)
+    if _,ok := globalFields[name]; !ok {
+        globalFields[name] = field
+    }
+    return field
+}
+
+func GetGlobalFields() map[string]mulbase.Field {
+    return globalFields
+}

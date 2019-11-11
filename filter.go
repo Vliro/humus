@@ -4,6 +4,7 @@ import (
 	"bytes"
 )
 
+//Filter represents an object in the query that will be serialized as @filter (function...)
 type Filter struct {
 	Function *Function
 }
@@ -14,12 +15,12 @@ func MakeFilter(f *Function) *Filter {
 	return fil
 }
 
-func (f *Filter) stringChan(q *GeneratedQuery, parent string, sb *bytes.Buffer) {
+func (f *Filter) create(q *GeneratedQuery, parent string, sb *bytes.Buffer) {
 	if f != nil && f.Function != nil {
 		sb.WriteString(tokenFilter)
 		sb.WriteString(tokenLP)
 		if f.Function != nil {
-			f.Function.string(q, parent, sb)
+			f.Function.create(q, parent, sb)
 		}
 		sb.WriteString(tokenRP)
 	}

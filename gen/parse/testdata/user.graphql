@@ -1,0 +1,24 @@
+type User {
+    Name: String!
+    Email: String!
+    Password: String!
+    Registered: DateTime!
+    Rank: Int!
+    Exp: Int!
+    Active: Boolean!
+    LastLogin: DateTime!
+    Speed: Int!
+    Jump: Int!
+    Acceleration: Int!
+    Power: Int!
+    Hats: [Int!]!
+    Heads: [Int!]!
+    Bodies: [Int!]!
+    Feets: [Int!]!
+    Hat: Int!
+    Head: Int!
+    Body: Int!
+    Feet: Int!
+
+    Levels: [Level!]!
+}

@@ -6,7 +6,11 @@ type StaticQuery struct {
 	Query string
 }
 
-func (s StaticQuery) Process() ([]byte, map[string]string, error) {
+func (s StaticQuery) Type() QueryType {
+	return QueryRegular
+}
+
+func (s StaticQuery) Process(sch schemaList) ([]byte, map[string]string, error) {
 	return []byte(s.Query), nil, nil
 }
 

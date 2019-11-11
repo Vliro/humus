@@ -3,7 +3,6 @@ package mulbase
 import (
 	"bytes"
 	"fmt"
-	"strconv"
 	"strings"
 )
 
@@ -50,6 +49,7 @@ func (o Ordering) String() string {
 	return s.String()
 }
 
+//If you change the names here make sure to follow the type Type + name as dictated in mulgen.
 type VarType string
 
 const (
@@ -142,30 +142,22 @@ func (f *Function) mapVariables(q *GeneratedQuery) {
 			slice = append(slice, "\""+v.Value.(string)+"\"")
 			continue
 		}
-		if v.Type == TypeDefault {
+		/*if v.Type == TypeDefault {
 			slice = append(slice, fmt.Sprintf("%v", v.Value))
 			continue
-		}
+		}*/
 		//Build the variable using the integer from the query.
-		var cc = q.GetNextVariable()
-		str := "$" + strconv.Itoa(cc)
-		var m VarObject
-		m.varType = v.Type
-		m.val = v.Value
-		q.VarMap[str] = m
-		slice = append(slice, str)
+		key := q.registerVariable(v.Type, fmt.Sprintf("%v", v.Value))
+		slice = append(slice, key)
 	}
 	f.mapValues = slice
 }
 
-func (f *Function) string(q *GeneratedQuery, parent string, sb *bytes.Buffer) {
-	if f == nil {
-		return
-	}
-	if f.Type == "" {
-		return
-	}
+func (f *Function) create(q *GeneratedQuery, parent string, sb *bytes.Buffer) {
+	//No nil checks etc. Should be done before.
+	//Map the variables to their proper value.
 	f.mapVariables(q)
+	//Write the default values.
 	sb.WriteString(strings.ToLower(string(f.Type)))
 	sb.WriteString(tokenLP)
 	sb.WriteString(f.buildVarString())
@@ -212,15 +204,9 @@ func (f *Function) check(q *GeneratedQuery) error {
 	switch f.Type {
 	case FunctionHas:
 		if len(f.Variables) != 1 && f.Variables[0].Type != TypePred {
-			goto error
+			return fmt.Errorf("invalid function")
 		}
 		break
-	default:
-		if len(f.Variables) < 1 {
-			goto error
-		}
 	}
 	return nil
-error:
-	return NewFunctionError(f.Type)
 }

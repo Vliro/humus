@@ -16,7 +16,7 @@ func newMeta() *Schema {
 	}
 	return s
 }
-
+//TODO: Continue adding dgraph directives.
 var metaSrc = `
 	# The ` + "`" + `Int` + "`" + ` scalar type represents non-fractional signed whole numeric values. Int can represent values between -(2^31) and 2^31 - 1.
 	scalar Int
@@ -32,7 +32,9 @@ var metaSrc = `
 
 	# The ` + "`" + `ID` + "`" + ` scalar type represents a unique identifier, often used to refetch an object or as key for a cache. The ID type appears in a JSON response as a String; however, it is not intended to be human-readable. When expected as an input type, any string (such as ` + "`" + `"4"` + "`" + `) or integer (such as ` + "`" + `4` + "`" + `) input value will be accepted as an ID.
 	scalar ID
-
+	
+	#Dgraph datetime
+	scalar DateTime
 	# Directs the executor to include this field or fragment only when the ` + "`" + `if` + "`" + ` argument is true.
 	directive @include(
 		# Included when true.
@@ -52,7 +54,14 @@ var metaSrc = `
 		# [Markdown](https://daringfireball.net/projects/markdown/).
 		reason: String = "No longer supported"
 	) on FIELD_DEFINITION | ENUM_VALUE
-
+	#Allows DGraph search.
+	directive @search(
+	  by: [String]
+	) on FIELD_DEFINITION | ENUM_VALUE
+	#Allow DGraph inverses.
+	directive @hasInverse(
+	  field: String
+	) on FIELD_DEFINITION | ENUM_VALUE
 	# A Directive provides a way to describe alternate runtime execution and type validation behavior in a GraphQL document.
 	#
 	# In some cases, you need to provide options to alter GraphQL's execution behavior

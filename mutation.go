@@ -6,10 +6,17 @@ type SingleMutation struct {
 }
 
 func (m SingleMutation) Type() QueryType {
+	if m.QueryType == QueryRegular {
+		panic("mutation: set to invalid query type.")
+	}
 	return m.QueryType
 }
 
-func (m SingleMutation) Process() ([]byte, map[string]string, error) {
+func checkInterface() {
+
+}
+
+func (m SingleMutation) Process(schemaList) ([]byte, map[string]string, error) {
 	//panic("do not process a single mutation")
 	b, _ := json.Marshal(m.Object)
 	return b, nil, nil
@@ -20,7 +27,7 @@ type MutationQuery struct {
 	Type MutationType
 }
 
-func (m *MutationQuery) Process() (string, map[string]string, error) {
+func (m *MutationQuery) Process(list schemaList) (string, map[string]string, error) {
 	return "", nil, nil
 }
 

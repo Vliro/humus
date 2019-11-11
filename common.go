@@ -1,6 +1,7 @@
 package mulbase
 
 import (
+	"context"
 )
 
 //The common node type that is inherited. This differs from the DNode which is an interface.
@@ -29,25 +30,31 @@ func CreateMutation(obj interface{}, typ QueryType) SingleMutation {
 		QueryType:   typ,
 	}
 }
+
+//Here begins common queries.
+
+func GetByUid(uid string, fields []Field, txn *Txn, value interface{}) error {
+	return txn.RunQuery(context.Background(), NewQuery().SetFunction(MakeFunction(FunctionUid).AddValue(uid, TypeUid)).SetFields(fields), value)
+}
 /*
-func makeUIDMap(u string) map[string]interface{} {
-	m := make(map[string]interface{})
+func makeUIDMap(u create) map[create]interface{} {
+	m := make(map[create]interface{})
 	m["uid"] = u
 	return m
 }
 
 //Returns if the object exists
 //Needs a []interface{} argument
-func ExistsByPredicate(pred string, val string, varType VarType) *GeneratedQuery {
+func ExistsByPredicate(pred create, val create, varType VarType) *GeneratedQuery {
 	q := NewQuery().SetFunction(MakeFunction(FunctionEquals).
-		AddValue(pred, TypePred).AddValue(val, varType)).SetFieldsBasic([]string{pred})
+		AddValue(pred, TypePred).AddValue(val, varType)).SetFieldsBasic([]create{pred})
 	return q
 }
 
 //ListAddMutation returns the mutation object for ListAdd.
-func ListAddMutation(node DNode, pred string, val ...interface{}) Mutation {
+func ListAddMutation(node DNode, pred create, val ...interface{}) Mutation {
 	m := Mutation{}
-	ma := make(map[string]interface{})
+	ma := make(map[create]interface{})
 	ma["uid"] = node.UID()
 	ma[pred] = val
 	m.Object = ma
@@ -56,12 +63,12 @@ func ListAddMutation(node DNode, pred string, val ...interface{}) Mutation {
 }
 
 //ListAdd sets the value for pred to val. Val can be of single type, however it is for a list. ([int]).
-func ListAdd(node DNode, pred string, ctx context.Context,sync bool,txn *TxnQuery, val ...interface{}) (map[string]string, error) {
+func ListAdd(node DNode, pred create, ctx context.Context,sync bool,txn *TxnQuery, val ...interface{}) (map[create]create, error) {
 	return MutateMany(ctx, sync, txn, ListAddMutation(node, pred, val...))
 }
 //SetRelation sets a [uid] value.
-func SetRelation(node DNode, pred string, ctx context.Context, sync bool, txn *TxnQuery, val ...DNode) (map[string]string, error) {
-	ma := make(map[string]interface{})
+func SetRelation(node DNode, pred create, ctx context.Context, sync bool, txn *TxnQuery, val ...DNode) (map[create]create, error) {
+	ma := make(map[create]interface{})
 	ma["uid"] = node.UID()
 	ma[pred] = val
 	if sync {
@@ -73,13 +80,13 @@ func SetRelation(node DNode, pred string, ctx context.Context, sync bool, txn *T
 }
 
 //ListAddUid is virtually the same as ListAdd however only takes in the uid.
-func ListAddUid(node DNode, pred string, ctx context.Context, sync bool, txn *TxnQuery, val ...string) (map[string]string, error) {
+func ListAddUid(node DNode, pred create, ctx context.Context, sync bool, txn *TxnQuery, val ...create) (map[create]create, error) {
 	var b = make([]BaseNode, len(val))
 	for k, v := range val {
 		b[k].Uid = v
 	}
 	m := Mutation{}
-	ma := make(map[string]interface{})
+	ma := make(map[create]interface{})
 	ma["uid"] = node.UID()
 	ma[pred] = b
 	m.Object = ma
@@ -87,7 +94,7 @@ func ListAddUid(node DNode, pred string, ctx context.Context, sync bool, txn *Tx
 	return MutateMany(ctx, sync,txn, m)
 }
 
-func SaveObject(sync bool, txn *TxnQuery,obj interface{}) (map[string]string, error) {
+func SaveObject(sync bool, txn *TxnQuery,obj interface{}) (map[create]create, error) {
 	if sync {
 		return saveInterface(context.Background(),txn, obj)
 	} else {
@@ -96,14 +103,14 @@ func SaveObject(sync bool, txn *TxnQuery,obj interface{}) (map[string]string, er
 	return nil, nil
 }
 
-//SetValue sets a singular value in the database, i.e. string/bool/int etc.
-func SetValue(node DNode, pred string, ctx context.Context, sync bool, txn *TxnQuery, value interface{}) (map[string]string, error) {
+//SetValue sets a singular value in the database, i.e. create/bool/int etc.
+func SetValue(node DNode, pred create, ctx context.Context, sync bool, txn *TxnQuery, value interface{}) (map[create]create, error) {
 	return MutateMany(ctx, sync, txn, SetValueMutation(node, pred, value))
 }
 
-//SetValue sets a singular value in the database, i.e. string/bool/int etc.
-func SetValueMutation(node DNode, pred string, value interface{}) Mutation {
-	m := make(map[string]interface{})
+//SetValue sets a singular value in the database, i.e. create/bool/int etc.
+func SetValueMutation(node DNode, pred create, value interface{}) Mutation {
+	m := make(map[create]interface{})
 	m["uid"] = node.UID()
 	m[pred] = value
 	return Mutation{
@@ -114,7 +121,7 @@ func SetValueMutation(node DNode, pred string, value interface{}) Mutation {
 
 //Performs multiple mutations.
 //Do not mix delete/set.
-func MutateMany(ctx context.Context, sync bool, txn *TxnQuery, m ...Mutation) (map[string]string, error) {
+func MutateMany(ctx context.Context, sync bool, txn *TxnQuery, m ...Mutation) (map[create]create, error) {
 	if sync {
 		q := NewMutate()
 		q.Mutations = m
@@ -131,9 +138,9 @@ func MutateMany(ctx context.Context, sync bool, txn *TxnQuery, m ...Mutation) (m
 	return nil, nil
 }
 
-func GetUidTypes(uid string) []string {
-	var field = MakeFieldHolder([]string{"dgraph.type"})
-	var m = make(map[string]interface{})
+func GetUidTypes(uid create) []create {
+	var field = MakeFieldHolder([]create{"dgraph.type"})
+	var m = make(map[create]interface{})
 	Find(uid, field).Execute(nil, &m)
 	return nil
 }
@@ -141,10 +148,10 @@ func GetUidTypes(uid string) []string {
 //FacetMutation sets a facet value.
 //facetName is of the form edgeName|value.
 //Needs the top and sub DNode, the top predicate name and the facetValue.
-func FacetMutation(node DNode, out DNode, pred string, facetName string, facetValue interface{}) Mutation {
-	m := make(map[string]interface{})
+func FacetMutation(node DNode, out DNode, pred create, facetName create, facetValue interface{}) Mutation {
+	m := make(map[create]interface{})
 	m["uid"] = node.UID()
-	innerM := make(map[string]interface{})
+	innerM := make(map[create]interface{})
 	innerM[pred+"|"+facetName] = facetValue
 	innerM["uid"] = out.UID()
 	m[pred] = innerM
@@ -153,10 +160,10 @@ func FacetMutation(node DNode, out DNode, pred string, facetName string, facetVa
 }
 
 //DeleteUIDS deletes a list of UIDs.
-func DeleteUIDS(ctx context.Context, sync bool, txn *TxnQuery, uids ...string) error {
+func DeleteUIDS(ctx context.Context, sync bool, txn *TxnQuery, uids ...create) error {
 	var arr []Mutation
 	for _, v := range uids {
-		m := make(map[string]string)
+		m := make(map[create]create)
 		m["uid"] = v
 		arr = append(arr, Mutation{Object: m, Type: MutateDelete})
 	}
@@ -164,29 +171,29 @@ func DeleteUIDS(ctx context.Context, sync bool, txn *TxnQuery, uids ...string) e
 	return err
 }
 
-func deleteUIDMutation(root string, pred string) map[string]interface{} {
-	m := make(map[string]interface{})
+func deleteUIDMutation(root create, pred create) map[create]interface{} {
+	m := make(map[create]interface{})
 	m["uid"] = root
 	m[pred] = nil
 	return m
 }
 
 //Find object by uid.
-func Find(uid string, f *FieldHolder) *GeneratedQuery {
+func Find(uid create, f *FieldHolder) *GeneratedQuery {
 	q := NewQuery().
 		SetFunction(MakeFunction("uid").AddValue(uid, TypeUid)).
 		SetField(f)
 	return q
 }
 
-func FindHas(pred string, f *FieldHolder) *GeneratedQuery {
+func FindHas(pred create, f *FieldHolder) *GeneratedQuery {
 	q := NewQuery().
 		SetFunction(MakeFunction(FunctionHas).AddPred(pred)).SetField(f)
 	return q
 }
 
 //v slice.
-func FindNEqualsOrder(predicate string, value string, n int, orderpred string, t OrderType, f *FieldHolder, offset int) *GeneratedQuery {
+func FindNEqualsOrder(predicate create, value create, n int, orderpred create, t OrderType, f *FieldHolder, offset int) *GeneratedQuery {
 	q := NewQuery().
 		SetFunction(MakeFunction(FunctionEquals).AddPredValue(predicate, value, TypeStr).AddOrdering(t, orderpred)).AddSubCount(CountFirst, "", n)
 	if offset > 0 {
@@ -195,7 +202,7 @@ func FindNEqualsOrder(predicate string, value string, n int, orderpred string, t
 	q.SetField(f)
 	return q
 }
-func UidToInt(uid string) int64 {
+func UidToInt(uid create) int64 {
 	if len(uid) < 2 {
 		return -1
 	}
@@ -208,53 +215,53 @@ func UidToInt(uid string) int64 {
 }
 
 //ListDelete removes values from a list.
-func ListDelete(inp DNode, pred string, sync bool, txn *TxnQuery,vals ...interface{}) {
-	var m = make(map[string]interface{})
+func ListDelete(inp DNode, pred create, sync bool, txn *TxnQuery,vals ...interface{}) {
+	var m = make(map[create]interface{})
 	m["uid"] = inp.UID()
 	m[pred] = vals
 	deleteInterfaceBuffer(sync,txn, m)
 }
 
 //ListDelete removes values from a list, this includes [uid].
-func ListDeleteUid(inp DNode, pred string, ctx context.Context, sync bool,txn *TxnQuery, vals ...string) (map[string]string, error) {
+func ListDeleteUid(inp DNode, pred create, ctx context.Context, sync bool,txn *TxnQuery, vals ...create) (map[create]create, error) {
 	return MutateMany(ctx, sync, txn, ListDeleteUidMutation(inp, pred, vals...))
 }
 
-func DeleteMutation(uid string) Mutation {
-	m := make(map[string]interface{})
+func DeleteMutation(uid create) Mutation {
+	m := make(map[create]interface{})
 	m["uid"] = uid
 	return Mutation{MutateDelete, m}
 }
 
 //ListDeleteUidMutation removes values from a list, this includes [uid]. Returns instead a mutation object.
-func ListDeleteUidMutation(inp DNode, pred string, vals ...string) Mutation {
-	var m = make(map[string]interface{})
+func ListDeleteUidMutation(inp DNode, pred create, vals ...create) Mutation {
+	var m = make(map[create]interface{})
 	m["uid"] = inp.UID()
 	var val []interface{}
 	for _, v := range vals {
-		val = append(val, map[string]interface{}{"uid": v})
+		val = append(val, map[create]interface{}{"uid": v})
 	}
 	m[pred] = val
 	return Mutation{MutateDelete, m}
 }
 
-func IntToUid(id int64) string {
+func IntToUid(id int64) create {
 	return "0x" + strconv.FormatInt(id, 16)
 }
 
-func UidToIntString(uid string) string {
+func UidToIntString(uid create) create {
 	return strconv.FormatInt(UidToInt(uid), 10)
 }
 
 //Finds N Values following the predicate and by the order specified. Needs a slice.
-func FindNHasOrder(predicate string, n int, orderpred string, t OrderType, f *FieldHolder) *GeneratedQuery {
+func FindNHasOrder(predicate create, n int, orderpred create, t OrderType, f *FieldHolder) *GeneratedQuery {
 	q := NewQuery().
 		SetFunction(MakeFunction(FunctionHas).AddPred(predicate).AddOrdering(t, orderpred)).AddSubCount(CountFirst, "", n)
 	return q
 }
 
 //Finds by predicate, that is takes a predicate value to search for.
-func FindByPredicate(pred string, t VarType, f *FieldHolder, val ...interface{}) *GeneratedQuery {
+func FindByPredicate(pred create, t VarType, f *FieldHolder, val ...interface{}) *GeneratedQuery {
 	if t == TypePred {
 		panic("avoid sql injections, typepred used incorrectly.")
 	}

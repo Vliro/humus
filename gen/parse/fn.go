@@ -10,6 +10,7 @@ type fieldTemplate struct {
 	Name   string
 	Parent string
 	Type   string
+	Tag string
 }
 
 type GetTemplate struct {
@@ -52,7 +53,7 @@ func processFieldTemplates(obj *schema.Object, w io.Writer) {
 		panic("missing get template")
 	}
 	for _, v := range obj.Fields {
-		var typ common.Type = v.Type
+		var typ = v.Type
 		for {
 			if val, ok := typ.(*common.NonNull); ok {
 				typ = val.OfType
@@ -64,11 +65,14 @@ func processFieldTemplates(obj *schema.Object, w io.Writer) {
 			}
 			break
 		}
+		//check if is of object type.
 		if val, ok := typ.(*schema.Object); ok {
+			//Fill the data with appropriate data values.
 			var data fieldTemplate
 			data.Type = val.GetName()
 			data.Name = v.GetName()
 			data.Parent = obj.GetName()
+			data.Tag = data.Parent + "." + data.Name
 			output.Fields = append(output.Fields, data)
 		}
 	}

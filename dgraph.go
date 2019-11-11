@@ -4,6 +4,7 @@ import (
 	"context"
 	"crypto/tls"
 	"crypto/x509"
+	"fmt"
 	"google.golang.org/grpc/encoding/gzip"
 	"io/ioutil"
 	"strconv"
@@ -16,22 +17,29 @@ import (
 )
 
 type DB struct {
-	d *dgo.Dgraph
-	ip string
-	port int
-	tls bool
+	d        *dgo.Dgraph
+	ip       string
+	port     int
+	tls      bool
 	endPoint string
+	schema   schemaList
 }
+
 //NewTxn creates a new txn for interacting with database.
 func (d *DB) NewTxn(readonly bool) *Txn {
+	if d.schema == nil {
+		panic("transaction without schema")
+	}
 	txn := new(Txn)
 	if readonly {
 		txn.txn = d.d.NewReadOnlyTxn()
 	} else {
 		txn.txn = d.d.NewTxn()
 	}
+	txn.sch = d.schema
 	return txn
 }
+
 //Queries outside a Txn context.
 //This is not intended for mutations.
 func (d *DB) Query(ctx context.Context, q Query, obj interface{}) error {
@@ -59,6 +67,19 @@ func (d *DB) Mutate(ctx context.Context, q Query) error {
 	return err
 }
 
+//Sets the database schema. This is required for any query.
+func (d *DB) SetSchema(sch map[string]Field) {
+	if sch == nil {
+		panic("nil schema map supplied")
+	}
+	d.schema = sch
+}
+//Simply performs the alter command.
+func (d *DB) Alter(ctx context.Context, op *api.Operation) error {
+	err := d.d.Alter(ctx, op)
+	return err
+}
+
 type QueryType uint8
 
 const (
@@ -69,7 +90,7 @@ const (
 
 type Query interface {
 	//Process the query type in order to send to the database.
-	Process() ([]byte, map[string]string, error)
+	Process(schemaList) ([]byte, map[string]string, error)
 	//What type of query is this? Mutation(set/delete), regular query?
 	Type() QueryType
 }
@@ -78,15 +99,17 @@ type Query interface {
 //First parameter is the root CA.
 //Second is the client crt, third is the client key.
 //Fourth is the node crt, fifth is the node key.
-func Init(dip string, dport int, tls bool, tlsPath ...string) {
+func Init(dip string, dport int, tls bool, tlsPath ...string) *DB {
 	if dport < 1000 {
 		panic("graphinit: invalid dgraph port number")
 	}
-	connect(dip, dport, tls, tlsPath)
-	initSchema()
+	db := connect(dip, dport, tls, tlsPath)
+	return db
+	//initSchema()
 }
-//Takes a connection string of the form http://ip:port/
-func connect(ip string, port int, dotls bool, paths []string) *DB{
+
+//Takes a connection create of the form http://ip:port/
+func connect(ip string, port int, dotls bool, paths []string) *DB {
 	//TODO: allow multiple dgraph clusters.
 	var conn *grpc.ClientConn
 	var err error
@@ -121,16 +144,19 @@ func connect(ip string, port int, dotls bool, paths []string) *DB{
 	}
 	return db
 }
+
 //Txn is a non thread-safe API for interacting with the database.
 //TODO: Should it be thread-safe?
 type Txn struct {
 	//All queries performed by this transaction.
 	//Allows for safe storage in Queries.
-	mutex sync.Mutex
+	mutex   sync.Mutex
 	Queries []Query
 	counter uint32
 	//The actual dgraph transaction.
-	txn     *dgo.Txn
+	txn *dgo.Txn
+	//List of schema passed by from the database.
+	sch schemaList
 }
 
 func (t *Txn) Commit(ctx context.Context) error {
@@ -140,10 +166,15 @@ func (t *Txn) Commit(ctx context.Context) error {
 func (t *Txn) Discard(ctx context.Context) error {
 	return t.txn.Discard(ctx)
 }
+
+func (t *Txn) SetSchema(sch schemaList) {
+	t.sch = sch
+}
+
 //Perform a single mutation.
 func (t *Txn) mutate(ctx context.Context, q Query) error {
 	//Add a single mutation to the query list.
-	byt,_, err := q.Process()
+	byt, _, err := q.Process(t.sch)
 	if err != nil {
 		return err
 	}
@@ -151,27 +182,28 @@ func (t *Txn) mutate(ctx context.Context, q Query) error {
 	if q.Type() == QueryDelete {
 		//TODO: fix this
 		m.DeleteJson = byt
-	} else if q.Type() == QuerySet{
+	} else if q.Type() == QuerySet {
 		m.SetJson = byt
 	}
 	_, err = t.txn.Mutate(ctx, &m)
 	return err
 }
+
 //Upsert follows the new 1.1 api and performs an upsert.
 //TODO: I really don't know what this does so work on it later.
 func (t *Txn) Upsert(ctx context.Context, q Query, m []*api.Mutation, obj ...interface{}) error {
 	if t.txn == nil {
 		return Error(errTransaction)
 	}
-	b, ma, err := q.Process()
+	b, ma, err := q.Process(t.sch)
 	if err != nil {
 		return Error(err)
 	}
 	var req = api.Request{
-		//TODO: Dont use string(b) as that performs unnecessary allocations. We do not perform any changes to b which should not cause any issues.
-		Query:                bytesToStringUnsafe(b),
-		Vars:                 ma,
-		Mutations:            m,
+		//TODO: Dont use create(b) as that performs unnecessary allocations. We do not perform any changes to b which should not cause any issues.
+		Query:     bytesToStringUnsafe(b),
+		Vars:      ma,
+		Mutations: m,
 	}
 	resp, err := t.txn.Do(ctx, &req)
 	if err != nil {
@@ -181,12 +213,13 @@ func (t *Txn) Upsert(ctx context.Context, q Query, m []*api.Mutation, obj ...int
 	return Error(err)
 }
 
-func (t *Txn) query(ctx context.Context, q Query, objs []interface{}) error{
-	str, m, err := q.Process()
+func (t *Txn) query(ctx context.Context, q Query, objs []interface{}) error {
+	str, m, err := q.Process(t.sch)
 	if err != nil {
 		return err
 	}
-	resp, err := t.txn.QueryWithVars(ctx,bytesToStringUnsafe(str),m)
+	fmt.Println(string(str))
+	resp, err := t.txn.QueryWithVars(ctx, bytesToStringUnsafe(str), m)
 	if err != nil {
 		return Error(err)
 	}
@@ -198,7 +231,7 @@ func (t *Txn) query(ctx context.Context, q Query, objs []interface{}) error{
 }
 
 //RunQuery executes the GraphQL+- query.
-//If q is a mutation query I expect objs to be supplied in q.
+//If q is a mutation query the mutation objects are supplied in q and not in objs.
 func (t *Txn) RunQuery(ctx context.Context, q Query, objs ...interface{}) error {
 	//if t.txn == nil {
 	//	return Error(errTransaction)
@@ -214,11 +247,11 @@ func (t *Txn) RunQuery(ctx context.Context, q Query, objs ...interface{}) error 
 		return Error(t.mutate(ctx, q))
 	}
 	return Error(errInvalidType)
-	/*m := make(map[string]string)
+	/*m := make(map[create]create)
 	//TODO: multiple GraphQL variables.
 	for k, v := range q.VarMap {
 		switch g := v.val.(type) {
-		case string:
+		case create:
 			m[k] = g
 			break
 		case int:

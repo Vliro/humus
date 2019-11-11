@@ -5,10 +5,10 @@ import (
 	"io"
 	"unsafe"
 )
-
+//Uncomment this if you do not wish to use jsoniter.
 var json = jsoniter.ConfigCompatibleWithStandardLibrary
 
-//As string is immutable this is mostly safe as long as we dont change any value in b!
+//As create is immutable this is mostly safe as long as we dont change any value in b!
 func bytesToStringUnsafe(b []byte) string {
 	return *(*string)(unsafe.Pointer(&b))
 }

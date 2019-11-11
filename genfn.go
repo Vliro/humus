@@ -1,19 +1,60 @@
 package mulbase
 
+import "context"
+
 //Functions associated with the generated package
 
-func GetChild(node DNode, field Field, to interface{}) error {
+func GetChild(node DNode, child string, fields []Field, txn *Txn, to interface{}) error {
 	uid := node.UID()
 	if uid == "" {
 		return Error(ErrUID)
 	}
-	return nil
+	var qu = NewQuery()
+	qu.SetFunction(MakeFunction(FunctionUid).AddValue(uid, TypeUid))
+	qu.Fields = []Field{
+		Field {
+			Name: child,
+			Fields: fields,
+		},
+	}
+	return txn.RunQuery(context.Background(), qu, to)
 }
 
-func AttachToList(node DNode, field Field, ) {
-
+func AttachToListObject(node DNode, field Field, txn *Txn, value DNode) error {
+	if node.UID() == "" {
+		return ErrUID
+	}
+	if value.UID() == "" {
+		value.SetType()
+	}
+	var mapVal = make(map[string]interface{})
+	mapVal["uid"] = node.UID()
+	mapVal[field.Name] = value
+	var m SingleMutation
+	m.QueryType = QuerySet
+	m.Object = mapVal
+	err := txn.RunQuery(context.Background(), m)
+	return err
 }
 //WriteNode saves a nodes fields that are of scalar types.
-func WriteNode(node DNode, async bool, txn *Txn) {
-
+func SetScalarValue(node DNode, field Field, txn *Txn, value interface{}) error {
+	if node.UID() == "" {
+		return ErrUID
+	}
+	var mapVal = make(map[string]interface{})
+	mapVal["uid"] = node.UID()
+	mapVal[field.Name] = value
+	var m SingleMutation
+	m.QueryType = QuerySet
+	m.Object = value
+	err := txn.RunQuery(context.Background(), m)
+	return err
+}
+//SaveNode ensures types are set of a new node. It serializes the entire node excluding any UID dependencies.
+func SaveScalars(node DNode, txn *Txn) error {
+	node.SetType()
+	return txn.RunQuery(context.Background(), SingleMutation{
+		Object:    node.Values(),
+		QueryType: QuerySet,
+	})
 }

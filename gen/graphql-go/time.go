@@ -15,7 +15,7 @@ type Time struct {
 // ImplementsGraphQLType maps this custom Go type
 // to the graphql scalar type in the Schema.
 func (Time) ImplementsGraphQLType(name string) bool {
-	return name == "Time"
+	return name == "DateTime"
 }
 
 // UnmarshalGraphQL is a custom unmarshaler for Time

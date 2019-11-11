@@ -2,15 +2,45 @@ package mulbase
 
 import (
 	"context"
+	"os"
+	"os/exec"
 	"testing"
 )
 
-func TestQuery(t *testing.T) {
-	q := GeneratedQuery{}
-	txn := new(Txn)
-	q.Fields = CharacterFields
-	q.Function = MakeFunction(FunctionHas).AddPred("test")
-	txn.RunQuery(context.Background(), &q, nil)
+var alpha, zero *exec.Cmd
+
+func TestMain(m *testing.M) {
+	d := setup()
+	makeSchema(d)
+	code := m.Run()
+	shutdown()
+	os.Exit(code)
 }
 
-var CharacterFields FieldList = []Field{MakeField("Character.name"), MakeField("Character.appearsIn")}
+func makeSchema(d *DB) {
+	q := StaticQuery{}
+	q.Query = "schema{}"
+	var m = make(map[string]interface{})
+	d.NewTxn(true).RunQuery(context.Background(), q, &m)
+	print(m)
+}
+
+func TestQuery(t *testing.T) {
+
+}
+
+func setup() *DB {
+	dz := exec.Command("dgraph zero")
+	da := exec.Command("dgraph alpha")
+	dz.Run()
+	da.Run()
+	zero = dz
+	alpha = da
+
+	return Init("localhost", 9080, false)
+}
+
+func shutdown() {
+	alpha.Process.Kill()
+	zero.Process.Kill()
+}

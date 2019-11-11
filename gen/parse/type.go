@@ -25,7 +25,7 @@ const bottomLine = "}\n"
 
 const fieldDecl = "var %vFields mulbase.FieldList = []mulbase.Field{%s} "
 
-const makeFieldName = "MakeField(%s)"
+const makeFieldName = "MakeField(%s, %v)"
 
 const fieldReceiver = "func (r *%s) "
 
@@ -33,6 +33,7 @@ type Field struct {
 	Tag  string
 	Name string
 	Type string
+	flags flags
 }
 
 var modelImports = []string{
@@ -62,6 +63,7 @@ func makeGoStruct(o *schema.Object) *bytes.Buffer {
 }
 
 //makeFieldList generates the field declarations, ie var Name FieldList = ...
+//and writes it to sb. It also ensures the proper generation of flag metadata.
 func makeFieldList(name string, fi []Field, sb *bytes.Buffer) {
 	var isb bytes.Buffer
 	for k, v := range fi {
@@ -71,7 +73,14 @@ func makeFieldList(name string, fi []Field, sb *bytes.Buffer) {
 		if v.Name == "" {
 			continue
 		}
-		isb.WriteString(fmt.Sprintf(makeFieldName, "\""+v.Tag+"\""))
+		var flagBuilder strings.Builder
+		//TODO: Include relevant metadata information in fields.
+		flagBuilder.WriteString("0")
+		if v.flags & flagScalar == 0 {
+			flagBuilder.WriteString("| mulbase.MetaObject")
+		}
+
+		isb.WriteString(fmt.Sprintf(makeFieldName, "\""+v.Tag+"\"", flagBuilder.String()))
 		if k != len(fi)-1 {
 			isb.WriteByte(',')
 		}
@@ -99,6 +108,7 @@ func writeField(root *schema.Object, name string, typ string, sb *bytes.Buffer, 
 		dbName))
 	fi.Name = strings.Title(name)
 	fi.Type = typ
+	fi.flags = flag
 	return fi
 }
 
@@ -118,18 +128,13 @@ func iterate(obj *schema.Object, data *schema.Field, field common.Type, sb *byte
 		*/
 		f |= flagPointer
 	case *schema.Scalar:
-		switch a.Name {
-		case "String":
-			typ = "string"
-		case "ID":
-			//UID
-			//typ = "mulbase.UID"
-			typ = ""
-		case "Boolean":
-			typ = "bool"
-		default:
-			panic("missing type")
+		//Set scalar.
+		f |= flagScalar
+		if val,ok := getBuiltIn(a.Name); ok {
+			typ = val
+			break
 		}
+		panic("missing type")
 	}
 	if typ != "" {
 		/*
@@ -153,8 +158,6 @@ func modelTemplate(name string, fields []Field, sb *bytes.Buffer) {
 	if templ == nil {
 		panic("missing Model template")
 	}
-
-
 	var m = modelStruct{
 		Name:   name,
 		Fields: fields,

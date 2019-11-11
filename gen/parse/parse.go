@@ -157,26 +157,33 @@ func Parse(input, output string) {
 }
 
 func generate(schema *schema.Schema, modelWriter io.Writer, fnWriter io.Writer) {
-	createModel(schema, modelWriter)
-	processFunctions(schema, fnWriter)
+	_,m := createModel(schema, modelWriter)
+	processFunctions(schema, fnWriter, m)
 }
 
 //Parses a single GraphQL file and writes to output.
-func createModel(s *schema.Schema, output io.Writer) {
+//Also generates a field map.
+func createModel(s *schema.Schema, output io.Writer) (error, map[string][]Field) {
 	//We now have the schema relevant for the file. First generate the models.
 	obj := s.Objects()
-	writeImports(modelImports, output)
+	//Use a temporary buffer to ensure we add imports last.
+	var tempBuffer bytes.Buffer
+	var fieldMap = make(map[string][]Field)
 	/*
 		Initially just create the go definitions.
 	*/
 	for _, vv := range obj {
-		buf := makeGoStruct(vv)
-		_, err := io.Copy(output, buf)
+		buf,m := makeGoStruct(vv)
+		fieldMap[vv.Name] = m
+		_, err := io.Copy(&tempBuffer, buf)
 
 		if err != nil {
 			panic(err)
 		}
 	}
+	writeImports(modelImports, output)
+	_ , err := io.Copy(output, &tempBuffer)
+	return err, fieldMap
 }
 
 var templates = map[string]string {

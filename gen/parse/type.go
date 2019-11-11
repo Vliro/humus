@@ -34,6 +34,8 @@ type Field struct {
 	Name string
 	Type string
 	flags flags
+	//like []*string
+	TypeLabel string
 }
 
 var modelImports = []string{
@@ -43,7 +45,7 @@ var modelImports = []string{
 
 //genFields generates the actual fields for the go definition.
 //the model generation does not use templates.
-func makeGoStruct(o *schema.Object) *bytes.Buffer {
+func makeGoStruct(o *schema.Object) (*bytes.Buffer, []Field) {
 	var sb bytes.Buffer
 	var fields []Field
 	sb.WriteString(fmt.Sprintf(topLine, o.Name))
@@ -58,8 +60,7 @@ func makeGoStruct(o *schema.Object) *bytes.Buffer {
 	sb.WriteString(bottomLine)
 	makeFieldList(o.Name, fields, &sb)
 	modelTemplate(o.Name, fields, &sb)
-
-	return &sb
+	return &sb, fields
 }
 
 //makeFieldList generates the field declarations, ie var Name FieldList = ...
@@ -77,9 +78,11 @@ func makeFieldList(name string, fi []Field, sb *bytes.Buffer) {
 		//TODO: Include relevant metadata information in fields.
 		flagBuilder.WriteString("0")
 		if v.flags & flagScalar == 0 {
-			flagBuilder.WriteString("| mulbase.MetaObject")
+			flagBuilder.WriteString("|mulbase.MetaObject")
 		}
-
+		if v.flags & flagArray != 0 {
+			flagBuilder.WriteString("|mulbase.MetaList")
+		}
 		isb.WriteString(fmt.Sprintf(makeFieldName, "\""+v.Tag+"\"", flagBuilder.String()))
 		if k != len(fi)-1 {
 			isb.WriteByte(',')
@@ -90,6 +93,7 @@ func makeFieldList(name string, fi []Field, sb *bytes.Buffer) {
 
 func writeField(root *schema.Object, name string, typ string, sb *bytes.Buffer, flag flags) Field {
 	var isb strings.Builder
+	var fi Field
 	if flag&flagArray != 0 {
 		isb.WriteString("[]")
 	}
@@ -97,18 +101,19 @@ func writeField(root *schema.Object, name string, typ string, sb *bytes.Buffer, 
 		isb.WriteByte('*')
 	}
 	isb.WriteString(typ)
-	var fi Field
 	//Do not capitalize the tag.
 	var dbName = root.Name + "." + name
 	fi.Tag = dbName
+	fi.TypeLabel = isb.String()
 	sb.WriteString(fmt.Sprintf(lineDeclaration,
 		//Ensure it is capitalized for export.
 		strings.Title(name),
-		isb.String(),
+		fi.TypeLabel,
 		dbName))
 	fi.Name = strings.Title(name)
 	fi.Type = typ
 	fi.flags = flag
+
 	return fi
 }
 

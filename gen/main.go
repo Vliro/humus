@@ -22,7 +22,8 @@ func main() {
 		}
 	}()
 	if *in == "" || *out == "" {
-		panic("missing input and/or output")
+		flag.Usage()
+		return
 	}
 	//Run the program.
 	parse.Parse(*in, *out)

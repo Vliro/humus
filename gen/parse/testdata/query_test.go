@@ -25,6 +25,23 @@ func TestQuery(t *testing.T) {
 }
 
 
+func TestSubPath(t *testing.T) {
+	db := mulbase.Init("172.17.0.2", 9080, false)
+	if db == nil {
+		t.Fail()
+		return
+	}
+	db.SetSchema(GetGlobalFields())
+	var q = mulbase.NewQuery()
+	q.SetFunction(mulbase.MakeFunction(mulbase.FunctionHas).AddValue("Character.name", mulbase.TypePred)).SetFields(CharacterFields.Sub("Character.appearsIn", EpisodeFields))
+	q.AddSubFilter(mulbase.MakeFunction(mulbase.FunctionEquals).AddPredValue("Episode.name","Cool Episode", mulbase.TypeStr), "Character.appearsIn")
+	var x Character
+	err := db.NewTxn(true).RunQuery(context.Background(), q, &x)
+	if err != nil {
+		print(err)
+	}
+}
+
 func TestAdd(t *testing.T) {
 	db := mulbase.Init("172.17.0.2", 9080, false)
 	if db == nil {

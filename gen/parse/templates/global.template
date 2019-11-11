@@ -7,7 +7,7 @@ func GetField(name string) mulbase.Field {
 }
 
 func MakeField(name string, flags mulbase.FieldMeta) mulbase.Field {
-    var field = mulbase.MakeField(name, flags)
+    var field = mulbase.Field{Name:name, Meta:flags}
     if _,ok := globalFields[name]; !ok {
         globalFields[name] = field
     }

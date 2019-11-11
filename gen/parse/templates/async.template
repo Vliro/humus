@@ -1,18 +1,30 @@
 {{range .Fields}}
-
     type async{{.Parent}}{{.Name}} struct {
         Err error
-        Value {{.Type}}
+        Value *{{.Type}}
     }
-
-    func Async{{.Parent}}{{.Name}}(q mulbase.Query, input *{{.Type}}, txn *mulbase.Txn) error {
-        ch := make(chan async{{.Parent}}{{.Name}}, 1)
-        go func(){
-            var obj {{.Type}}
-            err := txn.RunQuery(context.Background(), q, &obj)
-            ch <- async{{.Parent}}{{.Name}}{err, obj}
+    //Populates the field of r.
+    func (r *{{.Parent}}) Get{{.Parent}}{{.Name}}Async ({{if .IsArray}}count int,{{end}} filter int, txn *mulbase.Txn) chan async{{.Parent}}{{.Name}}{
+        if r.UID() == "" {
+            return nil
+        }
+        var ch = make(chan async{{.Parent}}{{.Name}}, 1)
+        go func() {
+            var output = new({{.Type}})
+            var err = mulbase.GetChild(r,"{{.Tag}}",{{.Type}}Fields,{{if .IsArray}}count,{{else}}-1,{{end}}txn, output)
+            var result async{{.Parent}}{{.Name}}
+            result.Err = err
+            result.Value = output
+            ch <- result
         }()
-        return nil
+        return ch
     }
-
+/*
+    func (r *{{.Parent}}) Add{{.Parent}}{{.Name}}(input *{{.Type}}) error {
+        if input.UID() == "" {
+            return mulbase.ErrUID
+        }
+        return nil
+    }*/
 {{end}}
+

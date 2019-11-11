@@ -18,10 +18,10 @@ type FieldList []Field
 type NewList FieldList
 
 //Sub allows you to add sub-field structures.
-//TODO: Racy reads? There are never writes to a field-list
+//TODO: Racy reads? There are never writes to a global field-list unless you are doing something wrong!
 //but might be concurrent reads.
 func (f FieldList) Sub(name string, fl []Field) NewList {
-	var newArr NewList = make([]Field, len(fl))
+	var newArr NewList = make([]Field, len(f))
 	//Copy!
 	copy(newArr, f)
 	//linear search but there are not a lot of values. Hash-map feels overkill
@@ -104,6 +104,7 @@ type Field struct {
 	Name   string
 	Fields []Field
 	Meta   FieldMeta
+	Local bool
 	//Type VarType
 }
 

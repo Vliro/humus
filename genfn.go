@@ -4,15 +4,18 @@ import "context"
 
 //Functions associated with the generated package
 
-func GetChild(node DNode, child string, fields []Field, txn *Txn, to interface{}) error {
+func GetChild(node DNode, child string, fields []Field, count int, txn *Txn, to interface{}) error {
 	uid := node.UID()
 	if uid == "" {
 		return Error(ErrUID)
 	}
 	var qu = NewQuery()
 	qu.SetFunction(MakeFunction(FunctionUid).AddValue(uid, TypeUid))
+	if count != -1 {
+		qu.AddSubCount(CountFirst, child, count)
+	}
 	qu.Fields = []Field{
-		Field {
+		{
 			Name: child,
 			Fields: fields,
 		},

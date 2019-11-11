@@ -236,7 +236,8 @@ func (t *Txn) RunQuery(ctx context.Context, q Query, objs ...interface{}) error 
 	//if t.txn == nil {
 	//	return Error(errTransaction)
 	//}
-	//Allow thread-safe appending of queries.
+	//Allow thread-safe appending of queries as might run queries.
+	//TODO: Right now this is only for storing the queries. Running queries in parallel that rely on each other is very much a race condition.
 	t.mutex.Lock()
 	t.Queries = append(t.Queries, q)
 	t.mutex.Unlock()
@@ -247,16 +248,4 @@ func (t *Txn) RunQuery(ctx context.Context, q Query, objs ...interface{}) error 
 		return Error(t.mutate(ctx, q))
 	}
 	return Error(errInvalidType)
-	/*m := make(map[create]create)
-	//TODO: multiple GraphQL variables.
-	for k, v := range q.VarMap {
-		switch g := v.val.(type) {
-		case create:
-			m[k] = g
-			break
-		case int:
-			m[k] = strconv.Itoa(g)
-			break
-		}
-	}*/
 }

@@ -1,11 +1,11 @@
 type Level {
-    Name: String!
-    Password: String!
-    Hash: String!
-    Owner: User!
-    Size: Int!
-    Updated: DateTime
-    PlayCount: Int!
-    Live: Boolean!
-    Rating: Float!
+    name: String!
+    password: String!
+    hash: String!
+    owner: User!
+    size: Int!
+    updated: DateTime
+    playCount: Int!
+    live: Boolean!
+    rating: Float!
 }

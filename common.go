@@ -14,8 +14,8 @@ func (n *Node) SetUID(uid string) {
 	n.Uid = UID(uid)
 }
 
-func (n *Node) SetType(types ...string) {
-	n.Type = types
+func (n *Node) SetType() {
+	panic("nodes have no types!")
 }
 
 func (n *Node) UID() UID {

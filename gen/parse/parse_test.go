@@ -1,11 +1,11 @@
 package parse
 
-import "testing"
+import (
+	"testing"
+	"time"
+)
 
 func TestParse(t *testing.T) {
 	Parse("testdata", "/tmp")
-}
-
-func TestOutput(t *testing.T) {
-
+	time.Sleep(time.Second)
 }

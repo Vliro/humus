@@ -2,11 +2,11 @@
 
 {{range .Fields}}
     //Populates the field of r.
-    func (r *{{.Parent}}) Get{{.Parent}}{{.Name}} (count int, filter int, txn *mulbase.Txn) error{
+    func (r *{{.Parent}}) Get{{.Parent}}{{.Name}} ({{if .IsArray}}count int,{{end}} filter int, txn *mulbase.Txn) error{
         if r.UID() == "" {
             return mulbase.ErrUID
         }
-        return mulbase.GetChild(r,"{{.Tag}}",{{.Type}}Fields,txn, &r.{{.Name}})
+        return mulbase.GetChild(r,"{{.Tag}}",{{.Type}}Fields,{{if .IsArray}}count,{{else}}-1,{{end}}txn, &r.{{.Name}})
     }
 
     func (r *{{.Parent}}) Add{{.Parent}}{{.Name}}(input *{{.Type}}) error {

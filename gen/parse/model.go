@@ -36,7 +36,7 @@ type Field struct {
 }
 
 var modelImports = []string{
-	"mulbase",
+	"github.com/Vliro/mulbase",
 	"context",
 }
 
@@ -194,7 +194,11 @@ func iterate(objName string, data *schema.Field, field common.Type, sb *bytes.Bu
 			typ = val
 			break
 		}
-		panic("missing type")
+	case *schema.Enum:
+		f |= flagEnum
+		typ = a.Name
+	default:
+		panic("missing type!")
 	}
 	if typ != "" {
 		/*

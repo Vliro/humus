@@ -20,6 +20,14 @@ func (u UID) Int() int64 {
 	return val
 }
 
+func StringFromInt(id int64) string {
+	return "0x"+strconv.FormatInt(id, 16)
+}
+
+func UidFromInt(id int64) UID {
+	return UID(StringFromInt(id))
+}
+
 const (
 	// syntax tokens
 	tokenLB     = "{" // Left Brace

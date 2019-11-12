@@ -8,6 +8,7 @@ var templates = map[string]string {
 	"Field": "global.template",
 	"Async": "async.template",
 	"Model": "model.template",
+	"Enum": "enum.template",
 }
 
 //Scalar builtin types.
@@ -29,4 +30,5 @@ const (
 	flagScalar
 	flagPointer
 	flagInterface
+	flagEnum
 )

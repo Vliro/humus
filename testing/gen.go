@@ -27,6 +27,27 @@ func (r *Comment) AddCommentCommentsOn(input *Post) error {
 	return nil
 }
 
+//Populates the field of r.
+func (r *Comment) GetCommentTest(filter int, txn *mulbase.Txn) error {
+	if r.UID() == "" {
+		return mulbase.ErrUID
+	}
+	q, err := mulbase.GetChild(r, "Comment.test", EpisodeFields, -1)
+	if err != nil {
+		return err
+	}
+	_, err = txn.RunQuery(context.Background(), q, &r.Test)
+	return err
+}
+
+//TODO. Don't use this.
+func (r *Comment) AddCommentTest(input *Episode) error {
+	if input.UID() == "" {
+		return mulbase.ErrUID
+	}
+	return nil
+}
+
 //Beginning of field.template. General functions.
 var globalFields = make(map[string]mulbase.Field)
 

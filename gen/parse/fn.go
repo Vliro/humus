@@ -1,8 +1,8 @@
 package parse
 
 import (
-	"io"
 	"github.com/Vliro/mulbase/gen/graphql-go/schema"
+	"io"
 )
 
 type fieldTemplate struct {

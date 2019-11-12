@@ -132,10 +132,11 @@ type Comment struct {
 	//List of interfaces implemented.
 	Post
 	//Regular fields
-	CommentsOn *Post `json:"Comment.commentsOn"`
+	CommentsOn *Post   `json:"Comment.commentsOn"`
+	Test       Episode `json:"Comment.test"`
 }
 
-var CommentFields mulbase.FieldList = []mulbase.Field{MakeField("Comment.commentsOn", 0|mulbase.MetaObject), MakeField("Post.text", 0), MakeField("Post.datePublished", 0)}
+var CommentFields mulbase.FieldList = []mulbase.Field{MakeField("Comment.commentsOn", 0|mulbase.MetaObject), MakeField("Comment.test", 0|mulbase.MetaObject), MakeField("Post.text", 0), MakeField("Post.datePublished", 0)}
 
 //SaveValues saves the node values that
 //do not contain any references to other objects.

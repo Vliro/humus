@@ -10,4 +10,11 @@ type Question implements Post {
 
 type Comment implements Post {
     commentsOn: Post!
+    test: Episode!
+}
+
+enum Episode {
+    NEWHOPE
+    EMPIRE
+    JEDI
 }

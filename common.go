@@ -35,7 +35,7 @@ func CreateMutation(obj interface{}, typ QueryType) SingleMutation {
 
 //From a uid, get value from fields and deserialize into value.
 //TODO: Should this require DNode?
-func GetByUid(ctx context.Context, uid string, fields []Field, txn *Txn, value interface{}) error {
+func GetByUid(ctx context.Context, uid UID, fields []Field, txn *Txn, value interface{}) error {
 	_, err := txn.RunQuery(ctx, NewQuery().SetFunction(MakeFunction(FunctionUid).AddValue(uid, TypeUid)).SetFields(fields), value)
 	return err
 }

@@ -26,6 +26,7 @@ func getBuiltIn(key string) (string, bool) {
 const (
 	ModelFileName = "/models.go"
 	FunctionFileName = "/gen.go"
+	EnumFileName = "/enums.go"
 )
 
 const (
@@ -87,16 +88,23 @@ func Parse(input, output string) {
 		panic(err)
 	}
 	defer fns.Close()
+	enum, err := os.Create(output + EnumFileName)
+	if err != nil {
+		panic(err)
+	}
+	defer enum.Close()
 	/*
 		Generate string builders. Do not use bufIO as we use gofmt on the result.
 	 */
 	var modelBuffer bytes.Buffer
 	var fnBuffer bytes.Buffer
+	var enumBuffer bytes.Buffer
 	/*
 		Write the package name.
 	*/
 	writeHeader(&modelBuffer)
 	writeHeader(&fnBuffer)
+	writeHeader(&enumBuffer)
 	/*
 		Walk the directory.
 	 */
@@ -133,14 +141,14 @@ func Parse(input, output string) {
 		Parse the entire schema, go-fmt the code and write to the file.
 	 */
 	sc := graphql.MustParseSchema(resultingFile.String(), nil)
-	generate(sc.Schema, &modelBuffer, &fnBuffer)
+	generate(sc.Schema, &modelBuffer, &fnBuffer, &enumBuffer)
 	if err != nil {
 		panic(err)
 	}
 	modelData := goFmt(modelBuffer.Bytes())
 	fnData := goFmt(fnBuffer.Bytes())
-
-	if modelData == nil || fnData == nil {
+	enumData := goFmt(enumBuffer.Bytes())
+	if modelData == nil || fnData == nil || enumData == nil {
 		panic("could not properly format code")
 	}
 	_, err = fns.Write(fnData)
@@ -151,16 +159,20 @@ func Parse(input, output string) {
 	if err != nil {
 		panic(err)
 	}
+	_, err = enum.Write(enumData)
+	if err != nil {
+		panic(err)
+	}
 }
 //make models and functions.
-func generate(schema *schema.Schema, modelWriter io.Writer, fnWriter io.Writer) {
-	_,m := createModel(schema, modelWriter)
+func generate(schema *schema.Schema, modelWriter io.Writer, fnWriter io.Writer, enumWriter io.Writer) {
+	_,m := createModel(schema, modelWriter, enumWriter)
 	processFunctions(schema, fnWriter, m)
 }
 
 //Parses a single GraphQL file and writes to output.
 //Also generates a field map.
-func createModel(s *schema.Schema, output io.Writer) (error, map[string][]Field) {
+func createModel(s *schema.Schema, output io.Writer, enumWriter io.Writer) (error, map[string][]Field) {
 	//We now have the schema relevant for the file. First generate the models.
 	obj := s.Objects()
 	//Use a temporary buffer to ensure we add imports last.
@@ -171,16 +183,30 @@ func createModel(s *schema.Schema, output io.Writer) (error, map[string][]Field)
 	*/
 
 	var interfaces = make(map[string]*schema.Interface)
+	var enums = make(map[string]*schema.Enum)
 	/*
-		Get a list of interfaces
+		Get a list of interfaces and enums
 	 */
-	for _,vv := range obj {
-		for _,v := range vv.Interfaces {
+	for _,vv := range s.Types {
+		switch a := vv.(type) {
+		case *schema.Interface:
+			interfaces[a.Name] = a
+		case *schema.Enum:
+			if a.Name[0] == '_' {
+				continue
+			}
+			enums[a.Name] = a
+		}
+		/*for _,v := range vv.Interfaces {
 			if _, ok :=interfaces[v.Name]; !ok {
 				interfaces[v.Name] = v
 			}
-		}
+		}*/
 	}
+	/*
+		Write the enums.
+	 */
+	makeEnums(enums, enumWriter)
 	/*
 		Write the interfaces first as we use these to extend the scalar values.
 	 */

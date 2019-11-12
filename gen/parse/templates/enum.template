@@ -1,0 +1,10 @@
+{{range .Vals}}
+    //Start new enum.
+    type {{.Name}} int
+
+    const (
+        {{.Start}} {{.Name}} = iota
+        {{range .Fields}}{{.}}
+        {{end}}
+    )
+{{end}}

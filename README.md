@@ -3,7 +3,7 @@
 Mulbase/Mulgen is a front-end library for DGraph. It includes static (mostly) code generation based on the same schema supplied to the database so no need to keep the client structs separate.
 It ensures json tags are set in sync with the schema and ensures compatibility with the database. 
 
-Note that this code does not, as of right, have any way to "go get" in a regular manner. It exists simply in go/src but hopefully this will be changed in due time. There are no guarantees whatsoever about this library right now.
+Note that this code does not, as of right now, use vendor/modules. This will be changed eventually. There are no guarantees whatsoever about this library right now.
 
 This is only tested against the beta DGraph graphql api. Altering the schema using GraphQL only works on this docker image/branch.
 

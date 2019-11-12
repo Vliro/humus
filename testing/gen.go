@@ -7,11 +7,11 @@ import (
 )
 
 //Populates the field of r.
-func (r *Comment) GetCommentCommentsOn(filter int, txn *mulbase.Txn) error {
+func (r *Comment) GetCommentCommentsOn(filter *mulbase.Filter, txn *mulbase.Txn) error {
 	if r.UID() == "" {
 		return mulbase.ErrUID
 	}
-	q, err := mulbase.GetChild(r, "Comment.commentsOn", PostFields, -1)
+	q, err := mulbase.GetChild(r, "Comment.commentsOn", PostFields, -1, filter)
 	if err != nil {
 		return err
 	}
@@ -21,27 +21,6 @@ func (r *Comment) GetCommentCommentsOn(filter int, txn *mulbase.Txn) error {
 
 //TODO. Don't use this.
 func (r *Comment) AddCommentCommentsOn(input *Post) error {
-	if input.UID() == "" {
-		return mulbase.ErrUID
-	}
-	return nil
-}
-
-//Populates the field of r.
-func (r *Comment) GetCommentTest(filter int, txn *mulbase.Txn) error {
-	if r.UID() == "" {
-		return mulbase.ErrUID
-	}
-	q, err := mulbase.GetChild(r, "Comment.test", EpisodeFields, -1)
-	if err != nil {
-		return err
-	}
-	_, err = txn.RunQuery(context.Background(), q, &r.Test)
-	return err
-}
-
-//TODO. Don't use this.
-func (r *Comment) AddCommentTest(input *Episode) error {
 	if input.UID() == "" {
 		return mulbase.ErrUID
 	}

@@ -4,11 +4,11 @@ This needs to be updated for 1-1 relations.
 
 {{range .Fields}}
     //Populates the field of r.
-    func (r *{{.Parent}}) Get{{.Parent}}{{.Name}} ({{if .IsArray}}count int,{{end}} filter int, txn *mulbase.Txn) error{
+    func (r *{{.Parent}}) Get{{.Parent}}{{.Name}} ({{if .IsArray}}count int,{{end}}filter *mulbase.Filter, txn *mulbase.Txn) error{
         if r.UID() == "" {
             return mulbase.ErrUID
         }
-        q, err := mulbase.GetChild(r,"{{.Tag}}",{{.Type}}Fields,{{if .IsArray}}count,{{else}}-1,{{end}})
+        q, err := mulbase.GetChild(r,"{{.Tag}}",{{.Type}}Fields,{{if .IsArray}}count,{{else}}-1,{{end}} filter)
         if err != nil {
             return err
         }

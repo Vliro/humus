@@ -6,7 +6,7 @@ package mulbase
 //Count represents how many (sorted by first) to get as well as an interface
 //to deserialize to.
 //Do not return interfaces.
-func GetChild(node DNode, child string, fields []Field, count int) (*GeneratedQuery, error) {
+func GetChild(node DNode, child string, fields []Field, count int, filter *Filter) (*GeneratedQuery, error) {
 	uid := node.UID()
 	if uid == "" {
 		return nil, Error(ErrUID)

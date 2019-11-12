@@ -55,7 +55,7 @@ func processFieldTemplates(obj *schema.Object, w io.Writer, m map[string][]Field
 	for _, v := range m[obj.Name] {
 		//Fill the data with appropriate data values.
 		//Only non-scalar values.
-		if v.flags & flagScalar != 0 {
+		if v.flags & flagScalar != 0 || v.flags & flagEnum != 0{
 			continue
 		}
 		var data fieldTemplate

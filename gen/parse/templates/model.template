@@ -3,7 +3,8 @@
 //do not contain any references to other objects.
 func (r *{{.Name}}) SaveValues(ctx context.Context, txn *mulbase.Txn) error {
     mut := mulbase.CreateMutation(r.Values(), mulbase.QuerySet)
-    return txn.RunQuery(ctx, mut)
+    _, err := txn.RunQuery(ctx, mut)
+    return err
 }
 //Fields returns all Scalar fields for this value.
 func (r *{{.Name}}) Fields() mulbase.FieldList {
@@ -24,7 +25,7 @@ func (r *{{.Name}}) Values() mulbase.DNode{
        m.{{.Name}}= r.{{.Name}}
        {{end -}}
    m.Uid = r.Uid
-   return m
+   return &m
 }
 
 //{{.Name}}Scalars is simply to avoid a map[string]interface{}

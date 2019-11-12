@@ -2,7 +2,7 @@ package mulbase
 
 import (
 	"errors"
-	"fmt"
+	errors2 "github.com/pkg/errors"
 )
 
 var errInvalidType = errors.New("invalid query supplied")
@@ -11,10 +11,15 @@ var errParsing = errors.New("error parsing input")
 var errTransaction = errors.New("invalid transaction")
 var ErrUID = errors.New("missing UID")
 
+var errMissingFunction = errors.New("missing function")
+var errMissingVariables = errors.New("missing variables in function")
 //Call this on a top level error.
 func Error(err error) error {
 	if err == nil {
 		return nil
 	}
-	return fmt.Errorf("mulbase: %v", err.Error())
+
+	return errors2.Wrap(err,"mulbase")
 }
+
+var fErrNil = "nil check failed for %s"

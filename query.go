@@ -6,10 +6,10 @@ import (
 	"strings"
 )
 
-/**
+/*
 	UID represents the primary UID class used in communication with DGraph.
 	This is used in code generation.
- */
+*/
 type UID string
 
 func (u UID) Int() int64 {
@@ -18,23 +18,6 @@ func (u UID) Int() int64 {
 		return -1
 	}
 	return val
-}
-
-type H map[string]interface{}
-//DNode represents an object that can be safely stored
-//in the database. It includes all necessary fields for
-//automatic generation.
-type DNode interface {
-	//Returns the UID of this node.
-	UID() UID
-	//Sets the UID of this node.
-	SetUID(uid string)
-	//Sets all types of this node. This has to be done at least once.
-	SetType()
-	//Returns all scalar fields for this node.
-	Fields() FieldList
-	//Serializes all the scalar values that are not hidden.
-	Values() DNode
 }
 
 const (
@@ -50,10 +33,12 @@ const (
 )
 
 //TODO: These have not been tested yet. Only GeneratedQuery.
+//TODO: Should this allow arbitrary Query interfaces and type switch?
 type Queries struct {
 	Queries []*GeneratedQuery
 }
 
+//Satisfy the Query interface.
 func (q *Queries) Process(schemaList) ([]byte, map[string]string, error) {
 	return q.create()
 }
@@ -67,20 +52,12 @@ func (q *Queries) Append(qu *GeneratedQuery) *Queries {
 	return q
 }
 
-func mapMerge(m1,m2 map[string]string) {
-	for k,v := range m2 {
-		m1[k] = v
-	}
-}
-
-func (q *Queries) create() ([]byte,map[string]string, error) {
-	queryStr := bytes.Buffer{}
-	final := bytes.Buffer{}
+func (q *Queries) create() ([]byte, map[string]string, error) {
+	var queryStr, final bytes.Buffer
 	//The query variable information.
 	final.WriteString("query t")
-	//The global variable counter.
+	//The global variable counter. It exists in a closure, it's just easy.
 	var varCounter int
-	//closure
 	varFunc := func() int {
 		varCounter++
 		return varCounter - 1
@@ -94,7 +71,7 @@ func (q *Queries) create() ([]byte,map[string]string, error) {
 		}
 		qu.index = k + 1
 		qu.VarMap = output
-		qu.VarFunc = varFunc
+		qu.varFunc = varFunc
 		str, _, err := qu.create()
 		if err != nil {
 			return nil, nil, err
@@ -107,51 +84,50 @@ func (q *Queries) create() ([]byte,map[string]string, error) {
 		if str == "" {
 			continue
 		}
+		//TODO: Make it more like a strings.Join to avoid all these error-prone additions.
 		if len(q.Queries) > 1 && k > 0 {
 			final.WriteByte(',')
 		}
 		final.WriteString(str)
 	}
-	final.WriteString(")")
-	final.WriteString("{")
+	final.WriteString("){")
 	final.WriteString(queryStr.String())
 	final.WriteString("}")
 	return final.Bytes(), output, nil
 }
 
-type VarObject struct {
-	val     string
-	varType VarType
-}
-
 //An aggregate value i.e. sum as well as what alias to name it as.
-type aggregateValues struct {
+type AggregateValues struct {
 	Type  AggregateType
 	Alias string
 }
 
 //The Field maps include a path for the predicate.
 //Root is "", all sub are /Predicate1/Predicate2...
+//It is quite a big allocation.
+//TODO: All maps kept separate? They might not be used that often.
 type GeneratedQuery struct {
 	//The root function.
-	Function       *Function
+	Function *Function
+	//Top level filter.
+	Filter *Filter
 	//All sub parts of the query.
 	FieldFunctions map[string]Function
 	FieldOrderings map[string][]Ordering
 	FieldCount     map[string][]Count
-	FieldAggregate map[string]aggregateValues
+	FieldAggregate map[string]AggregateValues
 	FieldFilters   map[string]Filter
-	varBuilder 	   strings.Builder
+	varBuilder     strings.Builder
 	VarMap         map[string]string
-	VarFunc        func() int
-	Filter         *Filter
-	Language       Language
+	varFunc        func() int
+	//The overall language for this query.
+	Language Language
 	//Which directives to apply on this query.
-	Directives     []Directive
-	Deserialize    bool
-	Fields         []Field
-	varCounter int
-	schema schemaList
+	Directives  []Directive
+	Deserialize bool
+	Fields      []Field
+	varCounter  int
+	schema      schemaList
 	//For multiple queries.
 	index int
 }
@@ -193,16 +169,6 @@ const (
 	MutateSet    MutationType = "set"
 )
 
-type Mutation struct {
-	Type   MutationType
-	Object interface{}
-}
-
-func (m *Mutation) AddValue(val interface{}) *Mutation {
-	m.Object = val
-	return m
-}
-
 func (q *GeneratedQuery) create() ([]byte, map[string]string, error) {
 	if err := q.check(); err != nil {
 		return nil, nil, err
@@ -229,20 +195,26 @@ func (q *GeneratedQuery) create() ([]byte, map[string]string, error) {
 		if i != 0 {
 			sb.WriteString(tokenSpace)
 		}
-		err := field.String(q, field.Name, sb)
-		if err != nil {
-			return nil, nil, err
-		}
+		field.create(q, field.Name, sb)
 	}
 	sb.WriteString(tokenSpace + "uid" + tokenSpace + tokenRB + tokenRB)
 	//TODO: Write variable header and create the var map.
 	var varString = q.Variables(true)
-	var result = make([]byte, len(varString) + len(sb.Bytes()))
+	var result = make([]byte, len(varString)+len(sb.Bytes()))
 	//Copy the query into result.
 	copy(result, varString)
 	copy(result[len(varString):], sb.Bytes())
-
 	return result, q.VarMap, nil
+}
+
+func (q *GeneratedQuery) AddDirective(dir Directive) *GeneratedQuery {
+	for _, v := range q.Directives {
+		if v == dir {
+			return q
+		}
+	}
+	q.Directives = append(q.Directives, dir)
+	return q
 }
 
 func (q *GeneratedQuery) check() error {
@@ -261,6 +233,11 @@ func (q *GeneratedQuery) check() error {
 	}
 	if err := q.Function.check(q); err != nil {
 		return err
+	}
+	for _, v := range q.Fields {
+		if err := v.check(q); err != nil {
+			return err
+		}
 	}
 	// check query
 	return nil
@@ -331,9 +308,9 @@ func (q *GeneratedQuery) Variables(single bool) string {
 //The alias is to avoid count(predicate) as name.
 func (q *GeneratedQuery) SetSubAggregate(path string, alias string, aggregate AggregateType) *GeneratedQuery {
 	if q.FieldAggregate == nil {
-		q.FieldAggregate = make(map[string]aggregateValues)
+		q.FieldAggregate = make(map[string]AggregateValues)
 	}
-	q.FieldAggregate[path] = aggregateValues{aggregate, alias}
+	q.FieldAggregate[path] = AggregateValues{aggregate, alias}
 	return q
 }
 
@@ -343,14 +320,14 @@ func (q *GeneratedQuery) registerVariable(typ VarType, value string) string {
 		q.varBuilder.WriteByte(',')
 	}
 	var val int
-	if q.VarFunc != nil {
-		val = q.VarFunc()
+	if q.varFunc != nil {
+		val = q.varFunc()
 	} else {
 		val = q.varCounter
 		q.varCounter++
 	}
-	var key = "$"+strconv.Itoa(val)
-	q.varBuilder.WriteString(key+":"+string(typ))
+	var key = "$" + strconv.Itoa(val)
+	q.varBuilder.WriteString(key + ":" + string(typ))
 	q.VarMap[key] = value
 	return key
 }
@@ -494,15 +471,7 @@ func (q *GeneratedQuery) AddDNode(d DNode, new bool, typ MutationType) *Generate
 	return q
 }
 
-func (q *GeneratedQuery) AddDirective(dir Directive) *GeneratedQuery {
-	for _, v := range q.Directives {
-		if v == dir {
-			return q
-		}
-	}
-	q.Directives = append(q.Directives, dir)
-	return q
-}
+
 */
 /*
 Returns a Queries object which can be used for multiple queries.

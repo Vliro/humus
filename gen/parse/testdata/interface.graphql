@@ -1,7 +1,6 @@
 interface Post {
-    id: ID!
-    text: String
-    datePublished: DateTime
+    text: String!
+    datePublished: DateTime!
 }
 
 type Question implements Post {

@@ -48,7 +48,7 @@ func makeGlobals(writer io.Writer) {
 func processFieldTemplates(obj *schema.Object, w io.Writer, m map[string][]Field) {
 	var output GetTemplate
 	templ := getTemplate("Get")
-	asyncTempl := getTemplate("Async")
+	//asyncTempl := getTemplate("Async")
 	if templ == nil {
 		panic("missing get template")
 	}
@@ -69,5 +69,5 @@ func processFieldTemplates(obj *schema.Object, w io.Writer, m map[string][]Field
 	output.Name = obj.Name
 	//write to the writer!
 	_ = templ.Execute(w, output)
-	_ = asyncTempl.Execute(w, output)
+	//_ = asyncTempl.Execute(w, output)
 }

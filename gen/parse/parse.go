@@ -180,8 +180,28 @@ func createModel(s *schema.Schema, output io.Writer) (error, map[string][]Field)
 	/*
 		Initially just create the go definitions.
 	*/
+
+	var interfaces = make(map[string]*schema.Interface)
+	/*
+		Get a list of interfaces
+	 */
+	for _,vv := range obj {
+		for _,v := range vv.Interfaces {
+			if _, ok :=interfaces[v.Name]; !ok {
+				interfaces[v.Name] = v
+			}
+		}
+	}
+	for _,v := range interfaces {
+		buf, m := makeGoInterface(v)
+		fieldMap[v.Name] = m
+		_, err := io.Copy(&tempBuffer, buf)
+		if err != nil {
+			panic(err)
+		}
+	}
 	for _, vv := range obj {
-		buf,m := makeGoStruct(vv)
+		buf,m := makeGoStruct(vv, fieldMap)
 		fieldMap[vv.Name] = m
 		_, err := io.Copy(&tempBuffer, buf)
 

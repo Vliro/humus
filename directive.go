@@ -1,5 +1,6 @@
 package mulbase
 
+//All dgraph query directives.
 type Directive string
 
 const (

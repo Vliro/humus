@@ -10,9 +10,15 @@
         }
         var ch = make(chan async{{.Parent}}{{.Name}}, 1)
         go func() {
-            var output = new({{.Type}})
-            var err = mulbase.GetChild(r,"{{.Tag}}",{{.Type}}Fields,{{if .IsArray}}count,{{else}}-1,{{end}}txn, output)
             var result async{{.Parent}}{{.Name}}
+            q, err := mulbase.GetChild(r,"{{.Tag}}",{{.Type}}Fields,{{if .IsArray}}count,{{else}}-1,{{end}})
+            if err != nil {
+                result.Err = err
+                ch <- result
+                return
+            }
+            var output = new({{.Type}})
+            _,err = txn.RunQuery(context.Background(), q, output)
             result.Err = err
             result.Value = output
             ch <- result

@@ -4,9 +4,10 @@ import (
 	"context"
 	"crypto/tls"
 	"crypto/x509"
-	"fmt"
+	"github.com/gammazero/workerpool"
 	"google.golang.org/grpc/encoding/gzip"
 	"io/ioutil"
+	"log"
 	"strconv"
 	"sync"
 
@@ -16,13 +17,54 @@ import (
 	"google.golang.org/grpc/credentials"
 )
 
+//Deprecated information but useful.
+//tlsPaths has length 5.
+//First parameter is the root CA.
+//Second is the client crt, third is the client key.
+//Fourth is the node crt, fifth is the node key.
+
+type Config struct {
+	//For initialization.
+	IP      string
+	Port    int
+	Tls     bool
+	RootCA  string
+	NodeCRT string
+	NodeKey string
+	//Other stuff.
+	LogQueries bool
+}
+
+//DNode represents an object that can be safely stored
+//in the database. It includes all necessary fields for
+//automatic generation.
+type DNode interface {
+	//Returns the UID of this node.
+	UID() UID
+	//Sets the UID of this node.
+	SetUID(uid string)
+	//Sets all types of this node. This has to be done at least once.
+	SetType()
+	//Returns all scalar fields for this node.
+	Fields() FieldList
+	//Serializes all the scalar values that are not hidden.
+	Values() DNode
+}
+
+//Number of workers.
+const workers = 10
+
 type DB struct {
-	d        *dgo.Dgraph
-	ip       string
-	port     int
-	tls      bool
-	endPoint string
-	schema   schemaList
+	//The api to graph.
+	d *dgo.Dgraph
+	//Config.
+	c *Config
+	//Schema list.
+	schema schemaList
+	//The pool of asynchronous workers.
+	pool *workerpool.WorkerPool
+	//The endpoint for possible GraphQL.
+	gplPoint string
 }
 
 //NewTxn creates a new txn for interacting with database.
@@ -36,7 +78,7 @@ func (d *DB) NewTxn(readonly bool) *Txn {
 	} else {
 		txn.txn = d.d.NewTxn()
 	}
-	txn.sch = d.schema
+	txn.db = d
 	return txn
 }
 
@@ -47,7 +89,7 @@ func (d *DB) Query(ctx context.Context, q Query, obj interface{}) error {
 		return Error(errInvalidType)
 	}
 	txn := d.NewTxn(true)
-	err := txn.RunQuery(ctx, q, obj)
+	_, err := txn.RunQuery(ctx, q, obj)
 	//TODO: Can we do this for readonly?
 	_ = txn.Discard(ctx)
 	return err
@@ -58,7 +100,7 @@ func (d *DB) Mutate(ctx context.Context, q Query) error {
 		return Error(errInvalidType)
 	}
 	txn := d.NewTxn(false)
-	err := txn.RunQuery(ctx, q, nil)
+	_, err := txn.RunQuery(ctx, q, nil)
 	if err != nil {
 		_ = txn.Discard(ctx)
 	} else {
@@ -74,6 +116,7 @@ func (d *DB) SetSchema(sch map[string]Field) {
 	}
 	d.schema = sch
 }
+
 //Simply performs the alter command.
 func (d *DB) Alter(ctx context.Context, op *api.Operation) error {
 	err := d.d.Alter(ctx, op)
@@ -88,6 +131,7 @@ const (
 	QueryDelete
 )
 
+//Allows it to be used in runQuery.
 type Query interface {
 	//Process the query type in order to send to the database.
 	Process(schemaList) ([]byte, map[string]string, error)
@@ -95,40 +139,36 @@ type Query interface {
 	Type() QueryType
 }
 
-//tlsPaths has length 5.
-//First parameter is the root CA.
-//Second is the client crt, third is the client key.
-//Fourth is the node crt, fifth is the node key.
-func Init(dip string, dport int, tls bool, tlsPath ...string) *DB {
-	if dport < 1000 {
+func Init(conf *Config) *DB {
+	if conf.Port < 1000 {
 		panic("graphinit: invalid dgraph port number")
 	}
-	db := connect(dip, dport, tls, tlsPath)
+	db := connect(conf)
+	db.pool = workerpool.New(workers)
 	return db
-	//initSchema()
 }
 
 //Takes a connection create of the form http://ip:port/
-func connect(ip string, port int, dotls bool, paths []string) *DB {
+func connect(conf *Config) *DB {
 	//TODO: allow multiple dgraph clusters.
 	var conn *grpc.ClientConn
 	var err error
-	if dotls {
+	if conf.Tls {
 		//TODO: Review this code as it might change how TLS works with dgraph.
 		rootCAs := x509.NewCertPool()
-		cCerts, err := tls.LoadX509KeyPair(paths[3], paths[4])
-		certs, err := ioutil.ReadFile(paths[0])
+		cCerts, err := tls.LoadX509KeyPair(conf.NodeCRT, conf.NodeKey)
+		certs, err := ioutil.ReadFile(conf.RootCA)
 		rootCAs.AppendCertsFromPEM(certs)
-		conf := &tls.Config{}
-		conf.RootCAs = rootCAs
-		conf.Certificates = append(conf.Certificates, cCerts)
-		c := credentials.NewTLS(conf)
-		conn, err = grpc.Dial(ip+":"+strconv.Itoa(port), grpc.WithDefaultCallOptions(grpc.UseCompressor(gzip.Name)), grpc.WithTransportCredentials(c))
+		tlsConf := &tls.Config{}
+		tlsConf.RootCAs = rootCAs
+		tlsConf.Certificates = append(tlsConf.Certificates, cCerts)
+		c := credentials.NewTLS(tlsConf)
+		conn, err = grpc.Dial(conf.IP+":"+strconv.Itoa(conf.Port), grpc.WithDefaultCallOptions(grpc.UseCompressor(gzip.Name)), grpc.WithTransportCredentials(c))
 		if err != nil {
 			panic(err)
 		}
 	} else {
-		conn, err = grpc.Dial(ip+":"+strconv.Itoa(port), grpc.WithDefaultCallOptions(grpc.UseCompressor(gzip.Name)), grpc.WithInsecure())
+		conn, err = grpc.Dial(conf.IP+":"+strconv.Itoa(conf.Port), grpc.WithDefaultCallOptions(grpc.UseCompressor(gzip.Name)), grpc.WithInsecure())
 		if err != nil {
 			panic(err)
 		}
@@ -137,26 +177,23 @@ func connect(ip string, port int, dotls bool, paths []string) *DB {
 	var c = dgo.NewDgraphClient(api.NewDgraphClient(conn))
 	db := &DB{
 		d:        c,
-		ip:       ip,
-		port:     port,
-		tls:      dotls,
-		endPoint: ip + ":" + strconv.Itoa(port) + "/graphql",
+		gplPoint: conf.IP + ":" + strconv.Itoa(conf.Port) + "/graphql",
 	}
 	return db
 }
 
 //Txn is a non thread-safe API for interacting with the database.
 //TODO: Should it be thread-safe?
+//TODO: Do not keep a storage of previous queries and reuse GeneratedQuery with sync.Pool?
 type Txn struct {
-	//All queries performed by this transaction.
 	//Allows for safe storage in Queries.
-	mutex   sync.Mutex
+	sync.Mutex
+	//All queries performed by this transaction.
 	Queries []Query
-	counter uint32
 	//The actual dgraph transaction.
 	txn *dgo.Txn
-	//List of schema passed by from the database.
-	sch schemaList
+	//The database. This is used for worker-pool & schema.
+	db *DB
 }
 
 func (t *Txn) Commit(ctx context.Context) error {
@@ -167,16 +204,12 @@ func (t *Txn) Discard(ctx context.Context) error {
 	return t.txn.Discard(ctx)
 }
 
-func (t *Txn) SetSchema(sch schemaList) {
-	t.sch = sch
-}
-
 //Perform a single mutation.
-func (t *Txn) mutate(ctx context.Context, q Query) error {
+func (t *Txn) mutate(ctx context.Context, q Query) (*api.Response, error) {
 	//Add a single mutation to the query list.
-	byt, _, err := q.Process(t.sch)
+	byt, _, err := q.Process(t.db.schema)
 	if err != nil {
-		return err
+		return nil, err
 	}
 	var m api.Mutation
 	if q.Type() == QueryDelete {
@@ -185,8 +218,8 @@ func (t *Txn) mutate(ctx context.Context, q Query) error {
 	} else if q.Type() == QuerySet {
 		m.SetJson = byt
 	}
-	_, err = t.txn.Mutate(ctx, &m)
-	return err
+	a, err := t.txn.Mutate(ctx, &m)
+	return a, err
 }
 
 //Upsert follows the new 1.1 api and performs an upsert.
@@ -195,7 +228,7 @@ func (t *Txn) Upsert(ctx context.Context, q Query, m []*api.Mutation, obj ...int
 	if t.txn == nil {
 		return Error(errTransaction)
 	}
-	b, ma, err := q.Process(t.sch)
+	b, ma, err := q.Process(t.db.schema)
 	if err != nil {
 		return Error(err)
 	}
@@ -214,15 +247,18 @@ func (t *Txn) Upsert(ctx context.Context, q Query, m []*api.Mutation, obj ...int
 }
 
 func (t *Txn) query(ctx context.Context, q Query, objs []interface{}) error {
-	str, m, err := q.Process(t.sch)
+	str, m, err := q.Process(t.db.schema)
 	if err != nil {
 		return err
 	}
-	fmt.Println(string(str))
 	resp, err := t.txn.QueryWithVars(ctx, bytesToStringUnsafe(str), m)
 	if err != nil {
 		return Error(err)
 	}
+	if t.db.c.LogQueries {
+		log.Printf("Query input: %s \n\n Query output: %s", string(str), string(resp.Json))
+	}
+	//This deserializes using reflect.
 	err = HandleResponse(resp.Json, objs)
 	if err != nil {
 		return Error(err)
@@ -230,22 +266,43 @@ func (t *Txn) query(ctx context.Context, q Query, objs []interface{}) error {
 	return nil
 }
 
+type Result struct {
+	Err error
+	Res *api.Response
+}
+
+//RunQueryAsync runs the query asynchronous. In the result the error is returned.
+func (t *Txn) RunQueryAsync(ctx context.Context, q Query, objs ...interface{}) chan Result {
+	ch := make(chan Result, 1)
+	f := func() {
+		r, err := t.RunQuery(ctx, q, objs...)
+		ch <- Result{
+			Err: err,
+			Res: r,
+		}
+	}
+	t.db.pool.Submit(f)
+	return ch
+}
+
 //RunQuery executes the GraphQL+- query.
 //If q is a mutation query the mutation objects are supplied in q and not in objs.
-func (t *Txn) RunQuery(ctx context.Context, q Query, objs ...interface{}) error {
+func (t *Txn) RunQuery(ctx context.Context, q Query, objs ...interface{}) (*api.Response, error) {
 	//if t.txn == nil {
 	//	return Error(errTransaction)
 	//}
 	//Allow thread-safe appending of queries as might run queries.
 	//TODO: Right now this is only for storing the queries. Running queries in parallel that rely on each other is very much a race condition.
-	t.mutex.Lock()
+	t.Lock()
 	t.Queries = append(t.Queries, q)
-	t.mutex.Unlock()
+	t.Unlock()
 	switch q.Type() {
 	case QueryRegular:
-		return Error(t.query(ctx, q, objs))
-	case QueryDelete, QuerySet:
-		return Error(t.mutate(ctx, q))
+		//No need for the response.
+		return nil, Error(t.query(ctx, q, objs))
+	case QuerySet, QueryDelete:
+		r, err := t.mutate(ctx, q)
+		return r, Error(err)
 	}
-	return Error(errInvalidType)
+	return nil, Error(errInvalidType)
 }

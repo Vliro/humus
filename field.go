@@ -2,10 +2,9 @@ package mulbase
 
 import (
 	"bytes"
+	"errors"
 	"io"
 	"strconv"
-
-	"github.com/pkg/errors"
 )
 
 //FieldList is a list of Fields associated with a generated object.
@@ -23,7 +22,10 @@ type NewList FieldList
 func (f FieldList) Sub(name string, fl []Field) NewList {
 	var newArr NewList = make([]Field, len(f))
 	//Copy!
-	copy(newArr, f)
+	n := copy(newArr, f)
+	if n != len(f) {
+		panic("fieldList sub: invalid length! something went wrong")
+	}
 	//linear search but there are not a lot of values. Hash-map feels overkill
 	for k, v := range newArr {
 		if v.Name == name {
@@ -37,7 +39,7 @@ func (f FieldList) Sub(name string, fl []Field) NewList {
 	}
 	return newArr
 }
-
+//These lists do not need copying as they are never global.
 func (f NewList) Sub(name string, fl []Field) NewList {
 	//linear search but fast either way.
 	for k, v := range f {
@@ -115,16 +117,6 @@ func MakeField(name string, meta FieldMeta) Field {
 	return x
 }
 
-// String returns read only create token channel or an error.
-// It checks if there is a circle.
-func (f *Field) String(q *GeneratedQuery, parent string, sb *bytes.Buffer) error {
-	if err := f.check(q); err != nil {
-		// return a closed channel instead of nil for receiving from nil blocks forever, hard to debug and confusing to users.
-		return errors.WithStack(err)
-	}
-	f.string(q, parent, sb)
-	return nil
-}
 
 func (f *Field) writeLanguageTag(sb *bytes.Buffer, l Language) {
 	if l != LanguageDefault && l != LanguageNone {
@@ -139,11 +131,11 @@ func (f *Field) getName() string {
 	return f.Name
 }
 
-// One may have noticed that there is a public String and a private create.
+// One may have noticed that there is a public create and a private create.
 // The different being the public method checks the validity of the Field structure
 // while the private counterpart assumes the validity.
 // Returns whether this field is a facet field.
-func (f *Field) string(q *GeneratedQuery, parent string, sb *bytes.Buffer) bool {
+func (f *Field) create(q *GeneratedQuery, parent string, sb *bytes.Buffer) {
 	agg, ok := q.FieldAggregate[parent]
 	if ok {
 		sb.WriteString(agg.Alias)
@@ -176,6 +168,7 @@ func (f *Field) string(q *GeneratedQuery, parent string, sb *bytes.Buffer) bool 
 		}
 		sb.WriteString(tokenRP)
 	}
+	//Should we order on this field?
 	order, ok := q.FieldOrderings[parent]
 	if ok {
 		sb.WriteString(tokenLP)
@@ -187,12 +180,13 @@ func (f *Field) string(q *GeneratedQuery, parent string, sb *bytes.Buffer) bool 
 		}
 		sb.WriteString(tokenRP)
 	}
+	//Should we filter on this field?
 	filter, ok := q.FieldFilters[parent]
 	if ok {
 		sb.WriteString(tokenSpace)
 		filter.create(q, parent, sb)
 	}
-	var tmp = new(bytes.Buffer)
+	var tmp bytes.Buffer
 	//writefct := false
 	if len(f.Fields) > 0 {
 		tmp.WriteString(tokenLB)
@@ -201,7 +195,7 @@ func (f *Field) string(q *GeneratedQuery, parent string, sb *bytes.Buffer) bool 
 				if i != 0 && i != len(f.Fields) {
 					tmp.WriteString(tokenSpace)
 				}
-				field.string(q, parent+"/"+field.Name, tmp)
+				field.create(q, parent+"/"+field.Name, &tmp)
 			}
 			/*if field.Facet && !writefct {
 				sb.WriteString(tokenSpace)
@@ -210,25 +204,24 @@ func (f *Field) string(q *GeneratedQuery, parent string, sb *bytes.Buffer) bool 
 				writefct = true
 			}*/
 		}
+		//Always add the uid field. I don't think this will be very expensive.
 		tmp.WriteString(tokenSpace)
 		tmp.WriteString("uid")
 		tmp.WriteString(tokenSpace)
 		tmp.WriteString(tokenRB)
 	}
-	io.Copy(sb, tmp)
-	return false
+	_, _ = io.Copy(sb, &tmp)
 }
 
 func (f *Field) check(q *GeneratedQuery) error {
+	if f.Name == "" {
+		return errors.New("missing name in field")
+	}
+	for _,v := range f.Fields {
+		if err := v.check(q); err != nil {
+			return err
+		}
+	}
 	return nil
 }
 
-func MakeFields(s ...string) []Field {
-	var f []Field
-	f = make([]Field, len(s))
-	for k, v := range s {
-		ft := MakeField(v, 0)
-		f[k] = ft
-	}
-	return f
-}

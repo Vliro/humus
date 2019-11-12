@@ -6,7 +6,12 @@
         if r.UID() == "" {
             return mulbase.ErrUID
         }
-        return mulbase.GetChild(r,"{{.Tag}}",{{.Type}}Fields,{{if .IsArray}}count,{{else}}-1,{{end}}txn, &r.{{.Name}})
+        q, err := mulbase.GetChild(r,"{{.Tag}}",{{.Type}}Fields,{{if .IsArray}}count,{{else}}-1,{{end}})
+        if err != nil {
+            return err
+        }
+        _,err = txn.RunQuery(context.Background(), q, &r.{{.Name}})
+        return err
     }
 
     func (r *{{.Parent}}) Add{{.Parent}}{{.Name}}(input *{{.Type}}) error {

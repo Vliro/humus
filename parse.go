@@ -125,10 +125,11 @@ func singleResponse(temp *fastjson.Value, inp interface{}) error {
 	}
 	return nil
 }
-//HandleResponse handles the input from a query..
-func HandleResponse(res []byte, inp []interface{}) error {
-	p := fastjson.Parser{}
-	v, err := p.ParseBytes(res)
+//HandleResponse handles the input from a query.
+func HandleResponse(res []byte, inp []interface{}, names ...string) error {
+	//Use a fastjson parser to traverse it initially.
+	var parse fastjson.Parser
+	v, err := parse.ParseBytes(res)
 	if err != nil {
 		return err
 	}
@@ -139,10 +140,26 @@ func HandleResponse(res []byte, inp []interface{}) error {
 	if d.Len() != len(inp) {
 		return errInvalidLength
 	}
+	/*
+		For static queries. Custom names are provided.
+	 */
+	if len(names) != 0 {
+		for k,v := range inp {
+			err = singleResponse(d.Get(names[k]), v)
+			if err != nil {
+				return errParsing
+			}
+		}
+		return nil
+	}
+	//Do we have a single query or multiple?
 	if q := d.Get("q") ; q != nil {
 		err = singleResponse(q, inp[0])
 		return err
 	}
+	/*
+		For type Queries with multiple query objects.
+	 */
 	for k,v := range inp {
 		err = singleResponse(d.Get("q" + strconv.Itoa(k)), v)
 		if err != nil {

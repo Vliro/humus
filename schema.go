@@ -55,7 +55,7 @@ type SchemaField struct {
 		panic(err)
 	}
 	for _, v := range arr {
-		name := strings.Trim(v.Get("predicate").String(), "\"")
+		name := strings.Trim(v.Get("predicate").create(), "\"")
 		if name == "_predicate_" {
 			continue
 		}

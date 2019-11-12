@@ -193,18 +193,18 @@ func NewFunctionError(t functionType) FunctionError {
 
 func (f *Function) check(q *GeneratedQuery) error {
 	if f == nil {
-		return fmt.Errorf("no function")
+		return errMissingFunction
 	}
 	if f.Type == "" {
-		return fmt.Errorf("no function")
+		return errMissingFunction
 	}
 	if len(f.Variables) == 0 {
-		return fmt.Errorf("no variables to function")
+		return errMissingVariables
 	}
 	switch f.Type {
 	case FunctionHas:
 		if len(f.Variables) != 1 && f.Variables[0].Type != TypePred {
-			return fmt.Errorf("invalid function")
+			return fmt.Errorf("%s function too many variables or invalid types, have %v need %v", f.Type, len(f.Variables), 1)
 		}
 		break
 	}

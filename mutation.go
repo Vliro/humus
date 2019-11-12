@@ -1,19 +1,15 @@
 package mulbase
 
+//SingleMutation represents just that, one object mutated.
+//interface{} is used over DNode as the structure of a mutation might
+//change so a map[string]interface{} is needed for certain mutations.
 type SingleMutation struct {
 	Object interface{}
 	QueryType QueryType
 }
 
 func (m SingleMutation) Type() QueryType {
-	if m.QueryType == QueryRegular {
-		panic("mutation: set to invalid query type.")
-	}
 	return m.QueryType
-}
-
-func checkInterface() {
-
 }
 
 func (m SingleMutation) Process(schemaList) ([]byte, map[string]string, error) {
@@ -23,12 +19,15 @@ func (m SingleMutation) Process(schemaList) ([]byte, map[string]string, error) {
 }
 
 type MutationQuery struct {
-	Values []SingleMutation
-	Type MutationType
+	Values []interface{}
+	QueryType QueryType
 }
 
-func (m *MutationQuery) Process(list schemaList) (string, map[string]string, error) {
-	return "", nil, nil
+func (m *MutationQuery) Process(list schemaList) ([]byte, map[string]string, error) {
+	byt, err := json.Marshal(m.Values)
+	return byt, nil, err
 }
 
-
+func (m *MutationQuery) Type() QueryType {
+	return m.QueryType
+}

@@ -2,8 +2,9 @@ package mulbase
 
 import "fmt"
 
+//StaticQuery represents a static query.
 type StaticQuery struct {
-	Query string
+	Query []byte
 }
 
 func (s StaticQuery) Type() QueryType {
@@ -11,10 +12,12 @@ func (s StaticQuery) Type() QueryType {
 }
 
 func (s StaticQuery) Process(sch schemaList) ([]byte, map[string]string, error) {
-	return []byte(s.Query), nil, nil
+	//TODO: API Forces copying here. Should we change it up?
+	//TODO: Add GraphQL variables.
+	return s.Query, nil, nil
 }
 
 func NewStaticQuery(query string, vals ...interface{}) StaticQuery {
 	str := fmt.Sprintf(query, vals...)
-	return StaticQuery{str}
+	return StaticQuery{[]byte(str)}
 }

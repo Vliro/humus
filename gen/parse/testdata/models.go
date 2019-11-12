@@ -7,118 +7,116 @@ import (
 	"time"
 )
 
-type Level struct {
+type Question struct {
 	//This line declares basic properties for a database node.
 	mulbase.Node
-	Name      string    `json:"Level.name"`
-	Password  string    `json:"Level.password"`
-	Hash      string    `json:"Level.hash"`
-	Owner     *User     `json:"Level.owner"`
-	Size      int       `json:"Level.size"`
-	Updated   time.Time `json:"Level.updated"`
-	PlayCount int       `json:"Level.playCount"`
-	Live      bool      `json:"Level.live"`
-	Rating    float64   `json:"Level.rating"`
+	Title         string    `json:"Question.title"`
+	Text          string    `json:"Question.text"`
+	DatePublished time.Time `json:"Question.datePublished"`
 }
 
-var LevelFields mulbase.FieldList = []mulbase.Field{MakeField("Level.name", 0), MakeField("Level.password", 0), MakeField("Level.hash", 0), MakeField("Level.owner", 0|mulbase.MetaObject), MakeField("Level.size", 0), MakeField("Level.updated", 0), MakeField("Level.playCount", 0), MakeField("Level.live", 0), MakeField("Level.rating", 0)}
+var QuestionFields mulbase.FieldList = []mulbase.Field{MakeField("Question.title", 0), MakeField("Question.text", 0), MakeField("Question.datePublished", 0)}
 
 //SaveValues saves the node values that
 //do not contain any references to other objects.
-func (r *Level) SaveValues(ctx context.Context, txn *mulbase.Txn) error {
+func (r *Question) SaveValues(ctx context.Context, txn *mulbase.Txn) error {
 	mut := mulbase.CreateMutation(r.Values(), mulbase.QuerySet)
 	return txn.RunQuery(ctx, mut)
 }
 
-//TODO: This is lazy af.
-//Values creates a map of all the scalar values.
-//This includes the UID.
-func (r *Level) Values() map[string]interface{} {
-	var m = make(map[string]interface{})
-	m["Level.name"] = r.Name
-	m["Level.password"] = r.Password
-	m["Level.hash"] = r.Hash
-	m["Level.size"] = r.Size
-	m["Level.updated"] = r.Updated
-	m["Level.playCount"] = r.PlayCount
-	m["Level.live"] = r.Live
-	m["Level.rating"] = r.Rating
-	m["uid"] = r.Uid
-	return m
+//Fields returns all Scalar fields for this value.
+func (r *Question) Fields() mulbase.FieldList {
+	return QuestionFields
 }
 
-func (r *Level) SetType() {
+//Sets the types. This includes interfaces.
+func (r *Question) SetType() {
 	r.Type = []string{
-		"Level",
+		"Question",
+		"Post",
 	}
 }
 
-type User struct {
-	//This line declares basic properties for a database node.
-	mulbase.Node
-	Name         string    `json:"User.name"`
-	Email        string    `json:"User.email"`
-	Password     string    `json:"User.password"`
-	Registered   time.Time `json:"User.registered"`
-	Rank         int       `json:"User.rank"`
-	Exp          int       `json:"User.exp"`
-	Active       bool      `json:"User.active"`
-	LastLogin    time.Time `json:"User.lastLogin"`
-	Speed        int       `json:"User.speed"`
-	Jump         int       `json:"User.jump"`
-	Acceleration int       `json:"User.acceleration"`
-	Power        int       `json:"User.power"`
-	Hats         []int     `json:"User.hats"`
-	Heads        []int     `json:"User.heads"`
-	Bodies       []int     `json:"User.bodies"`
-	Feets        []int     `json:"User.feets"`
-	Hat          int       `json:"User.hat"`
-	Head         int       `json:"User.head"`
-	Body         int       `json:"User.body"`
-	Feet         int       `json:"User.feet"`
-	Levels       []Level   `json:"User.levels"`
+//Values returns all the scalar values for this node.
+func (r *Question) Values() mulbase.DNode {
+	var m QuestionScalars
+	m.Title = r.Title
+	m.Text = r.Text
+	m.DatePublished = r.DatePublished
+	m.Uid = r.Uid
+	return m
 }
 
-var UserFields mulbase.FieldList = []mulbase.Field{MakeField("User.name", 0), MakeField("User.email", 0), MakeField("User.password", 0), MakeField("User.registered", 0), MakeField("User.rank", 0), MakeField("User.exp", 0), MakeField("User.active", 0), MakeField("User.lastLogin", 0), MakeField("User.speed", 0), MakeField("User.jump", 0), MakeField("User.acceleration", 0), MakeField("User.power", 0), MakeField("User.hats", 0|mulbase.MetaList), MakeField("User.heads", 0|mulbase.MetaList), MakeField("User.bodies", 0|mulbase.MetaList), MakeField("User.feets", 0|mulbase.MetaList), MakeField("User.hat", 0), MakeField("User.head", 0), MakeField("User.body", 0), MakeField("User.feet", 0), MakeField("User.levels", 0|mulbase.MetaObject|mulbase.MetaList)}
+//QuestionScalars is simply to avoid a map[string]interface{}
+//It is a mirror of the previous struct with all scalar values.
+type QuestionScalars struct {
+	mulbase.Node
+	Title         string    `json:"Question.title"`
+	Text          string    `json:"Question.text"`
+	DatePublished time.Time `json:"Question.datePublished"`
+}
+
+func (s *QuestionScalars) Values() mulbase.DNode {
+	return s
+}
+
+func (s *QuestionScalars) Fields() mulbase.FieldList {
+	return QuestionFields
+}
+
+//End of model.template
+type Comment struct {
+	//This line declares basic properties for a database node.
+	mulbase.Node
+	Text          string    `json:"Comment.text"`
+	DatePublished time.Time `json:"Comment.datePublished"`
+}
+
+var CommentFields mulbase.FieldList = []mulbase.Field{MakeField("Comment.text", 0), MakeField("Comment.datePublished", 0)}
 
 //SaveValues saves the node values that
 //do not contain any references to other objects.
-func (r *User) SaveValues(ctx context.Context, txn *mulbase.Txn) error {
+func (r *Comment) SaveValues(ctx context.Context, txn *mulbase.Txn) error {
 	mut := mulbase.CreateMutation(r.Values(), mulbase.QuerySet)
 	return txn.RunQuery(ctx, mut)
 }
 
-//TODO: This is lazy af.
-//Values creates a map of all the scalar values.
-//This includes the UID.
-func (r *User) Values() map[string]interface{} {
-	var m = make(map[string]interface{})
-	m["User.name"] = r.Name
-	m["User.email"] = r.Email
-	m["User.password"] = r.Password
-	m["User.registered"] = r.Registered
-	m["User.rank"] = r.Rank
-	m["User.exp"] = r.Exp
-	m["User.active"] = r.Active
-	m["User.lastLogin"] = r.LastLogin
-	m["User.speed"] = r.Speed
-	m["User.jump"] = r.Jump
-	m["User.acceleration"] = r.Acceleration
-	m["User.power"] = r.Power
-	m["User.hats"] = r.Hats
-	m["User.heads"] = r.Heads
-	m["User.bodies"] = r.Bodies
-	m["User.feets"] = r.Feets
-	m["User.hat"] = r.Hat
-	m["User.head"] = r.Head
-	m["User.body"] = r.Body
-	m["User.feet"] = r.Feet
-	m["uid"] = r.Uid
+//Fields returns all Scalar fields for this value.
+func (r *Comment) Fields() mulbase.FieldList {
+	return CommentFields
+}
+
+//Sets the types. This includes interfaces.
+func (r *Comment) SetType() {
+	r.Type = []string{
+		"Comment",
+		"Post",
+	}
+}
+
+//Values returns all the scalar values for this node.
+func (r *Comment) Values() mulbase.DNode {
+	var m CommentScalars
+	m.Text = r.Text
+	m.DatePublished = r.DatePublished
+	m.Uid = r.Uid
 	return m
 }
 
-func (r *User) SetType() {
-	r.Type = []string{
-		"User",
-	}
+//CommentScalars is simply to avoid a map[string]interface{}
+//It is a mirror of the previous struct with all scalar values.
+type CommentScalars struct {
+	mulbase.Node
+	Text          string    `json:"Comment.text"`
+	DatePublished time.Time `json:"Comment.datePublished"`
 }
+
+func (s *CommentScalars) Values() mulbase.DNode {
+	return s
+}
+
+func (s *CommentScalars) Fields() mulbase.FieldList {
+	return CommentFields
+}
+
+//End of model.template

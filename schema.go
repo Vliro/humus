@@ -1,6 +1,8 @@
 package mulbase
 
 type schemaList map[string]Field
+
+//Deprecated.
 /*
 type SchemaField struct {
 	Type    VarType `json:"type,omitempty"`

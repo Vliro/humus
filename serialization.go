@@ -5,14 +5,15 @@ import (
 	"io"
 	"unsafe"
 )
-//Uncomment this if you do not wish to use jsoniter.
+//Per default this library uses jsoniter for json serialization
+//and deserialization.
 var json = jsoniter.ConfigCompatibleWithStandardLibrary
 
 //As create is immutable this is mostly safe as long as we dont change any value in b!
 func bytesToStringUnsafe(b []byte) string {
 	return *(*string)(unsafe.Pointer(&b))
 }
-
+//TODO: The functions below might be unnecessary.
 func Serialize(d interface{}) string {
 	bytes, err := json.Marshal(d)
 	if err != nil {

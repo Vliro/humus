@@ -21,14 +21,20 @@ func (u UID) Int() int64 {
 }
 
 type H map[string]interface{}
-
+//DNode represents an object that can be safely stored
+//in the database. It includes all necessary fields for
+//automatic generation.
 type DNode interface {
+	//Returns the UID of this node.
 	UID() UID
+	//Sets the UID of this node.
 	SetUID(uid string)
+	//Sets all types of this node. This has to be done at least once.
 	SetType()
+	//Returns all scalar fields for this node.
 	Fields() FieldList
 	//Serializes all the scalar values that are not hidden.
-	Values() map[string]interface{}
+	Values() DNode
 }
 
 const (
@@ -43,7 +49,7 @@ const (
 	tokenFilter = "@filter"
 )
 
-
+//TODO: These have not been tested yet. Only GeneratedQuery.
 type Queries struct {
 	Queries []*GeneratedQuery
 }

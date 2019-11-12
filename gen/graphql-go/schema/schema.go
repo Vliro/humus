@@ -309,9 +309,14 @@ func (s *Schema) Parse(schemaString string, useStringDescriptions bool) error {
 			if !ok {
 				return errors.Errorf("type %q is not an interface", intfName)
 			}
-			for _, f := range intf.Fields.Names() {
+			for k, f := range intf.Fields.Names() {
+				//This is the previous code for forcing reusage of interfaces.
+				//Instead, simply add the field in all its glory to the object.
 				if obj.Fields.Get(f) == nil {
-					return errors.Errorf("interface %q expects field %q but %q does not provide it", intfName, f, obj.Name)
+					//return errors.Errorf("interface %q expects field %q but %q does not provide it", intfName, f, obj.Name)
+					obj.Fields = append(obj.Fields, intf.Fields[k])
+				} else {
+					return errors.Errorf("interface %q expects field %q to not exist but %q provides it", intfName, f, obj.Name)
 				}
 			}
 			obj.Interfaces[i] = intf

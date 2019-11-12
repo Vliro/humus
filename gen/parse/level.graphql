@@ -8,4 +8,5 @@ type Level {
     playCount: Int!
     live: Boolean!
     rating: Float!
+    owner: User! @hasInverse(field: levels)
 }

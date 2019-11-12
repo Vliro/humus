@@ -2,6 +2,7 @@ package parse
 
 import (
 	"bytes"
+	"errors"
 	"fmt"
 	"mulbase/gen/graphql-go/common"
 	"mulbase/gen/graphql-go/schema"
@@ -44,7 +45,7 @@ var modelImports = []string{
 }
 
 //genFields generates the actual fields for the go definition.
-//the model generation does not use templates.
+//Returns the list of fields created! This includes scalars.
 func makeGoStruct(o *schema.Object) (*bytes.Buffer, []Field) {
 	var sb bytes.Buffer
 	var fields []Field
@@ -59,12 +60,13 @@ func makeGoStruct(o *schema.Object) (*bytes.Buffer, []Field) {
 	}
 	sb.WriteString(bottomLine)
 	makeFieldList(o.Name, fields, &sb)
-	modelTemplate(o.Name, fields, &sb)
+	modelTemplate(o, o.Name, fields, &sb)
 	return &sb, fields
 }
 
 //makeFieldList generates the field declarations, ie var Name FieldList = ...
 //and writes it to sb. It also ensures the proper generation of flag metadata.
+//This also writes the scalar list.
 func makeFieldList(name string, fi []Field, sb *bytes.Buffer) {
 	var isb bytes.Buffer
 	for k, v := range fi {
@@ -90,7 +92,7 @@ func makeFieldList(name string, fi []Field, sb *bytes.Buffer) {
 	}
 	sb.WriteString(fmt.Sprintf(fieldDecl, name, isb.String()) + "\n")
 }
-
+//Create the field declaration as well as the Field object. These field objects are used in template generation.
 func writeField(root *schema.Object, name string, typ string, sb *bytes.Buffer, flag flags) Field {
 	var isb strings.Builder
 	var fi Field
@@ -133,7 +135,7 @@ func iterate(obj *schema.Object, data *schema.Field, field common.Type, sb *byte
 		*/
 		f |= flagPointer
 	case *schema.Scalar:
-		//Set scalar.
+		//Set scalar flag.
 		f |= flagScalar
 		if val,ok := getBuiltIn(a.Name); ok {
 			typ = val
@@ -143,7 +145,7 @@ func iterate(obj *schema.Object, data *schema.Field, field common.Type, sb *byte
 	}
 	if typ != "" {
 		/*
-			Do not allow unexported fields in database declarations.
+			Do not allow unexported fields in database declarations. (that is, the struct definition.
 		*/
 		var name = data.Name
 		var ff = writeField(obj, name, typ, sb, f)
@@ -151,14 +153,15 @@ func iterate(obj *schema.Object, data *schema.Field, field common.Type, sb *byte
 	}
 	return nil
 }
-
+//The input struct for model template.
 type modelStruct struct {
 	Name   string
 	Fields []Field
 	ScalarFields []Field
+	Interfaces []string
 }
-
-func modelTemplate(name string, fields []Field, sb *bytes.Buffer) {
+//Executes the model template for all scalar fields.
+func modelTemplate(obj *schema.Object, name string, fields []Field, sb *bytes.Buffer) {
 	templ := getTemplate("Model")
 	if templ == nil {
 		panic("missing Model template")
@@ -166,6 +169,9 @@ func modelTemplate(name string, fields []Field, sb *bytes.Buffer) {
 	var m = modelStruct{
 		Name:   name,
 		Fields: fields,
+	}
+	for _,v := range obj.Interfaces {
+		m.Interfaces = append(m.Interfaces, v.Name)
 	}
 	main: for _,v := range m.Fields {
 		for _,iv := range builtins {
@@ -176,4 +182,15 @@ func modelTemplate(name string, fields []Field, sb *bytes.Buffer) {
 		}
 	}
 	_ = templ.Execute(sb, m)
+}
+
+func verifyDirectives(field *schema.Field, created Field) error {
+	for _,v := range field.Directives {
+		if v.Name.Name == "hasInverse" {
+			if created.flags & flagScalar != 0 {
+				return errors.New("cannot use hasInverse on scalar.")
+			}
+		}
+	}
+	return nil
 }

@@ -112,7 +112,7 @@ func Parse(input, output string) {
 	 */
 
 	var resultingFile bytes.Buffer
-	resultingFile.WriteString(header)
+	var hasFile = false
 	err = filepath.Walk(input, func(path string, info os.FileInfo, err error) error {
 		if err != nil {
 			panic(err)
@@ -130,11 +130,19 @@ func Parse(input, output string) {
 			if fp := filepath.Ext(info.Name()); fp != ".graphql" {
 				return nil
 			}
+			hasFile = true
 			resultingFile.Write(fd)
 			//Ensure we add the proper header.
 		}
 		return nil
 	})
+	//No file found. Don't do anything.
+	if !hasFile {
+		return
+	}
+	/*
+		Parse the entire schema, go-fmt the code and write to the file.
+	 */
 	sc := graphql.MustParseSchema(resultingFile.String(), nil)
 	generate(sc.Schema, &modelBuffer, &fnBuffer)
 	if err != nil {
@@ -155,7 +163,7 @@ func Parse(input, output string) {
 		panic(err)
 	}
 }
-
+//make models and functions.
 func generate(schema *schema.Schema, modelWriter io.Writer, fnWriter io.Writer) {
 	_,m := createModel(schema, modelWriter)
 	processFunctions(schema, fnWriter, m)
@@ -185,7 +193,7 @@ func createModel(s *schema.Schema, output io.Writer) (error, map[string][]Field)
 	_ , err := io.Copy(output, &tempBuffer)
 	return err, fieldMap
 }
-
+//list of template files.
 var templates = map[string]string {
 	"Get": "get.template",
 	"Field": "global.template",
@@ -209,5 +217,4 @@ func getTemplate(name string) *template.Template {
 		return nil
 	}
 	return templ
-
 }

@@ -5,21 +5,43 @@ func (r *{{.Name}}) SaveValues(ctx context.Context, txn *mulbase.Txn) error {
     mut := mulbase.CreateMutation(r.Values(), mulbase.QuerySet)
     return txn.RunQuery(ctx, mut)
 }
-
-//TODO: This is lazy af.
-//Values creates a map of all the scalar values.
-//This includes the UID.
-func (r *{{.Name}}) Values() map[string]interface{} {
-   var m = make(map[string]interface{})
-   {{range .ScalarFields -}}
-       m["{{.Tag}}"] = r.{{.Name}}
-       {{end -}}
-   m["uid"] = r.Uid
-   return m
+//Fields returns all Scalar fields for this value.
+func (r *{{.Name}}) Fields() mulbase.FieldList {
+    return {{.Name}}Fields
 }
-
+//Sets the types. This includes interfaces.
 func (r *{{.Name}}) SetType() {
     r.Type = []string {
         "{{.Name}}",
+        {{range .Interfaces}}"{{.}}",
+        {{end}}
     }
 }
+//Values returns all the scalar values for this node.
+func (r *{{.Name}}) Values() mulbase.DNode{
+   var m {{.Name}}Scalars
+   {{range .ScalarFields -}}
+       m.{{.Name}}= r.{{.Name}}
+       {{end -}}
+   m.Uid = r.Uid
+   return m
+}
+
+//{{.Name}}Scalars is simply to avoid a map[string]interface{}
+//It is a mirror of the previous struct with all scalar values.
+type {{.Name}}Scalars struct {
+    mulbase.Node
+    {{range .ScalarFields -}}
+        {{.Name}} {{.Type}} `json:"{{.Tag}}"`
+    {{end}}
+}
+
+func (s *{{.Name}}Scalars) Values() mulbase.DNode {
+    return s
+}
+
+func (s *{{.Name}}Scalars) Fields() mulbase.FieldList {
+    return {{.Name}}Fields
+}
+
+//End of model.template

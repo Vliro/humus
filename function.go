@@ -10,7 +10,7 @@ type functionType string
 type OrderType string
 
 type Predicate string
-
+//Stringify this predicate.
 func (s Predicate) String() string {
 	return string("<" + s + ">")
 }

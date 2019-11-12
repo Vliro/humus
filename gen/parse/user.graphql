@@ -19,6 +19,5 @@ type User {
     head: Int!
     body: Int!
     feet: Int!
-
-    levels: [Level!]!
+    levels: [Level!]! @hasInverse(field: owner)
 }

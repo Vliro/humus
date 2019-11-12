@@ -1,0 +1,13 @@
+interface Post {
+    id: ID!
+    text: String
+    datePublished: DateTime
+}
+
+type Question implements Post {
+    title: String!
+}
+
+type Comment implements Post {
+    commentsOn: Post!
+}

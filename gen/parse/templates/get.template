@@ -17,7 +17,3 @@
     }
 {{end}}
 
-func (r *{{.Name}}) Fields() mulbase.FieldList {
-    return {{.Name}}Fields
-}
-

@@ -1,4 +1,6 @@
-
+{{/*Generates Getters/Setters for database relations.
+This needs to be updated for 1-1 relations.
+*/}}
 
 {{range .Fields}}
     //Populates the field of r.
@@ -13,7 +15,7 @@
         _,err = txn.RunQuery(context.Background(), q, &r.{{.Name}})
         return err
     }
-
+    //TODO. Don't use this.
     func (r *{{.Parent}}) Add{{.Parent}}{{.Name}}(input *{{.Type}}) error {
         if input.UID() == "" {
             return mulbase.ErrUID

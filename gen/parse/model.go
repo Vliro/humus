@@ -9,16 +9,6 @@ import (
 	"strings"
 )
 
-type flags int
-
-const (
-	flagNotNull = 1 << iota
-	flagArray
-	flagScalar
-	flagPointer
-	flagInterface
-)
-
 const topLine = "type %v struct {\n"
 //Make sure there is space beforehand.
 const lineDeclaration = " %v `json:\"%v\"` \n"

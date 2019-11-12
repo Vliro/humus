@@ -7,18 +7,24 @@ import (
 	"strconv"
 )
 
-//FieldList is a list of Fields associated with a generated object.
-//These are of global type and should never be modified lest
-//the state of the entire application should be changed.
-//Whenever fields are added to this list they are copied.
+/*
+	FieldList is a list of Fields associated with a generated object.
+	These are of global type and should never be modified lest
+	the state of the entire application should be changed.
+	Whenever fields are added to this list they are copied.
+	Example usage:
+
+	var NewFields = CharacterFields.Sub("Character.friends", CharacterFields).Sub("Character.enemies", CharacterFields.
+					Sub("Character.items", ItemFields)
+	This will also ensure fields are copied properly from the global list.
+*/
 type FieldList []Field
 
 //No need to reallocate. Typing here is very important as it will no longer copy.
 type NewList FieldList
 
-//Sub allows you to add sub-field structures.
 //TODO: Racy reads? There are never writes to a global field-list unless you are doing something wrong!
-//but might be concurrent reads.
+//Sub allows you to add sub-field structures.
 func (f FieldList) Sub(name string, fl []Field) NewList {
 	var newArr NewList = make([]Field, len(f))
 	//Copy!
@@ -79,6 +85,8 @@ type Count struct {
 }
 
 //A meta field for schemas.
+//This simply defines properties surrounding fields such as language etc.
+//This is used in generating the queries.
 type FieldMeta int
 
 func (f FieldMeta) Lang() bool {
@@ -187,7 +195,6 @@ func (f *Field) create(q *GeneratedQuery, parent string, sb *bytes.Buffer) {
 		filter.create(q, parent, sb)
 	}
 	var tmp bytes.Buffer
-	//writefct := false
 	if len(f.Fields) > 0 {
 		tmp.WriteString(tokenLB)
 		for i, field := range f.Fields {
@@ -197,12 +204,6 @@ func (f *Field) create(q *GeneratedQuery, parent string, sb *bytes.Buffer) {
 				}
 				field.create(q, parent+"/"+field.Name, &tmp)
 			}
-			/*if field.Facet && !writefct {
-				sb.WriteString(tokenSpace)
-				sb.WriteString("@facets")
-				sb.WriteString(tokenSpace)
-				writefct = true
-			}*/
 		}
 		//Always add the uid field. I don't think this will be very expensive.
 		tmp.WriteString(tokenSpace)

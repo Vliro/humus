@@ -1,3 +1,4 @@
+{{/*This might be removed at one point but it is kept for now.*/}}
 {{range .Fields}}
     type async{{.Parent}}{{.Name}} struct {
         Err error

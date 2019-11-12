@@ -2,7 +2,7 @@
 
 Mulbase/Mulgen is a front-end library for DGraph. It includes static (mostly) code generation based on the same schema supplied to the database so no need to keep the client structs separate. 
 
-Note that this code does not, as of right, have any way to git pull. It exists simply in go/src but hopefully this will be changed. There are no guarantees whatsoever about this library right now.
+Note that this code does not, as of right, have any way to go get in a regular manner. It exists simply in go/src but hopefully this will be changed in due time. There are no guarantees whatsoever about this library right now.
 
 ## Mulgen
 
@@ -28,3 +28,17 @@ The GraphQL Non-null(! operator) defines whether or not whether scalar values ar
 This is derived from https://github.com/graph-gophers/graphql-go. A lot of code has been removed that
 was not necessary since primarily the parsing was necessary and not the actual GraphQL elements. 
 The foremost change was making the schema and its objects public for code generation.
+
+## Getting started
+
+Running mulbase/gen/parse/main.go with input/output flags generates the model files, models.go and gen.go. 
+These are used with mulbase. Create a new DB object using mulbase.Init() and set the schema from the global fields
+generated. 
+
+## TODOS
+
+Language tags are soon to be added properly, I'm not sure how they work with DGraph GraphQL. 
+Proper testing. 
+Finalize the API.
+Comment.
+Clean up the gen directory. Code is messy.

@@ -178,6 +178,7 @@ func connect(conf *Config) *DB {
 	db := &DB{
 		d:        c,
 		gplPoint: conf.IP + ":" + strconv.Itoa(conf.Port) + "/graphql",
+		c: conf,
 	}
 	return db
 }

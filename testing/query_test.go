@@ -1,7 +1,8 @@
-package mulgen
+package testing
 
 import (
 	"context"
+	"fmt"
 	"mulbase"
 	"testing"
 	"time"
@@ -62,7 +63,7 @@ func TestHasUid(t *testing.T) {
 		t.Error("could not find uid")
 		return
 	}
-	txn.Discard(context.Background())
+	_ = txn.Discard(context.Background())
 }
 
 func TestMutate(t *testing.T) {
@@ -104,4 +105,23 @@ func TestMutateAsync(t *testing.T) {
 		t.Error(err)
 		return
 	}
+}
+
+func TestStaticQuery(t *testing.T) {
+	q := mulbase.NewStaticQuery(fmt.Sprintf(`{q(func: uid(%s)) {
+		uid
+		Post.datePublished
+		Post.text}}`, uid))
+	txn := db.NewTxn(true)
+	var c Comment
+	_, err := txn.RunQuery(context.Background(), q, &c)
+	if err != nil {
+		t.Error(err)
+		return
+	}
+	if string(c.Uid) != uid {
+		t.Error("could not fetch in static query.")
+		return
+	}
+	_ = txn.Discard(context.Background())
 }

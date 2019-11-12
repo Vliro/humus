@@ -14,16 +14,6 @@ import (
 	"strings"
 	"text/template"
 )
-//Scalar builtin types.
-var builtins = map[string]string{
-	"String": "string",
-	"Int":    "int",
-	"Boolean": "bool",
-	"DateTime": "time.Time",
-	"Float": "float64",
-	//Uid handled separately.
-	"ID": "",
-}
 
 func getBuiltIn(key string) (string, bool) {
 	val,ok := builtins[key]
@@ -82,7 +72,7 @@ func goFmt(byt []byte) []byte {
 	return result
 }
 
-
+//Parse parses the directory input and outputs go files to the directory output.
 func Parse(input, output string) {
 	/*
 		First pass. Generate the models.
@@ -110,7 +100,6 @@ func Parse(input, output string) {
 	/*
 		Walk the directory.
 	 */
-
 	var resultingFile bytes.Buffer
 	var hasFile = false
 	err = filepath.Walk(input, func(path string, info os.FileInfo, err error) error {
@@ -192,6 +181,9 @@ func createModel(s *schema.Schema, output io.Writer) (error, map[string][]Field)
 			}
 		}
 	}
+	/*
+		Write the interfaces first as we use these to extend the scalar values.
+	 */
 	for _,v := range interfaces {
 		buf, m := makeGoInterface(v)
 		fieldMap[v.Name] = m
@@ -200,6 +192,9 @@ func createModel(s *schema.Schema, output io.Writer) (error, map[string][]Field)
 			panic(err)
 		}
 	}
+	/*
+		Write the objects.
+	 */
 	for _, vv := range obj {
 		buf,m := makeGoStruct(vv, fieldMap)
 		fieldMap[vv.Name] = m
@@ -213,13 +208,7 @@ func createModel(s *schema.Schema, output io.Writer) (error, map[string][]Field)
 	_ , err := io.Copy(output, &tempBuffer)
 	return err, fieldMap
 }
-//list of template files.
-var templates = map[string]string {
-	"Get": "get.template",
-	"Field": "global.template",
-	"Async": "async.template",
-	"Model": "model.template",
-}
+
 //The box relevant for embedding assets.
 var box = packr.New("templates", "./templates")
 

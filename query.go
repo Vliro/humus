@@ -51,7 +51,7 @@ func (q *Queries) Append(qu *GeneratedQuery) *Queries {
 	q.Queries = append(q.Queries, qu)
 	return q
 }
-
+//create the byte representation.
 func (q *Queries) create() ([]byte, map[string]string, error) {
 	var queryStr, final bytes.Buffer
 	//The query variable information.

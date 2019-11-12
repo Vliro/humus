@@ -1,7 +1,6 @@
 package mulbase
 
 import (
-	"PR2Server/core/logger"
 	"errors"
 	"reflect"
 	"strconv"
@@ -41,6 +40,7 @@ func GetResponse(res []byte, inp interface{}) {
 	}
 	return
 }
+
 /*
 	func HandleResponseArray(res []byte, params []interface{}) error {
 	p := fastjson.Parser{}
@@ -72,7 +72,6 @@ func singleResponse(temp *fastjson.Value, inp interface{}) error {
 	var b []byte
 	val := reflect.ValueOf(inp)
 	if !(val.Kind() == reflect.Ptr || val.Kind() == reflect.Interface) {
-		logger.LogWarn("invalid input to singleResponse.")
 		return errors.New("parse: invalid input to singleResponse")
 	}
 	if val.Kind() == reflect.Ptr {
@@ -125,6 +124,7 @@ func singleResponse(temp *fastjson.Value, inp interface{}) error {
 	}
 	return nil
 }
+
 //HandleResponse handles the input from a query.
 func HandleResponse(res []byte, inp []interface{}, names ...string) error {
 	//Use a fastjson parser to traverse it initially.
@@ -142,9 +142,9 @@ func HandleResponse(res []byte, inp []interface{}, names ...string) error {
 	}
 	/*
 		For static queries. Custom names are provided.
-	 */
+	*/
 	if len(names) != 0 {
-		for k,v := range inp {
+		for k, v := range inp {
 			err = singleResponse(d.Get(names[k]), v)
 			if err != nil {
 				return errParsing
@@ -153,15 +153,15 @@ func HandleResponse(res []byte, inp []interface{}, names ...string) error {
 		return nil
 	}
 	//Do we have a single query or multiple?
-	if q := d.Get("q") ; q != nil {
+	if q := d.Get("q"); q != nil {
 		err = singleResponse(q, inp[0])
 		return err
 	}
 	/*
 		For type Queries with multiple query objects.
-	 */
-	for k,v := range inp {
-		err = singleResponse(d.Get("q" + strconv.Itoa(k)), v)
+	*/
+	for k, v := range inp {
+		err = singleResponse(d.Get("q"+strconv.Itoa(k)), v)
 		if err != nil {
 			return errParsing
 		}

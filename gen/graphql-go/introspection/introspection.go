@@ -3,8 +3,8 @@ package introspection
 import (
 	"sort"
 
-	"mulbase/gen/graphql-go/common"
-	"mulbase/gen/graphql-go/schema"
+	"github.com/Vliro/mulbase/gen/graphql-go/common"
+	"github.com/Vliro/mulbase/gen/graphql-go/schema"
 )
 
 type Schema struct {

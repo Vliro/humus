@@ -59,12 +59,16 @@ const (
 	TypeUid     VarType = "uid"
 	TypeDefault VarType = ""
 )
-
+//GraphVariable represents a variable before it is parsed and written into a query.
+//TODO: Minimize interface{} here.
 type GraphVariable struct {
 	Type  VarType
 	Value interface{}
 }
 
+//Function represents a GraphQL+- function. It writes into the query
+//the function type, checks the type as well as the list of arguments.
+//It uses GraphQL variables to minimize risk of any type of injection.
 type Function struct {
 	Type      functionType
 	Variables []GraphVariable

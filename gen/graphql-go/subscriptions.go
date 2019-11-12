@@ -5,14 +5,14 @@ import (
 	"errors"
 	"reflect"
 
-	"mulbase/gen/graphql-go/common"
-	qerrors "mulbase/gen/graphql-go/errors"
-	"mulbase/gen/graphql-go/internal/exec"
-	"mulbase/gen/graphql-go/internal/exec/resolvable"
-	"mulbase/gen/graphql-go/internal/exec/selected"
-	"mulbase/gen/graphql-go/internal/query"
-	"mulbase/gen/graphql-go/internal/validation"
-	"mulbase/gen/graphql-go/introspection"
+	"github.com/Vliro/mulbase/gen/graphql-go/common"
+	qerrors "github.com/Vliro/mulbase/gen/graphql-go/errors"
+	"github.com/Vliro/mulbase/gen/graphql-go/internal/exec"
+	"github.com/Vliro/mulbase/gen/graphql-go/internal/exec/resolvable"
+	"github.com/Vliro/mulbase/gen/graphql-go/internal/exec/selected"
+	"github.com/Vliro/mulbase/gen/graphql-go/internal/query"
+	"github.com/Vliro/mulbase/gen/graphql-go/internal/validation"
+	"github.com/Vliro/mulbase/gen/graphql-go/introspection"
 )
 
 // Subscribe returns a response channel for the given subscription with the Schema's

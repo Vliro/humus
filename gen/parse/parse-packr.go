@@ -5,4 +5,4 @@
 // and any other packr generated files.
 package parse
 
-import _ "mulbase/gen/packrd"
+import _ "github.com/Vliro/mulbase/gen/packrd"

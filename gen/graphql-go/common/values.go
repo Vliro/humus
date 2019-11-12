@@ -1,7 +1,7 @@
 package common
 
 import (
-	"mulbase/gen/graphql-go/errors"
+	"github.com/Vliro/mulbase/gen/graphql-go/errors"
 )
 
 // http://facebook.github.io/graphql/draft/#InputValueDefinition

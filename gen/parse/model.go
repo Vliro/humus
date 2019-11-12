@@ -4,8 +4,8 @@ import (
 	"bytes"
 	"errors"
 	"fmt"
-	"mulbase/gen/graphql-go/common"
-	"mulbase/gen/graphql-go/schema"
+	"github.com/Vliro/mulbase/gen/graphql-go/common"
+	"github.com/Vliro/mulbase/gen/graphql-go/schema"
 	"strings"
 )
 
@@ -20,6 +20,10 @@ const fieldDecl = "var %vFields mulbase.FieldList = []mulbase.Field{%s} "
 const makeFieldName = "MakeField(%s, %v)"
 
 const fieldReceiver = "func (r *%s) "
+
+const fieldDeclObj = `var _ = func() {
+%s
+}()`
 
 type Field struct {
 	Tag  string
@@ -58,7 +62,6 @@ func makeGoStruct(o *schema.Object, m map[string][]Field) (*bytes.Buffer, []Fiel
 		}
 	}
 	sb.WriteString(bottomLine)
-	makeFieldList(o.Name, fields, &sb)
 	/*
 		Here we need to include fields from the interface!
 	 */
@@ -69,6 +72,7 @@ func makeGoStruct(o *schema.Object, m map[string][]Field) (*bytes.Buffer, []Fiel
 		val := m[v.Name]
 		fieldsInterface = append(fieldsInterface, val...)
 	}
+	makeFieldList(o.Name, fieldsInterface, &sb)
 	modelTemplate(o.Interfaces, o.Name, fieldsInterface, &sb)
 	return &sb, fields
 }
@@ -180,6 +184,7 @@ func iterate(objName string, data *schema.Field, field common.Type, sb *bytes.Bu
 		f |= flagPointer
 	case *schema.Interface:
 		f |= flagInterface
+		f |= flagPointer
 		typ = a.Name
 	case *schema.Scalar:
 		//Set scalar flag.

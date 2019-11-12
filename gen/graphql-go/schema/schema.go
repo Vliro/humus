@@ -5,8 +5,8 @@ import (
 	"strings"
 	"text/scanner"
 
-	"mulbase/gen/graphql-go/common"
-	"mulbase/gen/graphql-go/errors"
+	"github.com/Vliro/mulbase/gen/graphql-go/common"
+	"github.com/Vliro/mulbase/gen/graphql-go/errors"
 )
 
 // Schema represents a GraphQL service's collective type system capabilities.

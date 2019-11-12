@@ -2,7 +2,7 @@ package parse
 
 import (
 	"io"
-	"mulbase/gen/graphql-go/schema"
+	"github.com/Vliro/mulbase/gen/graphql-go/schema"
 )
 
 type fieldTemplate struct {
@@ -19,7 +19,7 @@ type GetTemplate struct {
 }
 
 var fnImports = []string{
-	"mulbase",
+	"github.com/Vliro/mulbase",
 	"context",
 }
 /*

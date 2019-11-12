@@ -23,4 +23,3 @@ This needs to be updated for 1-1 relations.
         return nil
     }
 {{end}}
-

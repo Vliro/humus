@@ -6,17 +6,17 @@ import (
 	"fmt"
 	"reflect"
 
-	"mulbase/gen/graphql-go/common"
-	"mulbase/gen/graphql-go/errors"
-	"mulbase/gen/graphql-go/internal/exec"
-	"mulbase/gen/graphql-go/internal/exec/resolvable"
-	"mulbase/gen/graphql-go/internal/exec/selected"
-	"mulbase/gen/graphql-go/internal/query"
-	"mulbase/gen/graphql-go/internal/validation"
-	"mulbase/gen/graphql-go/introspection"
-	"mulbase/gen/graphql-go/log"
-	"mulbase/gen/graphql-go/schema"
-	"mulbase/gen/graphql-go/trace"
+	"github.com/Vliro/mulbase/gen/graphql-go/common"
+	"github.com/Vliro/mulbase/gen/graphql-go/errors"
+	"github.com/Vliro/mulbase/gen/graphql-go/internal/exec"
+	"github.com/Vliro/mulbase/gen/graphql-go/internal/exec/resolvable"
+	"github.com/Vliro/mulbase/gen/graphql-go/internal/exec/selected"
+	"github.com/Vliro/mulbase/gen/graphql-go/internal/query"
+	"github.com/Vliro/mulbase/gen/graphql-go/internal/validation"
+	"github.com/Vliro/mulbase/gen/graphql-go/introspection"
+	"github.com/Vliro/mulbase/gen/graphql-go/log"
+	"github.com/Vliro/mulbase/gen/graphql-go/schema"
+	"github.com/Vliro/mulbase/gen/graphql-go/trace"
 )
 
 // ParseSchema parses a GraphQL Schema and attaches the given root resolver. It returns an error if

@@ -8,10 +8,10 @@ import (
 	"strings"
 	"text/scanner"
 
-	"mulbase/gen/graphql-go/common"
-	"mulbase/gen/graphql-go/errors"
-	"mulbase/gen/graphql-go/internal/query"
-	"mulbase/gen/graphql-go/schema"
+	"github.com/Vliro/mulbase/gen/graphql-go/common"
+	"github.com/Vliro/mulbase/gen/graphql-go/errors"
+	"github.com/Vliro/mulbase/gen/graphql-go/internal/query"
+	"github.com/Vliro/mulbase/gen/graphql-go/schema"
 )
 
 type varSet map[*common.InputValue]struct{}

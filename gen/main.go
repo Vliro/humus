@@ -3,7 +3,7 @@ package main
 import (
 	"flag"
 	"fmt"
-	"mulbase/gen/parse"
+	"github.com/Vliro/mulbase/gen/parse"
 )
 
 func main() {

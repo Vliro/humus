@@ -109,14 +109,6 @@ func (d *DB) Mutate(ctx context.Context, q Query) error {
 	return err
 }
 
-//Sets the database schema. This is required for any query.
-func (d *DB) SetSchema(sch map[string]Field) {
-	if sch == nil {
-		panic("nil schema map supplied")
-	}
-	d.schema = sch
-}
-
 //Simply performs the alter command.
 func (d *DB) Alter(ctx context.Context, op *api.Operation) error {
 	err := d.d.Alter(ctx, op)
@@ -138,18 +130,19 @@ type Query interface {
 	//What type of query is this? Mutation(set/delete), regular query?
 	Type() QueryType
 }
-
-func Init(conf *Config) *DB {
+//Init creates a new database connection using the given config
+//and schema.
+func Init(conf *Config, sch map[string]Field) *DB {
 	if conf.Port < 1000 {
 		panic("graphinit: invalid dgraph port number")
 	}
-	db := connect(conf)
+	db := connect(conf, sch)
 	db.pool = workerpool.New(workers)
 	return db
 }
 
 //Takes a connection create of the form http://ip:port/
-func connect(conf *Config) *DB {
+func connect(conf *Config, sch schemaList) *DB {
 	//TODO: allow multiple dgraph clusters.
 	var conn *grpc.ClientConn
 	var err error
@@ -179,7 +172,10 @@ func connect(conf *Config) *DB {
 		d:        c,
 		gplPoint: conf.IP + ":" + strconv.Itoa(conf.Port) + "/graphql",
 		c: conf,
+		schema: sch,
 	}
+	//Run an empty query to ensure connection.
+	db.Query(context.Background(), NewStaticQuery(""), nil)
 	return db
 }
 

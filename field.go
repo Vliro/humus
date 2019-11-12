@@ -101,6 +101,10 @@ func (f FieldMeta) Reverse() bool {
 	return f&MetaReverse > 0
 }
 
+func (f FieldMeta) Object() bool {
+	return f&MetaObject > 0
+}
+
 const (
 	MetaObject FieldMeta = 1 << iota
 	MetaList
@@ -144,6 +148,10 @@ func (f *Field) getName() string {
 // while the private counterpart assumes the validity.
 // Returns whether this field is a facet field.
 func (f *Field) create(q *GeneratedQuery, parent string, sb *bytes.Buffer) {
+	//Default signature of field, do not include.
+	if f.Meta.Object() && len(f.Fields) == 0 {
+		return
+	}
 	agg, ok := q.FieldAggregate[parent]
 	if ok {
 		sb.WriteString(agg.Alias)

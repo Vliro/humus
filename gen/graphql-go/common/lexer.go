@@ -7,7 +7,7 @@ import (
 	"strings"
 	"text/scanner"
 
-	"mulbase/gen/graphql-go/errors"
+	"github.com/Vliro/mulbase/gen/graphql-go/errors"
 )
 
 type syntaxError string

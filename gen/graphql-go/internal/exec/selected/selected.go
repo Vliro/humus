@@ -5,13 +5,13 @@ import (
 	"reflect"
 	"sync"
 
-	"mulbase/gen/graphql-go/common"
-	"mulbase/gen/graphql-go/errors"
-	"mulbase/gen/graphql-go/internal/exec/packer"
-	"mulbase/gen/graphql-go/internal/exec/resolvable"
-	"mulbase/gen/graphql-go/internal/query"
-	"mulbase/gen/graphql-go/introspection"
-	"mulbase/gen/graphql-go/schema"
+	"github.com/Vliro/mulbase/gen/graphql-go/common"
+	"github.com/Vliro/mulbase/gen/graphql-go/errors"
+	"github.com/Vliro/mulbase/gen/graphql-go/internal/exec/packer"
+	"github.com/Vliro/mulbase/gen/graphql-go/internal/exec/resolvable"
+	"github.com/Vliro/mulbase/gen/graphql-go/internal/query"
+	"github.com/Vliro/mulbase/gen/graphql-go/introspection"
+	"github.com/Vliro/mulbase/gen/graphql-go/schema"
 )
 
 type Request struct {

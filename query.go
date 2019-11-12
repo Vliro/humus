@@ -186,7 +186,9 @@ func (q *GeneratedQuery) create() ([]byte, map[string]string, error) {
 	q.Function.create(q, "", sb)
 	sb.WriteString(tokenRP)
 	//optional filter
-	q.Filter.create(q, "", sb)
+	if q.Filter != nil {
+		q.Filter.create(q, "", sb)
+	}
 	for _, v := range q.Directives {
 		sb.WriteString("@" + string(v))
 	}

@@ -4,8 +4,8 @@ import (
 	"fmt"
 	"text/scanner"
 
-	"mulbase/gen/graphql-go/common"
-	"mulbase/gen/graphql-go/errors"
+	"github.com/Vliro/mulbase/gen/graphql-go/common"
+	"github.com/Vliro/mulbase/gen/graphql-go/errors"
 )
 
 type Document struct {

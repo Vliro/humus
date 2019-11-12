@@ -1,9 +1,9 @@
-package testing
+package mulgen
 
 import (
 	"context"
 	"fmt"
-	"mulbase"
+	"github.com/Vliro/mulbase"
 	"testing"
 	"time"
 )
@@ -18,11 +18,10 @@ func TestMain(m *testing.M) {
 		Tls:        false,
 		LogQueries: true,
 	}
-	db = mulbase.Init(&conf)
+	db = mulbase.Init(&conf, GetGlobalFields())
 	if db == nil {
 		return
 	}
-	db.SetSchema(GetGlobalFields())
 	uidd := runOneMutation(db)
 	if uidd == "" {
 		return
@@ -59,7 +58,7 @@ func TestHasUid(t *testing.T) {
 		t.Error(err)
 		return
 	}
-	if c.Uid != mulbase.UID(uid) {
+	if c.Uid == "" || c.Uid != mulbase.UID(uid) {
 		t.Error("could not find uid")
 		return
 	}

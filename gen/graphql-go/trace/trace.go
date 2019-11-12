@@ -7,8 +7,8 @@ import (
 	"github.com/opentracing/opentracing-go"
 	"github.com/opentracing/opentracing-go/ext"
 	"github.com/opentracing/opentracing-go/log"
-	"mulbase/gen/graphql-go/errors"
-	"mulbase/gen/graphql-go/introspection"
+	"github.com/Vliro/mulbase/gen/graphql-go/errors"
+	"github.com/Vliro/mulbase/gen/graphql-go/introspection"
 )
 
 type TraceQueryFinishFunc func([]*errors.QueryError)

@@ -5,6 +5,7 @@ interface Post {
 
 type Question implements Post {
     title: String!
+    id: Int!
 }
 
 type Comment implements Post {

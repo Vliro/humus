@@ -7,7 +7,10 @@ Note that this code does not, as of right now, use vendor/modules. This will be 
 
 This is only tested against the beta DGraph graphql api. Altering the schema using GraphQL only works on this docker image/branch.
 
-It generates definitions from GraphQL but right now it queries the database using regular GraphQL+-.
+It generates definitions from GraphQL(as well as dgraph regular) but right now it queries the database using regular GraphQL+-.
+
+In the repository almost everything is interfaced. This allows you to fine-tune exactly how models are saved and dealt with as 
+mutations are very important that they behave as you want while at the same time not having to write the mutation code 100% manually.
 
 ## Mulgen
 
@@ -15,6 +18,9 @@ Mulgen is the library for generating structs and common definitions.
 
 The code is mostly hacked together to get the functionality. Once I've decided exactly how it will generate models the code will
 be written to be easier to understand and deal with. 
+
+It supports using both regular DGraph schemas as well as its GraphQL api. It generates a schema that roughly matches (What I) believe 
+is the appropriate dgraph schema and sets up the fields according to it. 
 
 ## Mulbase
 

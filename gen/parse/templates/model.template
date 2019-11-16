@@ -1,44 +1,70 @@
 {{/* This template is for the model accessing all scalar values and all values. If you want to create relations between objects write them in get.template */}}
+//Generating constant field values.
+const (
+{{range .Fields}}
+    {{$.Name}}{{.Name}}Field = "{{.Tag}}"{{end}}
+)
 //SaveValues saves the node values that
 //do not contain any references to other objects.
 func (r *{{.Name}}) SaveValues(ctx context.Context, txn *mulbase.Txn) error {
     mut := mulbase.CreateMutation(r.Values(), mulbase.QuerySet)
-    _, err := txn.RunQuery(ctx, mut)
+     err := txn.Query(ctx, mut)
     return err
 }
 //Fields returns all Scalar fields for this value.
 func (r *{{.Name}}) Fields() mulbase.FieldList {
     return {{.Name}}Fields
 }
-//Sets the types. This includes interfaces.
+//Sets the types. This DOES NOT include interfaces!
+//as they are set in dgraph already.
 func (r *{{.Name}}) SetType() {
     r.Type = []string {
         "{{.Name}}",
-        {{range .Interfaces}}"{{.}}",
-        {{end}}
     }
 }
 //Values returns all the scalar values for this node.
 func (r *{{.Name}}) Values() mulbase.DNode{
    var m {{.Name}}Scalars
    {{range .ScalarFields -}}
+       {{if not .IsPassword -}}
        m.{{.Name}}= r.{{.Name}}
        {{end -}}
+   {{end -}}
    m.Uid = r.Uid
    return &m
 }
+//Values returns all the scalar values for this node.
+func (r *{{.Name}}) MapValues(types bool) mulbase.Mapper {
+   var m = make(map[string]interface{}, {{len .ScalarFields }})
+   {{range .ScalarFields -}}
+      {{if not .IsPassword -}}
+m["{{.Tag}}"]= r.{{.Name}}
+      {{end -}}
+   {{end -}}
+   m["uid"] = r.Uid
+   if types {
+        r.SetType()
+        m["dgraph.type"] = r.Type
+   }
+   return m
+}
+
 
 //{{.Name}}Scalars is simply to avoid a map[string]interface{}
 //It is a mirror of the previous struct with all scalar values.
 type {{.Name}}Scalars struct {
     mulbase.Node
     {{range .ScalarFields -}}
-        {{.Name}} {{.Type}} `json:"{{.Tag}}"`
+        {{.Name}} {{.TypeLabel}} `json:"{{.WrittenTag}}"`
     {{end}}
 }
 
 func (s *{{.Name}}Scalars) Values() mulbase.DNode {
     return s
+}
+
+func (s *{{.Name}}Scalars) MapValues(types bool) mulbase.Mapper {
+    panic("{{.Name}}Scalars called, use the original one instead")
 }
 
 func (s *{{.Name}}Scalars) Fields() mulbase.FieldList {

@@ -31,4 +31,6 @@ const (
 	flagPointer
 	flagInterface
 	flagEnum
+	flagReverse
+	flagObject
 )

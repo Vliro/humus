@@ -9,6 +9,9 @@ type StaticQuery struct {
 }
 //SetVar sets the variable in the GraphQL query map.
 func (s *StaticQuery) SetVar(key string, val interface{}) *StaticQuery {
+	if s.vars == nil {
+		s.vars = make(map[string]string)
+	}
 	s.vars[key] = fmt.Sprintf("%v", val)
 	return s
 }

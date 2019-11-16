@@ -13,10 +13,15 @@ It generates definitions from GraphQL but right now it queries the database usin
 
 Mulgen is the library for generating structs and common definitions.
 
+The code is mostly hacked together to get the functionality. Once I've decided exactly how it will generate models the code will
+be written to be easier to understand and deal with. 
+
 ## Mulbase
 
 Mulbase represents the regular code for interacting with the database through the DNode interface which is satisfied by all generated classes. It includes GeneratedQuery's, StaticQuery's(simple string queries), SingleMutations as well as MultipleMutations. These all exist inside Txn objects with simple commit-now calls also available straight in the *DB class.
-Also, arbitrary interfaces can be mutated as well, for instance a map\[string\]interface{} if needed.
+Also, arbitrary interfaces can be mutated as well, for instance a map\[string\]interface{} using the Mapper wrapper over it. 
+Most features are wrapped around an interface and by implementing methods you can modify how the package sends data to the DB. This level of control
+is crucial for a graph database as, for instance, mutating a struct with an edge you can accidentally overwrite values in its relation.
 
 The query interface is a lot more done than the mutation interface. 
 
@@ -25,7 +30,7 @@ Right now it does not really have proper testing. What needs to be added is a me
 It supports(TODO) DGraph language tags by following the schema and supplying them in the generated query as needed.
 
 An underlying point about many functions like SaveScalars is it does not run immediately. It returns a query object as you might want to extend the query. After that you simply
-execute it inside a transaction object.
+execute it inside a transaction object or the DB directly.
 
 ## Notes about GraphQL
 
@@ -39,9 +44,9 @@ The foremost change was making the schema and its objects public for code genera
 
 ## Getting started
 
-Running mulbase/gen/parse/main.go with input/output flags generates the model files, models.go and gen.go. 
+Running mulbase/gen/parse/main.go with input/output flags generates the model files, mulgen.go and gen.go. 
 These are used with mulbase. Create a new DB object using mulbase.Init() and set the schema from the global fields
-generated. 
+generated. You can then use this to query.
 
 ## TODOS
 

@@ -21,18 +21,24 @@ const makeFieldName = "MakeField(%s, %v)"
 
 const fieldReceiver = "func (r *%s) "
 
-const fieldDeclObj = `var _ = func() {
-%s
-}()`
+const fieldDeclObj = `var _ = %s
+`
 
 type Field struct {
 	Tag  string
+	//This include omitempty for instance.
+	WrittenTag string
+	//Backup for using reverse since
 	Name string
 	Type string
 	flags flags
 	//like []*string
 	TypeLabel string
 	FromInterface bool
+
+	IsPassword bool
+
+	Directives []*common.Directive
 }
 
 var modelImports = []string{
@@ -74,6 +80,15 @@ func makeGoStruct(o *schema.Object, m map[string][]Field) (*bytes.Buffer, []Fiel
 	}
 	makeFieldList(o.Name, fieldsInterface, &sb)
 	modelTemplate(o.Interfaces, o.Name, fieldsInterface, &sb)
+
+	if _,ok := globalFields[o.Name]; !ok {
+		globalFields[o.Name] = Object{
+			Fields:    fields,
+			AllFields: fieldsInterface,
+			Type:      objectRegular,
+		}
+	}
+
 	return &sb, fields
 }
 //generates the go interface.
@@ -90,7 +105,7 @@ func makeGoInterface(o *schema.Interface) (*bytes.Buffer, []Field) {
 	sb.WriteString("//This line declares basic properties for a database node. \nmulbase.Node \n")
 	for _, v := range o.Fields {
 		var fi = iterate(o.Name, v, v.Type, &sb, 0)
-		if fi == nil {
+		if fi == nil{// || fi.IsPassword {
 			continue
 		}
 		//dereference the field.
@@ -102,7 +117,16 @@ func makeGoInterface(o *schema.Interface) (*bytes.Buffer, []Field) {
 	}
 	sb.WriteString(bottomLine)
 	makeFieldList(o.Name, fields, &sb)
-	modelTemplate(nil, o.Name, fields, &sb)
+	modelTemplate(nil, o.Name, fields,  &sb)
+
+	if _,ok := globalFields[o.Name]; !ok {
+		globalFields[o.Name] = Object{
+			Fields:    fields,
+			AllFields: fields,
+			Type:      objectInterface,
+		}
+	}
+
 	return &sb, fields
 }
 //Create an interface embedding with the proper tag.
@@ -122,25 +146,34 @@ func makeFieldList(name string, fi []Field, sb *bytes.Buffer) {
 		if v.Name == "" {
 			panic("makeFieldList: missing name, something went wrong")
 		}
+
 		var flagBuilder strings.Builder
 		//TODO: Include relevant metadata information in fields.
 		flagBuilder.WriteString("0")
-		if v.flags & flagScalar == 0 {
+		obj := v.flags & flagObject
+		if obj > 0 {
 			flagBuilder.WriteString("|mulbase.MetaObject")
 		}
 		if v.flags & flagArray != 0 {
 			flagBuilder.WriteString("|mulbase.MetaList")
 		}
-		isb.WriteString(fmt.Sprintf(makeFieldName, "\""+v.Tag+"\"", flagBuilder.String()))
-		if k != len(fi)-1 {
-			isb.WriteByte(',')
+		if v.flags & flagReverse != 0 {
+			flagBuilder.WriteString("|mulbase.MetaReverse")
+		}
+		if v.IsPassword {
+			sb.WriteString(fmt.Sprintf(fieldDeclObj,fmt.Sprintf(makeFieldName, "\""+v.Tag+"\"", flagBuilder.String())))
+		} else {
+			isb.WriteString(fmt.Sprintf(makeFieldName, "\""+v.Tag+"\"", flagBuilder.String()))
+			if k != len(fi)-1 {
+				isb.WriteByte(',')
+			}
 		}
 	}
 	sb.WriteString(fmt.Sprintf(fieldDecl, name, isb.String()) + "\n")
 }
 //Create the field declaration as well as the Field object. These field objects are used in template generation.
 //This ensures the values in json tags will match the database.
-func writeField(objectName string, name string, typ string, sb *bytes.Buffer, flag flags) Field {
+func writeField(objectName string, name string, typ string, sb *bytes.Buffer, flag flags, directiveName string) Field {
 	var isb strings.Builder
 	var fi Field
 	if flag&flagArray != 0 {
@@ -152,14 +185,29 @@ func writeField(objectName string, name string, typ string, sb *bytes.Buffer, fl
 	isb.WriteString(typ)
 	//Do not capitalize the tag.
 	var dbName = objectName + "." + name
+	if parseState == "dgraph" && flag & flagReverse > 0 && flag & flagArray > 0 {
+		dbName = "~" + typ + "." + directiveName
+	}
 	fi.Tag = dbName
 	fi.TypeLabel = isb.String()
 	sb.WriteString(strings.Title(name))
 
+	//Here, we also have to consider the metadata values.
+	meta := getMetaValue(dbName)
+	if meta != nil {
+		fi.IsPassword = meta.Password
+		//TODO: Should fix be
+		fi.WrittenTag = dbName + ",omitempty"
+	} else {
+		fi.WrittenTag = dbName
+	}
+
+	//TODO: Right now there is an omitempty on non-mandatory fields. This should work I believe.
+
 	sb.WriteString(fmt.Sprintf(lineDeclaration,
 		//Ensure it is capitalized for export.
 		fi.TypeLabel,
-		dbName))
+		fi.WrittenTag))
 	fi.Name = strings.Title(name)
 	fi.Type = typ
 	fi.flags = flag
@@ -182,9 +230,11 @@ func iterate(objName string, data *schema.Field, field common.Type, sb *bytes.Bu
 			TODO: Should objects be pointers only?
 		*/
 		f |= flagPointer
+		f |= flagObject
 	case *schema.Interface:
 		f |= flagInterface
 		f |= flagPointer
+		f |= flagObject
 		typ = a.Name
 	case *schema.Scalar:
 		//Set scalar flag.
@@ -192,10 +242,10 @@ func iterate(objName string, data *schema.Field, field common.Type, sb *bytes.Bu
 		//switch to the default go type instead.
 		if val,ok := getBuiltIn(a.Name); ok {
 			typ = val
-			break
 		}
 	case *schema.Enum:
 		f |= flagEnum
+		f |= flagScalar
 		typ = a.Name
 	default:
 		panic("missing type!")
@@ -205,7 +255,17 @@ func iterate(objName string, data *schema.Field, field common.Type, sb *bytes.Bu
 			Do not allow unexported fields in database declarations. (that is, the struct definition.
 		*/
 		var name = data.Name
-		var ff = writeField(objName, name, typ, sb, f)
+		/*
+			Check directives.
+		 */
+		var dirName string
+		if dir := data.Directives.Get("hasInverse"); dir != nil {
+			f |= flagReverse
+			val := dir.Args.MustGet("field")
+			dirName = val.String()
+		}
+		var ff = writeField(objName, name, typ, sb, f, dirName)
+		ff.Directives = data.Directives
 		return &ff
 	}
 	return nil
@@ -219,19 +279,19 @@ type modelStruct struct {
 	Interfaces []string
 }
 //Executes the model template for all scalar fields.
-func modelTemplate(interf []*schema.Interface, name string, fields []Field, sb *bytes.Buffer) {
+func modelTemplate(interf []*schema.Interface, name string, allScalars []Field, sb *bytes.Buffer) {
 	templ := getTemplate("Model")
 	if templ == nil {
 		panic("missing Model template")
 	}
 	var m = modelStruct{
 		Name:   name,
-		Fields: fields,
+		Fields: allScalars,
 	}
 	for _,v := range interf {
 		m.Interfaces = append(m.Interfaces, v.Name)
 	}
-	//Create the scalar fields, i.e. split it into two slices.
+	//Create the scalar allScalars, i.e. split it into two slices.
 	main: for _,v := range m.Fields {
 		/*
 			Skip non mandatory values in scalar generation.

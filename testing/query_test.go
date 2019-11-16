@@ -1,13 +1,6 @@
 package mulgen
 
-import (
-	"context"
-	"fmt"
-	"github.com/Vliro/mulbase"
-	"testing"
-	"time"
-)
-
+/*
 var db *mulbase.DB
 var uid string
 
@@ -35,8 +28,8 @@ func runOneMutation(d *mulbase.DB) string{
 	var c Comment
 	c.DatePublished = time.Now()
 	c.Text = "First"
-	s := mulbase.SaveScalars(&c, txn)
-	r,err := txn.RunQuery(context.Background(), s)
+	s := mulbase.SaveScalars(&c)
+	err := txn.Query(context.Background(), s)
 	if err != nil {
 		return ""
 	}
@@ -71,7 +64,7 @@ func TestMutate(t *testing.T) {
 	c.DatePublished = time.Now()
 	c.Text = "This is a trial run."
 	s := mulbase.SaveScalars(&c, txn)
-	_,err := txn.RunQuery(context.Background(), s)
+	err := txn.Query(context.Background(), s)
 	if err != nil {
 		t.Error(err)
 		return
@@ -89,7 +82,7 @@ func TestMutateAsync(t *testing.T) {
 	c.DatePublished = time.Now()
 	c.Text = "This is a trial run async."
 	s := mulbase.SaveScalars(&c, txn)
-	ch := txn.RunQueryAsync(context.Background(), s)
+	ch := txn.QueryAsync(context.Background(), s)
 	r := <-ch
 	if r.Err != nil {
 		t.Error(r.Err)
@@ -113,7 +106,7 @@ func TestStaticQuery(t *testing.T) {
 		Post.text}}`, uid))
 	txn := db.NewTxn(true)
 	var c Comment
-	_, err := txn.RunQuery(context.Background(), q, &c)
+	_, err := txn.Query(context.Background(), q, &c)
 	if err != nil {
 		t.Error(err)
 		return
@@ -124,3 +117,5 @@ func TestStaticQuery(t *testing.T) {
 	}
 	_ = txn.Discard(context.Background())
 }
+
+ */

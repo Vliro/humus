@@ -11,6 +11,7 @@ func main() {
 	//TODO: Use cobra layout?
 	in := flag.String("input", "", "Sets the root directory path for parsing SDL files.")
 	out := flag.String("output", "", "Sets the root directory path for outputting go files.")
+	mode := flag.String("mode", "dgraph", "Sets which schema to use in generation for fields. Values are graphql or dgraph.")
 	flag.Parse()
 	/*
 		TODO: Fix proper handling if shit goes bad.
@@ -21,10 +22,10 @@ func main() {
 			panic(r)
 		}
 	}()
-	if *in == "" || *out == "" {
+	if *in == "" || *out == "" || *mode == "" {
 		flag.Usage()
 		return
 	}
 	//Run the program.
-	parse.Parse(*in, *out)
+	parse.Parse(*in, *out, *mode)
 }

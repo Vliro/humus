@@ -45,6 +45,32 @@ func (f FieldList) Sub(name string, fl []Field) NewList {
 	}
 	return newArr
 }
+
+func (f FieldList) Add(fi Field) NewList {
+	var newList NewList = make([]Field, len(f)+1)
+	copy(newList, f)
+	newList[len(f)] = fi
+	return newList
+}
+
+func (f FieldList) AddName(nam string, sch schemaList) NewList {
+	var newList NewList = make([]Field, len(f)+1)
+	copy(newList, f)
+	newList[len(f)] = sch[nam]
+	return newList
+}
+
+//Facet adds a field of type facet.
+func (f FieldList) Facet(edgeName string, facetName string) NewList {
+	var newArr NewList = make([]Field, len(f)+1)
+	//Copy!
+	n := copy(newArr, f)
+	if n != len(f) {
+		panic("fieldList sub: invalid length! something went wrong")
+	}
+	newArr[len(f)] = MakeField(edgeName + "|" + facetName, 0 | MetaFacet)
+	return newArr
+}
 //These lists do not need copying as they are never global.
 func (f NewList) Sub(name string, fl []Field) NewList {
 	//linear search but fast either way.
@@ -55,6 +81,26 @@ func (f NewList) Sub(name string, fl []Field) NewList {
 		}
 	}
 	return f
+}
+
+func Sub(name string, fl []Field, sch schemaList) NewList {
+	var newFields = make([]Field, 1)
+	newFields[0] = sch[name]
+	newFields[0].Fields = fl
+	return newFields
+}
+
+func Fields(sch schemaList, names ...string) NewList{
+	var ret = make([]Field, len(names))
+	for k,v := range names {
+		val := sch[v]
+		ret[k] = val
+	}
+	return ret
+}
+//Facet adds a field of type facet.
+func (f NewList) Facet(edgeName string, facetName string) NewList {
+	return append(f,MakeField(edgeName + "|" + facetName, 0 | MetaFacet))
 }
 
 func (f NewList) Add(fi Field) NewList {
@@ -111,6 +157,7 @@ const (
 	MetaLang
 	MetaUid
 	MetaReverse
+	MetaFacet
 )
 
 // Field is a recursive data struct which represents a GraphQL query field.
@@ -234,3 +281,15 @@ func (f *Field) check(q *GeneratedQuery) error {
 	return nil
 }
 
+func MakeFields(sch schemaList, names ...string) []Field{
+	var ret = make([]Field, len(names))
+	for k,v := range names {
+		field, ok := sch[v]
+		if ok {
+			ret[k] = field
+		} else {
+			ret[k] = MakeField(v, 0)
+		}
+	}
+	return ret
+}

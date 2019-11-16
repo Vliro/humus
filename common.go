@@ -1,7 +1,12 @@
 package mulbase
 
-import (
-	"context"
+
+//TODO: To define methods of saving.
+type RelationType int
+
+const (
+	RelationID RelationType =  iota
+	RelationValues
 )
 
 //The common node type that is inherited. This differs from the DNode which is an interface.
@@ -10,8 +15,8 @@ type Node struct {
 	Type []string `json:"dgraph.type"`
 }
 
-func (n *Node) SetUID(uid string) {
-	n.Uid = UID(uid)
+func (n *Node) SetUID(uid UID) {
+	n.Uid = uid
 }
 
 func (n *Node) SetType() {
@@ -24,7 +29,7 @@ func (n *Node) UID() UID {
 //CreateMutation is a short-hand for creating
 //a single mutation query object.
 //tTODO: Only allow DNodes? Not likely.
-func CreateMutation(obj interface{}, typ QueryType) SingleMutation {
+func CreateMutation(obj DNode, typ QueryType) SingleMutation {
 	return SingleMutation{
 		Object: obj,
 		QueryType:   typ,
@@ -35,7 +40,26 @@ func CreateMutation(obj interface{}, typ QueryType) SingleMutation {
 
 //From a uid, get value from fields and deserialize into value.
 //TODO: Should this require DNode?
-func GetByUid(ctx context.Context, uid UID, fields []Field, txn *Txn, value interface{}) error {
-	_, err := txn.RunQuery(ctx, NewQuery().SetFunction(MakeFunction(FunctionUid).AddValue(uid, TypeUid)).SetFields(fields), value)
-	return err
+func GetByUid(uid UID, fields []Field) *GeneratedQuery {
+	q := NewQuery().SetFunction(MakeFunction(FunctionUid).AddValue(uid, TypeUid)).SetFields(fields)
+	return q
+}
+
+func GetByPredicate(pred string, fields []Field, typ VarType, values ...interface{}) *GeneratedQuery {
+	q := NewQuery().SetFunction(MakeFunction(FunctionEquals).AddPredMultiple(pred,typ, values...)).SetFields(fields)
+	return q
+}
+
+func AddScalarList(origin DNode, predicate string, value ...interface{}) SingleMutation {
+	var mapper = make(Mapper)
+	mapper.SetUID(origin.UID())
+	mapper[predicate] = value
+	return CreateMutation(mapper, QuerySet)
+}
+
+func AddToList(origin DNode, predicate string, child DNode) SingleMutation {
+	var mapper = make(Mapper)
+	mapper.SetUID(origin.UID())
+	mapper.SetArray(predicate, false, child)
+	return CreateMutation(mapper, QuerySet)
 }

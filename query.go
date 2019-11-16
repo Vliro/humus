@@ -20,6 +20,14 @@ func (u UID) Int() int64 {
 	return val
 }
 
+func (u UID) IntString() string{
+	val, err := strconv.ParseInt(string(u), 16, 64)
+	if err != nil {
+		return ""
+	}
+	return strconv.FormatInt(val, 10)
+}
+
 func StringFromInt(id int64) string {
 	return "0x"+strconv.FormatInt(id, 16)
 }
@@ -153,6 +161,10 @@ func NewQuery() *GeneratedQuery {
 
 func (q *GeneratedQuery) Process(sch schemaList) ([]byte, map[string]string, error) {
 	q.schema = sch
+	err := q.check()
+	if err != nil {
+		return nil, nil, err
+	}
 	return q.create()
 }
 

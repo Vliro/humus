@@ -1,0 +1,143 @@
+type Level {
+Level.name : string  
+Level.password : string  
+Level.hash : string  
+Level.size : int  
+Level.updated : datetime  
+Level.playCount : int  
+Level.live : bool  
+Level.rating : float  
+Level.owner : User  
+Level.version : LevelVersion  
+Level.versions : [LevelVersion]  
+}
+type LevelVersion {
+LevelVersion.version : int  
+LevelVersion.maxTime : int  
+LevelVersion.minLevel : int  
+LevelVersion.description : string  
+LevelVersion.gameMode : string  
+LevelVersion.song : int  
+LevelVersion.gravity : float  
+LevelVersion.items : [Item]  
+LevelVersion.credits : string  
+LevelVersion.created : datetime  
+}
+type ChatMessage {
+ChatMessage.room : string  
+Message.from : User  
+Message.content : string  
+Message.time : datetime  
+}
+type Error {
+Error.message : string  
+Error.errorType : string  
+Error.time : datetime  
+}
+type Message {
+Message.from : User  
+Message.content : string  
+Message.time : datetime  
+}
+type PM {
+PM.to : User  
+Message.from : User  
+Message.content : string  
+Message.time : datetime  
+}
+type Page {
+Page.levels : [PageLevel]  
+Page.identifier : string  
+}
+type PageLevel {
+PageLevel.order : int  
+PageLevel.level : Level  
+}
+type User {
+User.password : string  
+User.name : string  
+User.email : string  
+User.registered : datetime  
+User.active : bool  
+User.lastLogin : datetime  
+User.rank : int  
+User.exp : int  
+User.speed : int  
+User.jump : int  
+User.acceleration : int  
+User.power : int  
+User.hats : [Hat]  
+User.heads : [Head]  
+User.bodies : [Body]  
+User.feets : [Feet]  
+User.hat : Hat  
+User.head : Head  
+User.body : Body  
+User.feet : Feet  
+User.hatColor : int  
+User.headColor : int  
+User.bodyColor : int  
+User.feetColor : int  
+User.ignored : [User]  
+User.friends : [User]  
+User.messages : [PM]  
+}
+<Message.from>: uid  . 
+<Message.content>: string  . 
+<Message.time>: datetime  . 
+<PM.to>: uid  . 
+<Message.from>: uid  . 
+<Message.content>: string  . 
+<Message.time>: datetime  . 
+<Page.levels>: [uid]  . 
+<Page.identifier>: string  . 
+<PageLevel.order>: int  . 
+<PageLevel.level>: uid  . 
+<User.password>: string  . 
+<User.name>: string @index(hash)  . 
+<User.email>: string @index(hash)  . 
+<User.registered>: datetime  . 
+<User.active>: bool  . 
+<User.lastLogin>: datetime  . 
+<User.rank>: int  . 
+<User.exp>: int  . 
+<User.speed>: int  . 
+<User.jump>: int  . 
+<User.acceleration>: int  . 
+<User.power>: int  . 
+<User.hats>: [int]  . 
+<User.heads>: [int]  . 
+<User.bodies>: [int]  . 
+<User.feets>: [int]  . 
+<User.hat>: int  . 
+<User.head>: int  . 
+<User.body>: int  . 
+<User.feet>: int  . 
+<Error.message>: string  . 
+<Error.errorType>: string  . 
+<Error.time>: datetime  . 
+<Level.name>: string @index(hash)  . 
+<Level.password>: string  . 
+<Level.hash>: string  . 
+<Level.size>: int  . 
+<Level.updated>: datetime  . 
+<Level.playCount>: int  . 
+<Level.live>: bool  . 
+<Level.rating>: float  . 
+<Level.owner>: uid @reverse  . 
+<Level.version>: uid  . 
+<Level.versions>: [uid]  . 
+<LevelVersion.version>: int  . 
+<LevelVersion.maxTime>: int  . 
+<LevelVersion.minLevel>: int  . 
+<LevelVersion.description>: string  . 
+<LevelVersion.gameMode>: string  . 
+<LevelVersion.song>: int  . 
+<LevelVersion.gravity>: float  . 
+<LevelVersion.items>: [int]  . 
+<LevelVersion.credits>: string  . 
+<LevelVersion.created>: datetime  . 
+<ChatMessage.room>: string @index(hash)  . 
+<Message.from>: uid  . 
+<Message.content>: string  . 
+<Message.time>: datetime  . 

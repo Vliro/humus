@@ -4,12 +4,15 @@ import (
 	"context"
 	"crypto/tls"
 	"crypto/x509"
+	"fmt"
 	"github.com/gammazero/workerpool"
 	"google.golang.org/grpc/encoding/gzip"
 	"io/ioutil"
 	"log"
+	"reflect"
 	"strconv"
 	"sync"
+	"time"
 
 	"github.com/dgraph-io/dgo"
 	"github.com/dgraph-io/dgo/protos/api"
@@ -42,17 +45,119 @@ type DNode interface {
 	//Returns the UID of this node.
 	UID() UID
 	//Sets the UID of this node.
-	SetUID(uid string)
+	SetUID(uid UID)
 	//Sets all types of this node. This has to be done at least once.
 	SetType()
 	//Returns all scalar fields for this node.
 	Fields() FieldList
 	//Serializes all the scalar values that are not hidden.
 	Values() DNode
+	//MapValues instead creates a map of values to allow you to build custom save methods.
+	MapValues(types bool) Mapper
+}
+//Querier is an abstraction over DB/TXN. Also allows for testing.
+type Querier interface {
+	Query(context.Context, Query, ...interface{}) error
+	Mutate(context.Context, Query) (*api.Response, error)
+	Discard(context.Context) error
+	Commit(context.Context) error
+}
+
+type AsyncQuerier interface {
+	Querier
+	QueryAsync(context.Context, Query, ...interface{}) chan Result
+	MutateAsync(context.Context, Query)
+}
+
+//UidObject is embedded in maps to ensure proper serialization.
+type MapUid struct  {
+	Uid UID `json:"uid"`
+}
+//Uid simply returns a struct that
+//can be used in 1-1 relations, i.e.
+//map[key] = mulbase.Uid(uiD)
+func Uid(u UID) MapUid{
+	return MapUid{Uid:u}
+}
+
+//A mapper that allows you to set subrelations.
+type Mapper map[string]interface{}
+
+func (m Mapper) UID() UID {
+	return m["uid"].(UID)
+}
+
+func (m Mapper) SetUID(uid UID) {
+	m["uid"] = UID(uid)
+}
+
+func (m Mapper) SetType() {
+	fmt.Println("SetType called on Mapper. Is this intended?")
+}
+
+func (m Mapper) Fields() FieldList {
+	return nil
+}
+
+func (m Mapper) Values() DNode {
+	return m
+}
+
+func (m Mapper) MapValues(types bool) Mapper {
+	return m
+}
+
+//Sets a singular regulation, i.e. 1-1.
+//TODO: Should default be = obj or = obj.Values()?
+func (m Mapper) Set(child string, all bool, obj DNode) Mapper {
+	if checkNil(obj) {
+		//TODO: what should actually happen here?
+		//panic for now.
+		panic("nil not expected in Mapper set")
+	}
+	if all {
+		if val, ok := obj.(Saver); ok {
+			m[child] = val.Save()
+		} else {
+			m[child] = obj
+		}
+	} else {
+		m[child] = Uid(obj.UID())
+	}
+	return m
+}
+//honestly, Go nil is annoying for interfaces.
+func checkNil(c DNode) bool {
+	if c == nil || (reflect.ValueOf(c).Kind() == reflect.Ptr && reflect.ValueOf(c).IsNil()) {
+		return true
+	}
+	return false
+}
+
+func (m Mapper) SetArray(child string, all bool, objs ...DNode) Mapper {
+	var output = make([]interface{}, len(objs))
+	for k,v := range objs {
+		if all {
+			if val, ok := v.(Saver); ok {
+				output[k] = val.Save()
+			} else {
+				output[k] = val
+			}
+		} else {
+			output[k] = v.UID()
+		}
+	}
+	m[child] = output
+	return m
+}
+
+//Saver allows you to implement a custom save method.
+type Saver interface {
+	Save() DNode
 }
 
 //Number of workers.
-const workers = 10
+const workers = 5
 
 type DB struct {
 	//The api to graph.
@@ -65,6 +170,10 @@ type DB struct {
 	pool *workerpool.WorkerPool
 	//The endpoint for possible GraphQL.
 	gplPoint string
+}
+
+func (d *DB) Schema() schemaList {
+	return d.schema
 }
 
 //NewTxn creates a new txn for interacting with database.
@@ -84,35 +193,60 @@ func (d *DB) NewTxn(readonly bool) *Txn {
 
 //Queries outside a Txn context.
 //This is not intended for mutations.
-func (d *DB) Query(ctx context.Context, q Query, obj interface{}) error {
+func (d *DB) Query(ctx context.Context, q Query, objs ...interface{}) error {
 	if q.Type() != QueryRegular {
 		return Error(errInvalidType)
 	}
 	txn := d.NewTxn(true)
-	_, err := txn.RunQuery(ctx, q, obj)
+	err := txn.Query(ctx, q, objs...)
 	//TODO: Can we do this for readonly?
 	_ = txn.Discard(ctx)
 	return err
 }
 
-func (d *DB) Mutate(ctx context.Context, q Query) error {
-	if q.Type() != QuerySet || q.Type() != QueryDelete {
-		return Error(errInvalidType)
+func (d *DB) Commit(ctx context.Context) error {
+	return nil
+	//Moot
+}
+
+func (d *DB) Discard(ctx context.Context) error {
+	return nil
+	//Moot
+}
+
+func (d *DB) Mutate(ctx context.Context, q Query) (*api.Response, error) {
+	if q.Type() != QuerySet && q.Type() != QueryDelete {
+		return nil, Error(errInvalidType)
 	}
 	txn := d.NewTxn(false)
-	_, err := txn.RunQuery(ctx, q, nil)
+	resp, err := txn.Mutate(ctx, q)
 	if err != nil {
 		_ = txn.Discard(ctx)
 	} else {
 		_ = txn.Commit(ctx)
 	}
-	return err
+	return resp, err
 }
 
 //Simply performs the alter command.
 func (d *DB) Alter(ctx context.Context, op *api.Operation) error {
 	err := d.d.Alter(ctx, op)
 	return err
+}
+
+func (d *DB) logError(ctx context.Context, err error) {
+	f := func() {
+		errorName := fmt.Sprintf("%T", err)
+		value := err.Error()
+		var result dbError
+		result.SetType()
+		result.Message = value
+		result.Time = time.Now()
+		result.ErrorType = errorName
+		_,_ = d.Mutate(context.Background(), CreateMutation(&result, QuerySet))
+	}
+	d.pool.Submit(f)
+	return
 }
 
 type QueryType uint8
@@ -123,7 +257,7 @@ const (
 	QueryDelete
 )
 
-//Allows it to be used in runQuery.
+//Allows it to be used in Query.
 type Query interface {
 	//Process the query type in order to send to the database.
 	Process(schemaList) ([]byte, map[string]string, error)
@@ -137,7 +271,6 @@ func Init(conf *Config, sch map[string]Field) *DB {
 		panic("graphinit: invalid dgraph port number")
 	}
 	db := connect(conf, sch)
-	db.pool = workerpool.New(workers)
 	return db
 }
 
@@ -175,7 +308,8 @@ func connect(conf *Config, sch schemaList) *DB {
 		schema: sch,
 	}
 	//Run an empty query to ensure connection.
-	db.Query(context.Background(), NewStaticQuery(""), nil)
+	db.pool = workerpool.New(workers)
+	_ = db.Query(context.Background(), NewStaticQuery(""), nil)
 	return db
 }
 
@@ -216,31 +350,49 @@ func (t *Txn) mutate(ctx context.Context, q Query) (*api.Response, error) {
 		m.SetJson = byt
 	}
 	a, err := t.txn.Mutate(ctx, &m)
+	if err != nil {
+		t.db.logError(context.Background(), err)
+	}
 	return a, err
 }
 
 //Upsert follows the new 1.1 api and performs an upsert.
 //TODO: I really don't know what this does so work on it later.
-func (t *Txn) Upsert(ctx context.Context, q Query, m []*api.Mutation, obj ...interface{}) error {
+func (t *Txn) Upsert(ctx context.Context, q Query, cond string, mutations ...Query) (int, error) {
 	if t.txn == nil {
-		return Error(errTransaction)
+		return 0, Error(errTransaction)
 	}
 	b, ma, err := q.Process(t.db.schema)
 	if err != nil {
-		return Error(err)
+		return 0, Error(err)
+	}
+	var muts = make([]*api.Mutation, len(mutations))
+	for k := range muts {
+		if mutations[k].Type() == QueryRegular {
+			return 0, errInvalidType
+		}
+		muts[k] = new(api.Mutation)
+		v := muts[k]
+		b,_, err := mutations[k].Process(t.db.schema)
+		if err != nil {
+			return 0, err
+		}
+		v.SetJson = b
+		v.Cond = cond
 	}
 	var req = api.Request{
 		//TODO: Dont use create(b) as that performs unnecessary allocations. We do not perform any changes to b which should not cause any issues.
 		Query:     bytesToStringUnsafe(b),
 		Vars:      ma,
-		Mutations: m,
+		Mutations: muts,
 	}
 	resp, err := t.txn.Do(ctx, &req)
+	print(resp)
 	if err != nil {
-		return Error(err)
+		return 0, Error(err)
 	}
-	err = HandleResponse(resp.Json, obj)
-	return Error(err)
+	//err = HandleResponse(resp.Json, obj)
+	return len(resp.Uids), nil
 }
 
 func (t *Txn) query(ctx context.Context, q Query, objs []interface{}) error {
@@ -250,6 +402,7 @@ func (t *Txn) query(ctx context.Context, q Query, objs []interface{}) error {
 	}
 	resp, err := t.txn.QueryWithVars(ctx, bytesToStringUnsafe(str), m)
 	if err != nil {
+		t.db.logError(context.Background(), err)
 		return Error(err)
 	}
 	if t.db.c.LogQueries {
@@ -268,38 +421,63 @@ type Result struct {
 	Res *api.Response
 }
 
-//RunQueryAsync runs the query asynchronous. In the result the error is returned.
-func (t *Txn) RunQueryAsync(ctx context.Context, q Query, objs ...interface{}) chan Result {
+//QueryAsync runs the query asynchronous. In the result the error is returned.
+func (t *Txn) QueryAsync(ctx context.Context, q Query, objs ...interface{}) chan Result {
 	ch := make(chan Result, 1)
 	f := func() {
-		r, err := t.RunQuery(ctx, q, objs...)
+		err := t.Query(ctx, q, objs...)
 		ch <- Result{
 			Err: err,
-			Res: r,
 		}
 	}
 	t.db.pool.Submit(f)
 	return ch
 }
 
-//RunQuery executes the GraphQL+- query.
+//Query executes the GraphQL+- query.
 //If q is a mutation query the mutation objects are supplied in q and not in objs.
-func (t *Txn) RunQuery(ctx context.Context, q Query, objs ...interface{}) (*api.Response, error) {
+func (t *Txn) Query(ctx context.Context, q Query, objs ...interface{}) error {
 	//if t.txn == nil {
 	//	return Error(errTransaction)
 	//}
 	//Allow thread-safe appending of queries as might run queries.
 	//TODO: Right now this is only for storing the queries. Running queries in parallel that rely on each other is very much a race condition.
 	t.Lock()
+	defer t.Unlock()
 	t.Queries = append(t.Queries, q)
-	t.Unlock()
 	switch q.Type() {
 	case QueryRegular:
 		//No need for the response.
-		return nil, Error(t.query(ctx, q, objs))
-	case QuerySet, QueryDelete:
-		r, err := t.mutate(ctx, q)
-		return r, Error(err)
+		return Error(t.query(ctx, q, objs))
+	default:
+		return errInvalidType
 	}
-	return nil, Error(errInvalidType)
+}
+
+func (t *Txn) Mutate(ctx context.Context, q Query) (*api.Response, error) {
+	t.Lock()
+	typ := q.Type()
+	if typ != QuerySet && typ != QueryDelete {
+		t.Unlock()
+		return nil, errInvalidType
+	}
+	t.Queries = append(t.Queries, q)
+	t.Unlock()
+	return t.mutate(ctx, q)
+}
+
+func (t *Txn) MutateAsync(ctx context.Context, q Query) chan Result {
+	t.Lock()
+	typ := q.Type()
+	if typ != QuerySet && typ != QueryDelete {
+		t.Unlock()
+		return nil
+	}
+	var ch = make(chan Result)
+	f := func() {
+		resp, err := t.mutate(ctx, q)
+		ch <- Result{Res:resp, Err:err}
+	}
+	t.db.pool.Submit(f)
+	return ch
 }

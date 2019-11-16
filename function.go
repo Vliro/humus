@@ -71,6 +71,8 @@ type GraphVariable struct {
 //It uses GraphQL variables to minimize risk of any type of injection.
 type Function struct {
 	Type      functionType
+	//Is it lazy to use []interface? yes!
+	//but then you dont have to specify variable types :)
 	Variables []GraphVariable
 	mapValues []string
 	Order     []Ordering

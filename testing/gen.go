@@ -7,24 +7,233 @@ import (
 )
 
 //Populates the field of r.
-func (r *Comment) GetCommentCommentsOn(filter *mulbase.Filter, txn *mulbase.Txn) error {
+func (r *Level) GetLevelOwner(filter *mulbase.Filter, db mulbase.Querier) error {
 	if r.UID() == "" {
 		return mulbase.ErrUID
 	}
-	q, err := mulbase.GetChild(r, "Comment.commentsOn", PostFields, -1, filter)
+	q, err := mulbase.GetChild(r, "Level.owner", UserFields, -1, filter)
 	if err != nil {
 		return err
 	}
-	_, err = txn.RunQuery(context.Background(), q, &r.CommentsOn)
+	err = db.Query(context.Background(), q, &r.Owner)
 	return err
 }
 
 //TODO. Don't use this.
-func (r *Comment) AddCommentCommentsOn(input *Post) error {
+func (r *Level) AddLevelOwner(input *User, db mulbase.Querier) error {
 	if input.UID() == "" {
 		return mulbase.ErrUID
 	}
-	return nil
+	mut := mulbase.AddToList(r, "Level.owner", input)
+	_, err := db.Mutate(context.Background(), mut)
+	return err
+}
+
+//Populates the field of r.
+func (r *Level) GetLevelVersion(filter *mulbase.Filter, db mulbase.Querier) error {
+	if r.UID() == "" {
+		return mulbase.ErrUID
+	}
+	q, err := mulbase.GetChild(r, "Level.version", LevelVersionFields, -1, filter)
+	if err != nil {
+		return err
+	}
+	err = db.Query(context.Background(), q, &r.Version)
+	return err
+}
+
+//TODO. Don't use this.
+func (r *Level) AddLevelVersion(input *LevelVersion, db mulbase.Querier) error {
+	if input.UID() == "" {
+		return mulbase.ErrUID
+	}
+	mut := mulbase.AddToList(r, "Level.version", input)
+	_, err := db.Mutate(context.Background(), mut)
+	return err
+}
+
+//Populates the field of r.
+func (r *Level) GetLevelVersions(count int, filter *mulbase.Filter, db mulbase.Querier) error {
+	if r.UID() == "" {
+		return mulbase.ErrUID
+	}
+	q, err := mulbase.GetChild(r, "Level.versions", LevelVersionFields, count, filter)
+	if err != nil {
+		return err
+	}
+	err = db.Query(context.Background(), q, &r.Versions)
+	return err
+}
+
+//TODO. Don't use this.
+func (r *Level) AddLevelVersions(input *LevelVersion, db mulbase.Querier) error {
+	if input.UID() == "" {
+		return mulbase.ErrUID
+	}
+	mut := mulbase.AddToList(r, "Level.versions", input)
+	_, err := db.Mutate(context.Background(), mut)
+	return err
+}
+
+//Populates the field of r.
+func (r *PM) GetPMTo(filter *mulbase.Filter, db mulbase.Querier) error {
+	if r.UID() == "" {
+		return mulbase.ErrUID
+	}
+	q, err := mulbase.GetChild(r, "PM.to", UserFields, -1, filter)
+	if err != nil {
+		return err
+	}
+	err = db.Query(context.Background(), q, &r.To)
+	return err
+}
+
+//TODO. Don't use this.
+func (r *PM) AddPMTo(input *User, db mulbase.Querier) error {
+	if input.UID() == "" {
+		return mulbase.ErrUID
+	}
+	mut := mulbase.AddToList(r, "PM.to", input)
+	_, err := db.Mutate(context.Background(), mut)
+	return err
+}
+
+//Populates the field of r.
+func (r *Page) GetPageLevels(count int, filter *mulbase.Filter, db mulbase.Querier) error {
+	if r.UID() == "" {
+		return mulbase.ErrUID
+	}
+	q, err := mulbase.GetChild(r, "Page.levels", PageLevelFields, count, filter)
+	if err != nil {
+		return err
+	}
+	err = db.Query(context.Background(), q, &r.Levels)
+	return err
+}
+
+//TODO. Don't use this.
+func (r *Page) AddPageLevels(input *PageLevel, db mulbase.Querier) error {
+	if input.UID() == "" {
+		return mulbase.ErrUID
+	}
+	mut := mulbase.AddToList(r, "Page.levels", input)
+	_, err := db.Mutate(context.Background(), mut)
+	return err
+}
+
+//Populates the field of r.
+func (r *PageLevel) GetPageLevelLevel(filter *mulbase.Filter, db mulbase.Querier) error {
+	if r.UID() == "" {
+		return mulbase.ErrUID
+	}
+	q, err := mulbase.GetChild(r, "PageLevel.level", LevelFields, -1, filter)
+	if err != nil {
+		return err
+	}
+	err = db.Query(context.Background(), q, &r.Level)
+	return err
+}
+
+//TODO. Don't use this.
+func (r *PageLevel) AddPageLevelLevel(input *Level, db mulbase.Querier) error {
+	if input.UID() == "" {
+		return mulbase.ErrUID
+	}
+	mut := mulbase.AddToList(r, "PageLevel.level", input)
+	_, err := db.Mutate(context.Background(), mut)
+	return err
+}
+
+//Populates the field of r.
+func (r *User) GetUserLevels(count int, filter *mulbase.Filter, db mulbase.Querier) error {
+	if r.UID() == "" {
+		return mulbase.ErrUID
+	}
+	q, err := mulbase.GetChild(r, "~Level.owner", LevelFields, count, filter)
+	if err != nil {
+		return err
+	}
+	err = db.Query(context.Background(), q, &r.Levels)
+	return err
+}
+
+//TODO. Don't use this.
+func (r *User) AddUserLevels(input *Level, db mulbase.Querier) error {
+	if input.UID() == "" {
+		return mulbase.ErrUID
+	}
+	mut := mulbase.AddToList(r, "~Level.owner", input)
+	_, err := db.Mutate(context.Background(), mut)
+	return err
+}
+
+//Populates the field of r.
+func (r *User) GetUserIgnored(count int, filter *mulbase.Filter, db mulbase.Querier) error {
+	if r.UID() == "" {
+		return mulbase.ErrUID
+	}
+	q, err := mulbase.GetChild(r, "User.ignored", UserFields, count, filter)
+	if err != nil {
+		return err
+	}
+	err = db.Query(context.Background(), q, &r.Ignored)
+	return err
+}
+
+//TODO. Don't use this.
+func (r *User) AddUserIgnored(input *User, db mulbase.Querier) error {
+	if input.UID() == "" {
+		return mulbase.ErrUID
+	}
+	mut := mulbase.AddToList(r, "User.ignored", input)
+	_, err := db.Mutate(context.Background(), mut)
+	return err
+}
+
+//Populates the field of r.
+func (r *User) GetUserFriends(count int, filter *mulbase.Filter, db mulbase.Querier) error {
+	if r.UID() == "" {
+		return mulbase.ErrUID
+	}
+	q, err := mulbase.GetChild(r, "User.friends", UserFields, count, filter)
+	if err != nil {
+		return err
+	}
+	err = db.Query(context.Background(), q, &r.Friends)
+	return err
+}
+
+//TODO. Don't use this.
+func (r *User) AddUserFriends(input *User, db mulbase.Querier) error {
+	if input.UID() == "" {
+		return mulbase.ErrUID
+	}
+	mut := mulbase.AddToList(r, "User.friends", input)
+	_, err := db.Mutate(context.Background(), mut)
+	return err
+}
+
+//Populates the field of r.
+func (r *User) GetUserMessages(count int, filter *mulbase.Filter, db mulbase.Querier) error {
+	if r.UID() == "" {
+		return mulbase.ErrUID
+	}
+	q, err := mulbase.GetChild(r, "User.messages", PMFields, count, filter)
+	if err != nil {
+		return err
+	}
+	err = db.Query(context.Background(), q, &r.Messages)
+	return err
+}
+
+//TODO. Don't use this.
+func (r *User) AddUserMessages(input *PM, db mulbase.Querier) error {
+	if input.UID() == "" {
+		return mulbase.ErrUID
+	}
+	mut := mulbase.AddToList(r, "User.messages", input)
+	_, err := db.Mutate(context.Background(), mut)
+	return err
 }
 
 //Beginning of field.template. General functions.

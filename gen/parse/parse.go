@@ -3,6 +3,7 @@ package parse
 import (
 	"bytes"
 	"fmt"
+	"github.com/BurntSushi/toml"
 	"github.com/gobuffalo/packr/v2"
 	"go/format"
 	"io"
@@ -15,6 +16,9 @@ import (
 	"text/template"
 )
 
+
+var parseState string
+
 func getBuiltIn(key string) (string, bool) {
 	val,ok := builtins[key]
 	if arr := strings.Split(val, "."); len(arr) > 1 {
@@ -24,9 +28,10 @@ func getBuiltIn(key string) (string, bool) {
 }
 
 const (
-	ModelFileName = "/models.go"
+	ModelFileName = "/mulgen.go"
 	FunctionFileName = "/gen.go"
 	EnumFileName = "/enums.go"
+	SchemaName = "/dgraph_schema.graphql"
 )
 
 const (
@@ -74,10 +79,11 @@ func goFmt(byt []byte) []byte {
 }
 
 //Parse parses the directory input and outputs go files to the directory output.
-func Parse(input, output string) {
+func Parse(input, output string, mode string) {
 	/*
-		First pass. Generate the models.
+		First pass. Generate the mulgen.
 	*/
+	parseState = mode
 	models, err := os.Create(output + ModelFileName)
 	if err != nil {
 		panic(err)
@@ -124,11 +130,19 @@ func Parse(input, output string) {
 			Use graphQL parser for the schema.
 			 */
 			//
+			if fp := filepath.Ext(info.Name()); fp == ".toml" {
+				meta = parseMeta(bytes.NewReader(fd))
+				return nil
+			}
 			if fp := filepath.Ext(info.Name()); fp != ".graphql" {
+				return nil
+			}
+			if info.Name() == "dgraph_schema.graphql" {
 				return nil
 			}
 			hasFile = true
 			resultingFile.Write(fd)
+			resultingFile.WriteByte('\n')
 			//Ensure we add the proper header.
 		}
 		return nil
@@ -137,6 +151,11 @@ func Parse(input, output string) {
 	if !hasFile {
 		return
 	}
+	data := getGraphFile("error.graphql")
+	if data == nil {
+		panic("something went horribly wrong")
+	}
+	resultingFile.Write(data)
 	/*
 		Parse the entire schema, go-fmt the code and write to the file.
 	 */
@@ -163,6 +182,21 @@ func Parse(input, output string) {
 	if err != nil {
 		panic(err)
 	}
+	if parseState == "graphql" {
+		sch, err := os.Create(output + SchemaName)
+		if err != nil {
+			return
+		}
+		defer sch.Close()
+	}
+	if parseState == "dgraph" {
+		dgraphSch, err := os.Create(output + "/dgraph.txt")
+		if err != nil {
+			return
+		}
+		defer dgraphSch.Close()
+		makeSchema(dgraphSch)
+	}
 }
 //make models and functions.
 func generate(schema *schema.Schema, modelWriter io.Writer, fnWriter io.Writer, enumWriter io.Writer) {
@@ -173,7 +207,7 @@ func generate(schema *schema.Schema, modelWriter io.Writer, fnWriter io.Writer, 
 //Parses a single GraphQL file and writes to output.
 //Also generates a field map.
 func createModel(s *schema.Schema, output io.Writer, enumWriter io.Writer) (error, map[string][]Field) {
-	//We now have the schema relevant for the file. First generate the models.
+	//We now have the schema relevant for the file. First generate the mulgen.
 	obj := s.Objects()
 	//Use a temporary buffer to ensure we add imports last.
 	var tempBuffer bytes.Buffer
@@ -238,6 +272,8 @@ func createModel(s *schema.Schema, output io.Writer, enumWriter io.Writer) (erro
 //The box relevant for embedding assets.
 var box = packr.New("templates", "./templates")
 
+var graphBox = packr.New("graphql", "./graphql")
+
 func getTemplate(name string) *template.Template {
 	file, ok := templates[name]
 	if !ok {
@@ -249,8 +285,47 @@ func getTemplate(name string) *template.Template {
 	}
 	templ, err := template.New(name).Parse(str)
 	if err != nil {
-		return nil
+		panic(err)
 	}
 	return templ
 }
 
+func getGraphFile(name string) []byte {
+	file, err := graphBox.Find(name)
+	if err != nil {
+		panic(err)
+	}
+	return file
+}
+//Meta allows you to specify how the structs are handled in go.
+//*.toml files allow you to specify properties that act independent
+//of the dgraph database. For instance, you generally don't want password
+//fields to be queried per default and/or mutated at times.
+//Specifying it as a password excludes it from all default queries.
+type Meta struct {
+	Password bool
+}
+
+func parseMeta(input io.Reader) map[string]map[string]Meta {
+	m := make(map[string]map[string]Meta)
+	_, err := toml.DecodeReader(input, &m)
+	if err != nil {
+		panic(err)
+	}
+	return m
+}
+
+var meta map[string]map[string]Meta
+
+func getMetaValue(name string) *Meta {
+	names := strings.Split(name, ".")
+	if len(names) != 2 {
+		return nil
+	}
+	if val, ok := meta[names[0]]; ok {
+		if md, ok := val[names[1]]; ok {
+			return &md
+		}
+	}
+	return nil
+}

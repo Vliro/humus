@@ -5,7 +5,7 @@
         Value *{{.Type}}
     }
     //Populates the field of r.
-    func (r *{{.Parent}}) Get{{.Parent}}{{.Name}}Async ({{if .IsArray}}count int,{{end}} filter int, txn *mulbase.Txn) chan async{{.Parent}}{{.Name}}{
+    func (r *{{.Parent}}) Get{{.Parent}}{{.Name}}Async ({{if .IsArray}}count int,{{end}} filter int, db mulbase.Querier) chan async{{.Parent}}{{.Name}}{
         if r.UID() == "" {
             return nil
         }
@@ -19,7 +19,7 @@
                 return
             }
             var output = new({{.Type}})
-            _,err = txn.RunQuery(context.Background(), q, output)
+            err = db.Query(context.Background(), q, output)
             result.Err = err
             result.Value = output
             ch <- result

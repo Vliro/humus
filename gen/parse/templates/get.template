@@ -4,7 +4,7 @@ This needs to be updated for 1-1 relations.
 
 {{range .Fields}}
     //Populates the field of r.
-    func (r *{{.Parent}}) Get{{.Parent}}{{.Name}} ({{if .IsArray}}count int,{{end}}filter *mulbase.Filter, txn *mulbase.Txn) error{
+    func (r *{{.Parent}}) Get{{.Parent}}{{.Name}} ({{if .IsArray}}count int,{{end}}filter *mulbase.Filter, db mulbase.Querier) error{
         if r.UID() == "" {
             return mulbase.ErrUID
         }
@@ -12,14 +12,18 @@ This needs to be updated for 1-1 relations.
         if err != nil {
             return err
         }
-        _,err = txn.RunQuery(context.Background(), q, &r.{{.Name}})
+        err = db.Query(context.Background(), q, &r.{{.Name}})
         return err
     }
     //TODO. Don't use this.
-    func (r *{{.Parent}}) Add{{.Parent}}{{.Name}}(input *{{.Type}}) error {
+    func (r *{{.Parent}}) Add{{.Parent}}{{.Name}}(input *{{.Type}}, db mulbase.Querier) error {
         if input.UID() == "" {
             return mulbase.ErrUID
         }
-        return nil
+        mut := mulbase.AddToList(r, "{{.Tag}}", input)
+        _, err := db.Mutate(context.Background(), mut)
+        return err
     }
+
+
 {{end}}

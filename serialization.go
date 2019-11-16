@@ -1,13 +1,14 @@
 package mulbase
 
 import (
-	jsoniter "github.com/json-iterator/go"
+	"encoding/json"
+	//jsoniter "github.com/json-iterator/go"
 	"io"
 	"unsafe"
 )
 //Per default this library uses jsoniter for json serialization
 //and deserialization.
-var json = jsoniter.ConfigCompatibleWithStandardLibrary
+//var json = jsoniter.ConfigCompatibleWithStandardLibrary
 
 //As create is immutable this is mostly safe as long as we dont change any value in b!
 func bytesToStringUnsafe(b []byte) string {

@@ -2,8 +2,10 @@ package mulbase
 
 import (
 	"bytes"
+	"fmt"
 	"strconv"
 	"strings"
+	"time"
 )
 
 /*
@@ -55,7 +57,7 @@ type Queries struct {
 }
 
 //Satisfy the Query interface.
-func (q *Queries) Process(schemaList) ([]byte, map[string]string, error) {
+func (q *Queries) Process(SchemaList) ([]byte, map[string]string, error) {
 	return q.create()
 }
 
@@ -128,11 +130,11 @@ type GeneratedQuery struct {
 	//Top level filter.
 	Filter *Filter
 	//All sub parts of the query.
-	FieldFunctions map[string]Function
-	FieldOrderings map[string][]Ordering
-	FieldCount     map[string][]Count
-	FieldAggregate map[string]AggregateValues
-	FieldFilters   map[string]Filter
+	FieldFunctions map[Predicate]Function
+	FieldOrderings map[Predicate][]Ordering
+	FieldCount     map[Predicate][]Count
+	FieldAggregate map[Predicate]AggregateValues
+	FieldFilters   map[Predicate]Filter
 	varBuilder     strings.Builder
 	VarMap         map[string]string
 	varFunc        func() int
@@ -141,14 +143,14 @@ type GeneratedQuery struct {
 	//Which directives to apply on this query.
 	Directives  []Directive
 	Deserialize bool
-	Fields      []Field
+	Fields      Fields
 	varCounter  int
-	schema      schemaList
+	schema      SchemaList
 	//For multiple queries.
 	index int
 }
 
-func (q *GeneratedQuery) SetFields(f []Field) *GeneratedQuery {
+func (q *GeneratedQuery) SetFields(f Fields) *GeneratedQuery {
 	q.Fields = f
 	return q
 }
@@ -159,7 +161,7 @@ func NewQuery() *GeneratedQuery {
 	}
 }
 
-func (q *GeneratedQuery) Process(sch schemaList) ([]byte, map[string]string, error) {
+func (q *GeneratedQuery) Process(sch SchemaList) ([]byte, map[string]string, error) {
 	q.schema = sch
 	err := q.check()
 	if err != nil {
@@ -172,12 +174,12 @@ func (q *GeneratedQuery) Type() QueryType {
 	return QueryRegular
 }
 
-func (q *GeneratedQuery) SetSubOrdering(t OrderType, path string, pred string) *GeneratedQuery {
+func (q *GeneratedQuery) SetSubOrdering(t OrderType, path Predicate, pred Predicate) *GeneratedQuery {
 	if q.FieldOrderings == nil {
-		q.FieldOrderings = make(map[string][]Ordering)
+		q.FieldOrderings = make(map[Predicate][]Ordering)
 	}
 	val := q.FieldOrderings[path]
-	val = append(val, Ordering{Type: t, Predicate: Predicate(pred)})
+	val = append(val, Ordering{Type: t, Predicate: pred})
 	q.FieldOrderings[path] = val
 	return q
 }
@@ -190,6 +192,7 @@ const (
 )
 
 func (q *GeneratedQuery) create() ([]byte, map[string]string, error) {
+	t := time.Now()
 	if err := q.check(); err != nil {
 		return nil, nil, err
 	}
@@ -213,7 +216,7 @@ func (q *GeneratedQuery) create() ([]byte, map[string]string, error) {
 		sb.WriteString("@" + string(v))
 	}
 	sb.WriteString(tokenLB)
-	for i, field := range q.Fields {
+	for i, field := range q.Fields.Get() {
 		if i != 0 {
 			sb.WriteString(tokenSpace)
 		}
@@ -226,6 +229,7 @@ func (q *GeneratedQuery) create() ([]byte, map[string]string, error) {
 	//Copy the query into result.
 	copy(result, varString)
 	copy(result[len(varString):], sb.Bytes())
+	fmt.Println(fmt.Sprintf("Creating query took %v", time.Now().Sub(t)))
 	return result, q.VarMap, nil
 }
 
@@ -256,7 +260,7 @@ func (q *GeneratedQuery) check() error {
 	if err := q.Function.check(q); err != nil {
 		return err
 	}
-	for _, v := range q.Fields {
+	for _, v := range q.Fields.Get() {
 		if err := v.check(q); err != nil {
 			return err
 		}
@@ -266,10 +270,10 @@ func (q *GeneratedQuery) check() error {
 }
 
 //Adds a count to a predicate.
-func (q *GeneratedQuery) AddSubCount(t CountType, path string, value int) *GeneratedQuery {
+func (q *GeneratedQuery) AddSubCount(t CountType, path Predicate, value int) *GeneratedQuery {
 	c := Count{Type: t, Value: value}
 	if q.FieldCount == nil {
-		q.FieldCount = make(map[string][]Count)
+		q.FieldCount = make(map[Predicate][]Count)
 	}
 	val := q.FieldCount[path]
 	//can append to nil slice:)
@@ -278,9 +282,9 @@ func (q *GeneratedQuery) AddSubCount(t CountType, path string, value int) *Gener
 }
 
 //Adds a subfilter to a predicate.
-func (q *GeneratedQuery) AddSubFilter(f *Function, path string, logical ...string) *GeneratedQuery {
+func (q *GeneratedQuery) AddSubFilter(f *Function, path Predicate, logical ...string) *GeneratedQuery {
 	if q.FieldFilters == nil {
-		q.FieldFilters = make(map[string]Filter)
+		q.FieldFilters = make(map[Predicate]Filter)
 	}
 	val, ok := q.FieldFilters[path]
 	if ok {
@@ -328,9 +332,9 @@ func (q *GeneratedQuery) Variables(single bool) string {
 }
 
 //The alias is to avoid count(predicate) as name.
-func (q *GeneratedQuery) SetSubAggregate(path string, alias string, aggregate AggregateType) *GeneratedQuery {
+func (q *GeneratedQuery) SetSubAggregate(path Predicate, alias string, aggregate AggregateType) *GeneratedQuery {
 	if q.FieldAggregate == nil {
-		q.FieldAggregate = make(map[string]AggregateValues)
+		q.FieldAggregate = make(map[Predicate]AggregateValues)
 	}
 	q.FieldAggregate[path] = AggregateValues{aggregate, alias}
 	return q

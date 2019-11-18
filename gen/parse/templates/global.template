@@ -1,12 +1,13 @@
 {{/* Global fields. */}}
-//Beginning of field.template. General functions.
-var globalFields = make(map[string]mulbase.Field)
 
-func GetField(name string) mulbase.Field {
+//Beginning of field.template. General functions.
+var globalFields = make(map[mulbase.Predicate]mulbase.Field)
+
+func GetField(name mulbase.Predicate) mulbase.Field {
 	return globalFields[name]
 }
 
-func MakeField(name string, flags mulbase.FieldMeta) mulbase.Field {
+func MakeField(name mulbase.Predicate, flags mulbase.FieldMeta) mulbase.Field {
     var field = mulbase.Field{Name:name, Meta:flags}
     if _,ok := globalFields[name]; !ok {
         globalFields[name] = field
@@ -14,6 +15,18 @@ func MakeField(name string, flags mulbase.FieldMeta) mulbase.Field {
     return field
 }
 
-func GetGlobalFields() map[string]mulbase.Field {
+func GetGlobalFields() map[mulbase.Predicate]mulbase.Field {
     return globalFields
+}
+
+type queryError struct {
+    Msg string
+}
+
+func (q queryError) Error() string {
+    return q.Msg
+}
+
+func newError(msg string) error {
+    return queryError{msg}
 }

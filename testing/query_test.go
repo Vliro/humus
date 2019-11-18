@@ -1,4 +1,4 @@
-package mulgen
+package gen
 
 /*
 var db *mulbase.DB

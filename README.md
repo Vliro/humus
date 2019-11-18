@@ -1,7 +1,10 @@
 ## The repository
 
-Mulbase/Mulgen is a front-end library for DGraph. It includes static (mostly) code generation based on the same schema supplied to the database so no need to keep the client structs separate.
+Mulbase/gen is a front-end library for DGraph. It includes static (mostly) code generation based on the same schema supplied to the database so no need to keep the client structs separate.
 It ensures json tags are set in sync with the schema and ensures compatibility with the database. 
+
+Right now it supports DGraph schema generation (default schema), GraphQL schema as well as generating the relevant field definitions. The library acts on interfaces to regulate how objects interact with the database
+as well as all queries/fields being interfaces to allow high modularity.
 
 Note that this code does not, as of right now, use vendor/modules. This will be changed eventually. There are no guarantees whatsoever about this library right now.
 
@@ -12,9 +15,9 @@ It generates definitions from GraphQL(as well as dgraph regular) but right now i
 In the repository almost everything is interfaced. This allows you to fine-tune exactly how models are saved and dealt with as 
 mutations are very important that they behave as you want while at the same time not having to write the mutation code 100% manually.
 
-## Mulgen
+## gen
 
-Mulgen is the library for generating structs and common definitions.
+gen is the library for generating structs and common definitions.
 
 The code is mostly hacked together to get the functionality. Once I've decided exactly how it will generate models the code will
 be written to be easier to understand and deal with. 
@@ -50,7 +53,7 @@ The foremost change was making the schema and its objects public for code genera
 
 ## Getting started
 
-Running mulbase/gen/parse/main.go with input/output flags generates the model files, mulgen.go and gen.go. 
+Running mulbase/gen/parse/main.go with input/output flags generates the model files, gen.go and gen.go. 
 These are used with mulbase. Create a new DB object using mulbase.Init() and set the schema from the global fields
 generated. You can then use this to query.
 

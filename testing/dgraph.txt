@@ -1,3 +1,29 @@
+type PM {
+PM.to : User  
+Message.from : User  
+Message.content : string  
+Message.time : datetime  
+}
+type ChatMessage {
+ChatMessage.room : string  
+Message.from : User  
+Message.content : string  
+Message.time : datetime  
+}
+type Page {
+Page.levels : [PageLevel]  
+Page.identifier : string  
+}
+type Error {
+Error.message : string  
+Error.errorType : string  
+Error.time : datetime  
+}
+type Message {
+Message.from : User  
+Message.content : string  
+Message.time : datetime  
+}
 type Level {
 Level.name : string  
 Level.password : string  
@@ -22,32 +48,6 @@ LevelVersion.gravity : float
 LevelVersion.items : [Item]  
 LevelVersion.credits : string  
 LevelVersion.created : datetime  
-}
-type ChatMessage {
-ChatMessage.room : string  
-Message.from : User  
-Message.content : string  
-Message.time : datetime  
-}
-type Error {
-Error.message : string  
-Error.errorType : string  
-Error.time : datetime  
-}
-type Message {
-Message.from : User  
-Message.content : string  
-Message.time : datetime  
-}
-type PM {
-PM.to : User  
-Message.from : User  
-Message.content : string  
-Message.time : datetime  
-}
-type Page {
-Page.levels : [PageLevel]  
-Page.identifier : string  
 }
 type PageLevel {
 PageLevel.order : int  
@@ -80,19 +80,7 @@ User.bodyColor : int
 User.feetColor : int  
 User.ignored : [User]  
 User.friends : [User]  
-User.messages : [PM]  
 }
-<Message.from>: uid  . 
-<Message.content>: string  . 
-<Message.time>: datetime  . 
-<PM.to>: uid  . 
-<Message.from>: uid  . 
-<Message.content>: string  . 
-<Message.time>: datetime  . 
-<Page.levels>: [uid]  . 
-<Page.identifier>: string  . 
-<PageLevel.order>: int  . 
-<PageLevel.level>: uid  . 
 <User.password>: string  . 
 <User.name>: string @index(hash)  . 
 <User.email>: string @index(hash)  . 
@@ -116,6 +104,9 @@ User.messages : [PM]
 <Error.message>: string  . 
 <Error.errorType>: string  . 
 <Error.time>: datetime  . 
+<Message.from>: uid  . 
+<Message.content>: string  . 
+<Message.time>: datetime  . 
 <Level.name>: string @index(hash)  . 
 <Level.password>: string  . 
 <Level.hash>: string  . 
@@ -137,7 +128,15 @@ User.messages : [PM]
 <LevelVersion.items>: [int]  . 
 <LevelVersion.credits>: string  . 
 <LevelVersion.created>: datetime  . 
+<PageLevel.order>: int  . 
+<PageLevel.level>: uid  . 
+<PM.to>: uid @reverse  . 
+<Message.from>: uid  . 
+<Message.content>: string  . 
+<Message.time>: datetime  . 
 <ChatMessage.room>: string @index(hash)  . 
 <Message.from>: uid  . 
 <Message.content>: string  . 
 <Message.time>: datetime  . 
+<Page.levels>: [uid]  . 
+<Page.identifier>: string  . 

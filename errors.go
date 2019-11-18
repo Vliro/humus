@@ -72,21 +72,20 @@ func (r *dbError) Values() DNode {
 	m.Message = r.Message
 	m.ErrorType = r.ErrorType
 	m.Time = r.Time
-	m.Uid = r.Uid
+	r.SetType()
+	m.Node = r.Node
 	return &m
 }
 
 //Values returns all the scalar values for this node.
-func (r *dbError) MapValues(types bool) Mapper {
+func (r *dbError) MapValues() Mapper {
 	var m = make(map[string]interface{}, 3)
 	m["Error.message"] = r.Message
 	m["Error.errorType"] = r.ErrorType
 	m["Error.time"] = r.Time
 	m["uid"] = r.Uid
-	if types {
-		r.SetType()
-		m["dgraph.type"] = r.Type
-	}
+	r.SetType()
+	m["dgraph.type"] = r.Type
 	return m
 }
 
@@ -103,7 +102,7 @@ func (s *ErrorScalars) Values() DNode {
 	return s
 }
 
-func (s *ErrorScalars) MapValues(types bool) Mapper {
+func (s *ErrorScalars) MapValues() Mapper {
 	panic("ErrorScalars called, use the original one instead")
 }
 

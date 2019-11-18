@@ -6,7 +6,6 @@ import (
 	"reflect"
 	"strconv"
 
-	"github.com/mitchellh/mapstructure"
 	"github.com/valyala/fastjson"
 )
 
@@ -15,7 +14,7 @@ type EmptyResponseErr struct{}
 func (e EmptyResponseErr) Error() string {
 	return "Empty response from dgraph."
 }
-
+/*
 //json is a variable in this package
 func GetResponse(res []byte, inp interface{}) {
 	var f map[string]interface{}
@@ -41,7 +40,7 @@ func GetResponse(res []byte, inp interface{}) {
 	}
 	return
 }
-
+*/
 /*
 	func HandleResponseArray(res []byte, params []interface{}) error {
 	p := fastjson.Parser{}
@@ -114,16 +113,22 @@ func singleResponse(temp *fastjson.Value, inp interface{}) error {
 				//No object was actually found, just the uid was found.
 				return nil
 			}
-			b = o.MarshalTo(b)
-			err = json.Unmarshal(b, inp)
+			byt, err := r[0].StringBytes()
+			if err != nil {
+				return err
+			}
+			err = json.Unmarshal(byt, inp)
 			return err
 		} else {
-			val := temp.MarshalTo(nil)
-			err = json.Unmarshal(val, inp)
+			//val := temp.MarshalTo(nil)
+			byt, err := temp.StringBytes()
+			if err != nil {
+				return err
+			}
+			err = json.Unmarshal(byt, inp)
 			return err
 		}
 	}
-	return nil
 }
 
 //HandleResponse handles the input from a query.

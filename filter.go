@@ -15,7 +15,7 @@ func MakeFilter(f *Function) *Filter {
 	return &Filter{Function:f}
 }
 
-func (f *Filter) create(q *GeneratedQuery, parent string, sb *bytes.Buffer) {
+func (f *Filter) create(q *GeneratedQuery, parent Predicate, sb *bytes.Buffer) {
 	//No nil checks. Done during check.
 	sb.WriteString(tokenFilter)
 	sb.WriteString(tokenLP)

@@ -5,6 +5,7 @@ import (
 	"errors"
 	"io"
 	"strconv"
+	"strings"
 )
 
 /*
@@ -18,14 +19,47 @@ import (
 					Sub("Character.items", ItemFields)
 	This will also ensure fields are copied properly from the global list.
 */
+
+type Fields interface {
+	Sub(name Predicate, fields Fields) Fields
+	Add(fi Field) Fields
+	Facet(facetName string, alias string) Fields
+	Get() []Field
+	Len() int
+}
+
+func Select(sch SchemaList, names ...Predicate) Fields {
+	var fields = make(NewList, len(names))
+	for k,v := range names {
+		fields[k] = sch[v]
+	}
+	return fields
+}
+
 type FieldList []Field
+
+func (f FieldList) Get() []Field {
+	return f
+}
+
+func (f FieldList) Len() int {
+	return len(f)
+}
 
 //No need to reallocate. Typing here is very important as it will no longer copy.
 type NewList FieldList
 
+func (f NewList) Get() []Field {
+	return f
+}
+
+func (f NewList) Len() int {
+	return len(f)
+}
+
 //TODO: Racy reads? There are never writes to a global field-list unless you are doing something wrong!
 //Sub allows you to add sub-field structures.
-func (f FieldList) Sub(name string, fl []Field) NewList {
+func (f FieldList) Sub(name Predicate, fl Fields) Fields {
 	var newArr NewList = make([]Field, len(f))
 	//Copy!
 	n := copy(newArr, f)
@@ -46,14 +80,14 @@ func (f FieldList) Sub(name string, fl []Field) NewList {
 	return newArr
 }
 
-func (f FieldList) Add(fi Field) NewList {
+func (f FieldList) Add(fi Field) Fields {
 	var newList NewList = make([]Field, len(f)+1)
 	copy(newList, f)
 	newList[len(f)] = fi
 	return newList
 }
 
-func (f FieldList) AddName(nam string, sch schemaList) NewList {
+func (f FieldList) AddName(nam Predicate, sch SchemaList) Fields {
 	var newList NewList = make([]Field, len(f)+1)
 	copy(newList, f)
 	newList[len(f)] = sch[nam]
@@ -61,18 +95,18 @@ func (f FieldList) AddName(nam string, sch schemaList) NewList {
 }
 
 //Facet adds a field of type facet.
-func (f FieldList) Facet(edgeName string, facetName string) NewList {
+func (f FieldList) Facet(facetName string, alias string) Fields {
 	var newArr NewList = make([]Field, len(f)+1)
 	//Copy!
 	n := copy(newArr, f)
 	if n != len(f) {
 		panic("fieldList sub: invalid length! something went wrong")
 	}
-	newArr[len(f)] = MakeField(edgeName + "|" + facetName, 0 | MetaFacet)
+	newArr[len(f)] = MakeField(Predicate(facetName), 0 | MetaFacet)
 	return newArr
 }
 //These lists do not need copying as they are never global.
-func (f NewList) Sub(name string, fl []Field) NewList {
+func (f NewList) Sub(name Predicate, fl Fields) Fields {
 	//linear search but fast either way.
 	for k, v := range f {
 		if v.Name == name {
@@ -83,28 +117,42 @@ func (f NewList) Sub(name string, fl []Field) NewList {
 	return f
 }
 
-func Sub(name string, fl []Field, sch schemaList) NewList {
+func (f NewList) Facet(facetName string, alias string) Fields {
+	return append(f, MakeField(Predicate(facetName), 0 | MetaFacet))
+}
+
+func Sub(name Predicate, fl []Field, sch SchemaList) NewList {
 	var newFields = make([]Field, 1)
 	newFields[0] = sch[name]
-	newFields[0].Fields = fl
+	newFields[0].Fields = NewList(fl)
 	return newFields
 }
 
-func Fields(sch schemaList, names ...string) NewList{
+/*func Fields(sch SchemaList, names ...string) NewList{
 	var ret = make([]Field, len(names))
 	for k,v := range names {
 		val := sch[v]
 		ret[k] = val
 	}
 	return ret
-}
+}*/
 //Facet adds a field of type facet.
-func (f NewList) Facet(edgeName string, facetName string) NewList {
-	return append(f,MakeField(edgeName + "|" + facetName, 0 | MetaFacet))
-}
-
-func (f NewList) Add(fi Field) NewList {
+func (f NewList) Add(fi Field) Fields {
 	return append(f, fi)
+}
+//CreatePath creates a nested path using paths of the form Pred1/Pred2...
+func CreatePath(paths ...Predicate) Predicate {
+	var sum = 0
+	for _,v := range paths {
+		sum += len(v)
+	}
+	var buf = strings.Builder{}
+	buf.Grow(sum + len(paths)-1)
+	for _,v := range paths {
+		buf.WriteString(string(v))
+		buf.WriteByte('/')
+	}
+	return Predicate(buf.String())
 }
 
 //TODO: offset
@@ -162,15 +210,41 @@ const (
 
 // Field is a recursive data struct which represents a GraphQL query field.
 type Field struct {
-	Name   string
-	Fields []Field
+	Name   Predicate
+	Fields Fields
 	Meta   FieldMeta
 	Local bool
 	//Type VarType
 }
+//Sub here simply uses fields as Field { fields}.
+//That is, you use this if you only want to get a relation.
+//Name here does not matter actually.
+func (f Field) Sub(name Predicate, fields Fields) Fields {
+	f.Fields = fields
+	return f
+}
+
+func (f Field) Len() int {
+	return 1
+}
+
+func (f Field) Add(fi Field) Fields {
+	var fields = make(NewList, 2)
+	fields[0] = f
+	fields[1] = fi
+	return fields
+}
+
+func (f Field) Facet(facetName string, alias string) Fields {
+	return append(NewList{}, f, MakeField(Predicate(facetName), 0 | MetaFacet))
+}
+
+func (f Field) Get() []Field {
+	return []Field{f}
+}
 
 // MakeField constructs a Field of given name and returns the Field.
-func MakeField(name string, meta FieldMeta) Field {
+func MakeField(name Predicate, meta FieldMeta) Field {
 	//TODO: better facet support
 	var x = Field{Name: name, Meta: meta}
 	return x
@@ -183,7 +257,7 @@ func (f *Field) writeLanguageTag(sb *bytes.Buffer, l Language) {
 	}
 }
 
-func (f *Field) getName() string {
+func (f *Field) getName() Predicate {
 	if f.Name[0] == '~' {
 		return f.Name[1:]
 	}
@@ -194,9 +268,9 @@ func (f *Field) getName() string {
 // The different being the public method checks the validity of the Field structure
 // while the private counterpart assumes the validity.
 // Returns whether this field is a facet field.
-func (f *Field) create(q *GeneratedQuery, parent string, sb *bytes.Buffer) {
+func (f *Field) create(q *GeneratedQuery, parent Predicate, sb *bytes.Buffer) {
 	//Default signature of field, do not include.
-	if f.Meta.Object() && len(f.Fields) == 0 {
+	if f.Meta.Object() && (f.Fields != nil && f.Fields.Len() == 0) {
 		return
 	}
 	agg, ok := q.FieldAggregate[parent]
@@ -205,13 +279,13 @@ func (f *Field) create(q *GeneratedQuery, parent string, sb *bytes.Buffer) {
 		sb.WriteString(" : ")
 		sb.WriteString(string(agg.Type))
 		sb.WriteString(tokenLP)
-		sb.WriteString(f.Name)
+		sb.WriteString(string(f.Name))
 		//if f.SchemaField.Lang {
 		//	f.writeLanguageTag(sb, q.Language)
 		//}
 		sb.WriteString(tokenRP)
 	} else {
-		sb.WriteString(f.Name)
+		sb.WriteString(string(f.Name))
 		//if f.SchemaField.Lang {
 		//	f.writeLanguageTag(sb, q.Language)
 		//}
@@ -250,11 +324,11 @@ func (f *Field) create(q *GeneratedQuery, parent string, sb *bytes.Buffer) {
 		filter.create(q, parent, sb)
 	}
 	var tmp bytes.Buffer
-	if len(f.Fields) > 0 {
+	if f.Fields != nil && f.Fields.Len() > 0 {
 		tmp.WriteString(tokenLB)
-		for i, field := range f.Fields {
+		for i, field := range f.Fields.Get() {
 			if len(field.Name) > 0 {
-				if i != 0 && i != len(f.Fields) {
+				if i != 0 && i != f.Fields.Len() {
 					tmp.WriteString(tokenSpace)
 				}
 				field.create(q, parent+"/"+field.Name, &tmp)
@@ -273,23 +347,12 @@ func (f *Field) check(q *GeneratedQuery) error {
 	if f.Name == "" {
 		return errors.New("missing name in field")
 	}
-	for _,v := range f.Fields {
-		if err := v.check(q); err != nil {
-			return err
+	if f.Fields != nil {
+		for _,v := range f.Fields.Get() {
+			if err := v.check(q); err != nil {
+				return err
+			}
 		}
 	}
 	return nil
-}
-
-func MakeFields(sch schemaList, names ...string) []Field{
-	var ret = make([]Field, len(names))
-	for k,v := range names {
-		field, ok := sch[v]
-		if ok {
-			ret[k] = field
-		} else {
-			ret[k] = MakeField(v, 0)
-		}
-	}
-	return ret
 }

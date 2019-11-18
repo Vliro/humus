@@ -2,7 +2,7 @@
 //Generating constant field values.
 const (
 {{range .Fields}}
-    {{$.Name}}{{.Name}}Field = "{{.Tag}}"{{end}}
+    {{$.Name}}{{.Name}}Field mulbase.Predicate = "{{.Tag}}"{{end}}
 )
 //SaveValues saves the node values that
 //do not contain any references to other objects.
@@ -30,11 +30,12 @@ func (r *{{.Name}}) Values() mulbase.DNode{
        m.{{.Name}}= r.{{.Name}}
        {{end -}}
    {{end -}}
-   m.Uid = r.Uid
+   r.SetType()
+   m.Node = r.Node
    return &m
 }
 //Values returns all the scalar values for this node.
-func (r *{{.Name}}) MapValues(types bool) mulbase.Mapper {
+func (r *{{.Name}}) MapValues() mulbase.Mapper {
    var m = make(map[string]interface{}, {{len .ScalarFields }})
    {{range .ScalarFields -}}
       {{if not .IsPassword -}}
@@ -42,10 +43,8 @@ m["{{.Tag}}"]= r.{{.Name}}
       {{end -}}
    {{end -}}
    m["uid"] = r.Uid
-   if types {
-        r.SetType()
-        m["dgraph.type"] = r.Type
-   }
+    r.SetType()
+    m["dgraph.type"] = r.Type
    return m
 }
 
@@ -63,7 +62,7 @@ func (s *{{.Name}}Scalars) Values() mulbase.DNode {
     return s
 }
 
-func (s *{{.Name}}Scalars) MapValues(types bool) mulbase.Mapper {
+func (s *{{.Name}}Scalars) MapValues() mulbase.Mapper {
     panic("{{.Name}}Scalars called, use the original one instead")
 }
 

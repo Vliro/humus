@@ -20,7 +20,7 @@ func (s StaticQuery) Type() QueryType {
 	return QueryRegular
 }
 //Process the query in order to send to DGraph.
-func (s StaticQuery) Process(sch schemaList) ([]byte, map[string]string, error) {
+func (s StaticQuery) Process(sch SchemaList) ([]byte, map[string]string, error) {
 	//TODO: API Forces copying here. Should we change it up?
 	//TODO: Add GraphQL variables.
 	return s.Query, s.vars, nil

@@ -8,45 +8,42 @@ import "fmt"
 //Count represents how many (sorted by first) to get as well as an interface
 //to deserialize to.
 //Do not return interfaces.
-func GetChild(node DNode, child string, fields []Field, count int, filter *Filter) (*GeneratedQuery, error) {
+func GetChild(node DNode, child Predicate, fields []Field, count int, filter *Filter) *GeneratedQuery {
 	uid := node.UID()
 	if uid == "" {
-		return nil, Error(ErrUID)
+		return nil
 	}
 	var qu = NewQuery()
-	qu.SetFunction(MakeFunction(FunctionUid).AddValue(uid, TypeUid))
+	qu.SetFunction(MakeFunction(FunctionUid).AddValue(uid))
 	qu.Filter = filter
 	//1-1 relations have no count.
 	if count != -1 {
 		qu.AddSubCount(CountFirst, child, count)
 	}
 	//Proper child structure.
-	qu.Fields = []Field{
+	qu.Fields = NewList{
 		{
 			Name: child,
-			Fields: fields,
+			Fields: NewList(fields),
 		},
 	}
-	return qu, nil
+	return qu
 }
 
-func AttachToListObject(node DNode, field Field, value DNode) (*SingleMutation, error) {
+func AttachToListObject(node DNode, field Field, value DNode) SingleMutation {
 	if node.UID() == "" {
-		return nil, Error(ErrUID)
+		return SingleMutation{}
 	}
 	//Do not allow attaching to a non-existant object without types!
 	if value.UID() == "" {
 		value.SetType()
 	}
-	//TODO: Handle this part inside mulgen? Avoid map[string]interface{}
+	//TODO: Handle this part inside gen? Avoid map[string]interface{}
 	var mapVal = make(Mapper)
 	mapVal["uid"] = node.UID()
-	mapVal[field.Name] = value
+	mapVal[string(field.Name)] = MapUid{Uid:value.UID()}
 	//Create mutation.
-	var m SingleMutation
-	m.QueryType = QuerySet
-	m.Object = mapVal
-	return &m, nil
+	return SingleMutation{QueryType:QuerySet, Object:mapVal}
 }
 //WriteNode saves a single scalar value.
 func SetScalarValue(node DNode, field Field, txn *Txn, value interface{}) (*SingleMutation, error) {
@@ -55,7 +52,7 @@ func SetScalarValue(node DNode, field Field, txn *Txn, value interface{}) (*Sing
 	}
 	var mapVal = make(Mapper)
 	mapVal["uid"] = node.UID()
-	mapVal[field.Name] = value
+	mapVal[string(field.Name)] = value
 	var m SingleMutation
 	m.QueryType = QuerySet
 	m.Object = mapVal
@@ -108,12 +105,28 @@ func SaveNodes(vals ...DNode) *MutationQuery {
 		v.SetType()
 	}
 	var m MutationQuery
-	for _,v := range vals {
+	/*for _,v := range vals {
 		if _, ok := v.(Saver); ok {
 			fmt.Println("SaveManyNodes called with custom save function. Is this intended?")
 		}
 		m.Values = append(m.Values, v)
-	}
+	}*/
+	m.Values = vals
 	m.QueryType = QuerySet
 	return &m
+}
+//DeleteNode deletes the node. NOTE: If it does not implement
+//deleter only the top-level uid is deleted.
+func DeleteNode(node DNode) SingleMutation {
+	return SingleMutation{
+		Object:    NewMapper(node.UID()),
+		QueryType: QueryDelete,
+	}
+}
+
+func DeleteNodes(nodes ...DNode) *MutationQuery {
+	return &MutationQuery{
+		Values:    nodes,
+		QueryType: QueryDelete,
+	}
 }

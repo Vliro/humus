@@ -53,7 +53,7 @@ type DNode interface {
 	//Serializes all the scalar values that are not hidden.
 	Values() DNode
 	//MapValues instead creates a map of values to allow you to build custom save methods.
-	MapValues(types bool) Mapper
+	MapValues() Mapper
 }
 //Querier is an abstraction over DB/TXN. Also allows for testing.
 type Querier interface {
@@ -67,6 +67,10 @@ type AsyncQuerier interface {
 	Querier
 	QueryAsync(context.Context, Query, ...interface{}) chan Result
 	MutateAsync(context.Context, Query)
+}
+
+func NewMapper(uid UID) Mapper {
+	return Mapper{"uid": uid}
 }
 
 //UidObject is embedded in maps to ensure proper serialization.
@@ -103,13 +107,13 @@ func (m Mapper) Values() DNode {
 	return m
 }
 
-func (m Mapper) MapValues(types bool) Mapper {
+func (m Mapper) MapValues() Mapper {
 	return m
 }
 
 //Sets a singular regulation, i.e. 1-1.
 //TODO: Should default be = obj or = obj.Values()?
-func (m Mapper) Set(child string, all bool, obj DNode) Mapper {
+func (m Mapper) Set(child Predicate, all bool, obj DNode) Mapper {
 	if checkNil(obj) {
 		//TODO: what should actually happen here?
 		//panic for now.
@@ -117,12 +121,12 @@ func (m Mapper) Set(child string, all bool, obj DNode) Mapper {
 	}
 	if all {
 		if val, ok := obj.(Saver); ok {
-			m[child] = val.Save()
+			m[string(child)] = val.Save()
 		} else {
-			m[child] = obj
+			m[string(child)] = obj
 		}
 	} else {
-		m[child] = Uid(obj.UID())
+		m[string(child)] = Uid(obj.UID())
 	}
 	return m
 }
@@ -156,6 +160,10 @@ type Saver interface {
 	Save() DNode
 }
 
+type Deleter interface {
+	Delete() DNode
+}
+
 //Number of workers.
 const workers = 5
 
@@ -165,14 +173,14 @@ type DB struct {
 	//Config.
 	c *Config
 	//Schema list.
-	schema schemaList
+	schema SchemaList
 	//The pool of asynchronous workers.
 	pool *workerpool.WorkerPool
 	//The endpoint for possible GraphQL.
 	gplPoint string
 }
 
-func (d *DB) Schema() schemaList {
+func (d *DB) Schema() SchemaList {
 	return d.schema
 }
 
@@ -260,13 +268,13 @@ const (
 //Allows it to be used in Query.
 type Query interface {
 	//Process the query type in order to send to the database.
-	Process(schemaList) ([]byte, map[string]string, error)
+	Process(SchemaList) ([]byte, map[string]string, error)
 	//What type of query is this? Mutation(set/delete), regular query?
 	Type() QueryType
 }
 //Init creates a new database connection using the given config
 //and schema.
-func Init(conf *Config, sch map[string]Field) *DB {
+func Init(conf *Config, sch map[Predicate]Field) *DB {
 	if conf.Port < 1000 {
 		panic("graphinit: invalid dgraph port number")
 	}
@@ -275,7 +283,7 @@ func Init(conf *Config, sch map[string]Field) *DB {
 }
 
 //Takes a connection create of the form http://ip:port/
-func connect(conf *Config, sch schemaList) *DB {
+func connect(conf *Config, sch SchemaList) *DB {
 	//TODO: allow multiple dgraph clusters.
 	var conn *grpc.ClientConn
 	var err error
@@ -387,7 +395,6 @@ func (t *Txn) Upsert(ctx context.Context, q Query, cond string, mutations ...Que
 		Mutations: muts,
 	}
 	resp, err := t.txn.Do(ctx, &req)
-	print(resp)
 	if err != nil {
 		return 0, Error(err)
 	}
@@ -406,7 +413,7 @@ func (t *Txn) query(ctx context.Context, q Query, objs []interface{}) error {
 		return Error(err)
 	}
 	if t.db.c.LogQueries {
-		log.Printf("Query input: %s \n\n Query output: %s", string(str), string(resp.Json))
+		log.Printf("Query input: %s \n Query output: %s", string(str), string(resp.Json))
 	}
 	//This deserializes using reflect.
 	err = HandleResponse(resp.Json, objs)
@@ -456,21 +463,19 @@ func (t *Txn) Query(ctx context.Context, q Query, objs ...interface{}) error {
 
 func (t *Txn) Mutate(ctx context.Context, q Query) (*api.Response, error) {
 	t.Lock()
+	defer t.Unlock()
 	typ := q.Type()
 	if typ != QuerySet && typ != QueryDelete {
 		t.Unlock()
 		return nil, errInvalidType
 	}
 	t.Queries = append(t.Queries, q)
-	t.Unlock()
 	return t.mutate(ctx, q)
 }
 
 func (t *Txn) MutateAsync(ctx context.Context, q Query) chan Result {
-	t.Lock()
 	typ := q.Type()
 	if typ != QuerySet && typ != QueryDelete {
-		t.Unlock()
 		return nil
 	}
 	var ch = make(chan Result)

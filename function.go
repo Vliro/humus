@@ -3,6 +3,7 @@ package mulbase
 import (
 	"bytes"
 	"fmt"
+	"strconv"
 	"strings"
 )
 
@@ -49,7 +50,7 @@ func (o Ordering) String() string {
 	return s.String()
 }
 
-//If you change the names here make sure to follow the type Type + name as dictated in mulgen.
+//If you change the names here make sure to follow the type Type + name as dictated in gen.
 type VarType string
 
 const (
@@ -62,8 +63,8 @@ const (
 //GraphVariable represents a variable before it is parsed and written into a query.
 //TODO: Minimize interface{} here.
 type GraphVariable struct {
+	Value string
 	Type  VarType
-	Value interface{}
 }
 
 //Function represents a GraphQL+- function. It writes into the query
@@ -87,46 +88,50 @@ func (f *Function) AddOrdering(t OrderType, pred string) *Function {
 	return f
 }
 
-func (f *Function) AddValue(v interface{}, t VarType) *Function {
-	vv := GraphVariable{t, v}
+func (f *Function) AddValue(v interface{}) *Function {
+	val, typ := processInterface(v)
+	vv := GraphVariable{val, typ}
 	f.Variables = append(f.Variables, vv)
 	return f
 }
 
 func (f *Function) AddValues(t VarType, v ...interface{}) *Function {
 	for k := range v {
-		v2 := GraphVariable{t, v[k]}
+		val, typ := processInterface(v[k])
+		v2 := GraphVariable{val, typ}
 		f.Variables = append(f.Variables, v2)
 	}
 	return f
 }
 
-func (f *Function) AddPred(name string) *Function {
-	vv := GraphVariable{TypePred, name}
+func (f *Function) AddPred(name Predicate) *Function {
+	vv := GraphVariable{string(name), TypePred}
 	f.Variables = append(f.Variables, vv)
 	return f
 }
 
-func (f *Function) AddPredValue(name string, v interface{}, t VarType) *Function {
-	v1 := GraphVariable{TypePred, name}
-	v2 := GraphVariable{t, v}
+func (f *Function) AddPredValue(name Predicate, v interface{}) *Function {
+	val, typ := processInterface(v)
+	v1 := GraphVariable{string(name), TypePred}
+	v2 := GraphVariable{val, typ}
 	f.Variables = append(f.Variables, v1, v2)
 	return f
 }
 
-func (f *Function) AddMatchValues(name string, v string, count int) *Function {
-	v1 := GraphVariable{TypePred, name}
-	v2 := GraphVariable{TypeStr, v}
-	v3 := GraphVariable{TypeDefault, count}
+func (f *Function) AddMatchValues(name Predicate, v string, count int) *Function {
+	v1 := GraphVariable{string(name), TypePred}
+	v2 := GraphVariable{v, TypeStr}
+	v3 := GraphVariable{strconv.Itoa(count), TypeInt}
 	f.Variables = append(f.Variables, v1, v2, v3)
 	return f
 }
 
-func (f *Function) AddPredMultiple(name string, t VarType, v ...interface{}) *Function {
-	v1 := GraphVariable{TypePred, name}
+func (f *Function) AddPredMultiple(name Predicate, v ...interface{}) *Function {
+	v1 := GraphVariable{string(name), TypePred}
 	f.Variables = append(f.Variables, v1)
-	for k := range v {
-		v2 := GraphVariable{t, v[k]}
+	for _,vv := range v {
+		val, typ := processInterface(vv)
+		v2 := GraphVariable{val, typ}
 		f.Variables = append(f.Variables, v2)
 	}
 	return f
@@ -138,14 +143,14 @@ func (f *Function) mapVariables(q *GeneratedQuery) {
 	for _, v := range f.Variables {
 		//Handle the two special cases that do not need variable mapping.
 		if v.Type == TypePred {
-			slice = append(slice, "<"+v.Value.(string)+">")
+			slice = append(slice, v.Value)
 			continue
 		}
 		if v.Type == TypeUid {
-			if len(v.Value.(string)) > 12 {
+			if len(v.Value) > 12 {
 				panic("invalid UID, this could be an SQL injection.")
 			}
-			slice = append(slice, "\""+v.Value.(string)+"\"")
+			slice = append(slice, "\""+v.Value+"\"")
 			continue
 		}
 		/*if v.Type == TypeDefault {
@@ -153,13 +158,13 @@ func (f *Function) mapVariables(q *GeneratedQuery) {
 			continue
 		}*/
 		//Build the variable using the integer from the query.
-		key := q.registerVariable(v.Type, fmt.Sprintf("%v", v.Value))
+		key := q.registerVariable(v.Type, v.Value)
 		slice = append(slice, key)
 	}
 	f.mapValues = slice
 }
 
-func (f *Function) create(q *GeneratedQuery, parent string, sb *bytes.Buffer) {
+func (f *Function) create(q *GeneratedQuery, parent Predicate, sb *bytes.Buffer) {
 	//No nil checks etc. Should be done before.
 	//Map the variables to their proper value.
 	f.mapVariables(q)

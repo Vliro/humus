@@ -51,7 +51,7 @@ type MutationQuery struct {
 	QueryType QueryType
 }
 
-func (m *MutationQuery) Process(list SchemaList) ([]byte, map[string]string, error) {
+func (m *MutationQuery) Process(SchemaList) ([]byte, map[string]string, error) {
 	for k,v := range m.Values {
 		switch m.QueryType {
 		case QuerySet:

@@ -5,6 +5,12 @@ import (
 	"io"
 )
 
+type EnumCreator struct{}
+
+func (e EnumCreator) Create(i *Generator, w io.Writer) {
+	e.makeEnums(i.enums(), i.outputs[EnumFileName])
+}
+
 type EnumValues struct {
 	Name string
 	Start string
@@ -15,7 +21,7 @@ type EnumResult struct {
 	Vals []EnumValues
 }
 
-func makeEnums(enums map[string]*schema.Enum, output io.Writer) {
+func (e EnumCreator) makeEnums(enums []*schema.Enum, output io.Writer) {
 	var res EnumResult
 	templ := getTemplate("Enum")
 	for _,v := range enums {

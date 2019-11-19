@@ -48,51 +48,64 @@ type DNode interface {
 	SetUID(uid UID)
 	//Sets all types of this node. This has to be done at least once.
 	SetType()
-	//Returns all scalar fields for this node.
+	//Returns all scalar fields for this node. This is not of Fields interface
+	//as they default nods always return a FieldList and not a NewList for instance.
 	Fields() FieldList
-	//Serializes all the scalar values that are not hidden.
+	//Serializes all the scalar values that are not hidden. It usually returns
+	//a type of *{{.Type}}Scalars.
 	Values() DNode
-	//MapValues instead creates a map of values to allow you to build custom save methods.
+	//MapValues instead creates a map of values to allow you to build custom save methods, such as immediately attaching edges.
 	MapValues() Mapper
 }
+
 //Querier is an abstraction over DB/TXN. Also allows for testing.
 type Querier interface {
+	//Query queries the database with a variable amount of interfaces to deserialize into.
+	//That is, if you are performing two queries q and q1 you are expected to supply two values.
 	Query(context.Context, Query, ...interface{}) error
+	//Mutate mutates the query and returns the response.
 	Mutate(context.Context, Query) (*api.Response, error)
+	//Discard the transaction. This is done automatically in DB but not in Txn.
 	Discard(context.Context) error
+	//Commit is the same as above except it commits the transaction.
 	Commit(context.Context) error
 }
 
 type AsyncQuerier interface {
 	Querier
 	QueryAsync(context.Context, Query, ...interface{}) chan Result
-	MutateAsync(context.Context, Query)
+	MutateAsync(context.Context, Query) chan Result
 }
 
-func NewMapper(uid UID) Mapper {
-	return Mapper{"uid": uid}
+func NewMapper(uid UID, typ []string) Mapper {
+	return Mapper{"uid": uid, "dgraph.type": typ}
 }
 
 //UidObject is embedded in maps to ensure proper serialization.
-type MapUid struct  {
+//Since it needs to be of form "predicate": {object} and not "predicate": "uid".
+type MapUid struct {
 	Uid UID `json:"uid"`
 }
+
 //Uid simply returns a struct that
 //can be used in 1-1 relations, i.e.
 //map[key] = mulbase.Uid(uiD)
-func Uid(u UID) MapUid{
-	return MapUid{Uid:u}
+func Uid(u UID) MapUid {
+	return MapUid{Uid: u}
 }
 
 //A mapper that allows you to set subrelations.
 type Mapper map[string]interface{}
 
 func (m Mapper) UID() UID {
-	return m["uid"].(UID)
+	if val, ok := m["uid"].(UID); ok {
+		return val
+	}
+	return ""
 }
 
 func (m Mapper) SetUID(uid UID) {
-	m["uid"] = UID(uid)
+	m["uid"] = uid
 }
 
 func (m Mapper) SetType() {
@@ -130,6 +143,7 @@ func (m Mapper) Set(child Predicate, all bool, obj DNode) Mapper {
 	}
 	return m
 }
+
 //honestly, Go nil is annoying for interfaces.
 func checkNil(c DNode) bool {
 	if c == nil || (reflect.ValueOf(c).Kind() == reflect.Ptr && reflect.ValueOf(c).IsNil()) {
@@ -140,7 +154,7 @@ func checkNil(c DNode) bool {
 
 func (m Mapper) SetArray(child string, all bool, objs ...DNode) Mapper {
 	var output = make([]interface{}, len(objs))
-	for k,v := range objs {
+	for k, v := range objs {
 		if all {
 			if val, ok := v.(Saver); ok {
 				output[k] = val.Save()
@@ -160,6 +174,7 @@ type Saver interface {
 	Save() DNode
 }
 
+//Deleter allows you to implement a custom delete method.
 type Deleter interface {
 	Delete() DNode
 }
@@ -244,6 +259,7 @@ func (d *DB) Alter(ctx context.Context, op *api.Operation) error {
 
 func (d *DB) logError(ctx context.Context, err error) {
 	f := func() {
+		//Get the type name.
 		errorName := fmt.Sprintf("%T", err)
 		value := err.Error()
 		var result dbError
@@ -251,7 +267,7 @@ func (d *DB) logError(ctx context.Context, err error) {
 		result.Message = value
 		result.Time = time.Now()
 		result.ErrorType = errorName
-		_,_ = d.Mutate(context.Background(), CreateMutation(&result, QuerySet))
+		_, _ = d.Mutate(context.Background(), CreateMutation(&result, QuerySet))
 	}
 	d.pool.Submit(f)
 	return
@@ -272,6 +288,7 @@ type Query interface {
 	//What type of query is this? Mutation(set/delete), regular query?
 	Type() QueryType
 }
+
 //Init creates a new database connection using the given config
 //and schema.
 func Init(conf *Config, sch map[Predicate]Field) *DB {
@@ -312,8 +329,8 @@ func connect(conf *Config, sch SchemaList) *DB {
 	db := &DB{
 		d:        c,
 		gplPoint: conf.IP + ":" + strconv.Itoa(conf.Port) + "/graphql",
-		c: conf,
-		schema: sch,
+		c:        conf,
+		schema:   sch,
 	}
 	//Run an empty query to ensure connection.
 	db.pool = workerpool.New(workers)
@@ -381,7 +398,7 @@ func (t *Txn) Upsert(ctx context.Context, q Query, cond string, mutations ...Que
 		}
 		muts[k] = new(api.Mutation)
 		v := muts[k]
-		b,_, err := mutations[k].Process(t.db.schema)
+		b, _, err := mutations[k].Process(t.db.schema)
 		if err != nil {
 			return 0, err
 		}
@@ -481,7 +498,7 @@ func (t *Txn) MutateAsync(ctx context.Context, q Query) chan Result {
 	var ch = make(chan Result)
 	f := func() {
 		resp, err := t.mutate(ctx, q)
-		ch <- Result{Res:resp, Err:err}
+		ch <- Result{Res: resp, Err: err}
 	}
 	t.db.pool.Submit(f)
 	return ch

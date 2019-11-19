@@ -113,15 +113,12 @@ func singleResponse(temp *fastjson.Value, inp interface{}) error {
 				//No object was actually found, just the uid was found.
 				return nil
 			}
-			byt, err := r[0].StringBytes()
-			if err != nil {
-				return err
-			}
+			byt := r[0].MarshalTo(nil)
 			err = json.Unmarshal(byt, inp)
 			return err
 		} else {
 			//val := temp.MarshalTo(nil)
-			byt, err := temp.StringBytes()
+			byt := temp.MarshalTo(nil)
 			if err != nil {
 				return err
 			}

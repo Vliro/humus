@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"github.com/Vliro/mulbase/gen/graphql-go/common"
 	"github.com/Vliro/mulbase/gen/graphql-go/schema"
+	"io"
 	"strings"
 )
 
@@ -25,40 +26,39 @@ const fieldReceiver = "func (r *%s) "
 const fieldDeclObj = `var _ = %s
 `
 
-type Field struct {
-	Tag string
-	//This include omitempty for instance.
-	WrittenTag string
-	//Backup for using reverse since
-	Name  string
-	Type  string
-	flags flags
-	//like []*string
-	TypeLabel     string
-	FromInterface bool
-
-	IsPassword bool
-
-	Directives []*common.Directive
-}
-
-func (f *Field) IsScalar() bool {
-	for _,v := range builtins {
-		if v == f.Type {
-			return true
-		}
-	}
-	return f.flags & flagEnum > 0
-}
+type ModelCreator struct {}
 
 var modelImports = []string{
 	"github.com/Vliro/mulbase",
 	"context",
 }
 
+func (m ModelCreator) Create(i *Generator, w io.Writer) {
+	var buffer bytes.Buffer
+	i.writeImports(modelImports, &buffer)
+	var interfaceMap = make(map[string][]Field)
+	var fieldMap = make(map[string][]Field)
+	for _,v := range i.getInterfaces() {
+		byt, field := m.makeGoInterface(v)
+		interfaceMap[v.Name] = field
+		_, _ = io.Copy(&buffer, byt)
+	}
+	for _,v := range i.getObjects() {
+		byt, field := m.makeGoStruct(v, interfaceMap)
+		fieldMap[v.Name] = field
+		_, _ = io.Copy(&buffer, byt)
+	}
+
+	_, err := io.Copy(w, &buffer)
+	if err != nil {
+		panic(err)
+	}
+	i.States[ModelFileName] = fieldMap
+}
+
 //genFields generates the actual fields for the go definition.
 //Returns the list of fields created! This includes scalars.
-func makeGoStruct(o *schema.Object, m map[string][]Field) (*bytes.Buffer, []Field) {
+func (mc ModelCreator) makeGoStruct(o *schema.Object, m map[string][]Field) (*bytes.Buffer, []Field) {
 	var sb bytes.Buffer
 	var fields []Field
 	sb.WriteString(fmt.Sprintf(topLine, o.Name))
@@ -75,6 +75,18 @@ func makeGoStruct(o *schema.Object, m map[string][]Field) (*bytes.Buffer, []Fiel
 		var fi = iterate(o.Name, v, v.Type, &sb, 0)
 		if fi != nil {
 			fields = append(fields, *fi)
+		}
+	}
+	val, ok := meta[o.Name]
+	if ok {
+		for nam,v := range val {
+			if v.Facet != "" {
+				var fi Field
+				fi.flags |= flagFacet
+				fi.Type = v.Type
+				fi.Name = v.Facet + "|" + nam
+				createField(v.Facet, fi.Name, v.Type, &sb, fi.flags, "")
+			}
 		}
 	}
 	sb.WriteString(bottomLine)
@@ -107,7 +119,7 @@ func makeGoStruct(o *schema.Object, m map[string][]Field) (*bytes.Buffer, []Fiel
 //implements embeds, the go-way.
 //You could probably merge makeGoInterface and makeGoStruct but
 //whatever, it works just fine.
-func makeGoInterface(o *schema.Interface) (*bytes.Buffer, []Field) {
+func (mc ModelCreator) makeGoInterface(o *schema.Interface) (*bytes.Buffer, []Field) {
 	var sb bytes.Buffer
 	var fields []Field
 	sb.WriteString("//Created from a GraphQL interface. \n")
@@ -158,9 +170,8 @@ func makeFieldList(name string, fi []Field, sb *bytes.Buffer, allowUnderscore bo
 		if v.Name == "" {
 			panic("makeFieldList: missing name, something went wrong")
 		}
-
 		var flagBuilder strings.Builder
-		//TODO: Include relevant metadata information in fields.
+		//This writes the metadata.
 		flagBuilder.WriteString("0")
 		obj := v.flags & flagObject
 		if obj > 0 {
@@ -172,6 +183,7 @@ func makeFieldList(name string, fi []Field, sb *bytes.Buffer, allowUnderscore bo
 		if v.flags&flagReverse != 0 {
 			flagBuilder.WriteString("|mulbase.MetaReverse")
 		}
+
 		if v.IsPassword { //|| obj > 0 {
 			if allowUnderscore {
 				sb.WriteString(fmt.Sprintf(fieldDeclObj, fmt.Sprintf(makeFieldName, "\""+v.Tag+"\"", flagBuilder.String())))
@@ -188,31 +200,38 @@ func makeFieldList(name string, fi []Field, sb *bytes.Buffer, allowUnderscore bo
 
 //Create the field declaration as well as the Field object. These field objects are used in template generation.
 //This ensures the values in json tags will match the database.
-func writeField(objectName string, name string, typ string, sb *bytes.Buffer, flag flags, directiveName string) Field {
-	var isb strings.Builder
+//directive name is used for facet.
+func createField(objectName string, name string, typ string, sb *bytes.Buffer, flag flags, directiveName string) Field {
 	var fi Field
 	if flag&flagArray != 0 {
-		isb.WriteString("[]")
+		fi.TypeLabel += "[]"
 	}
-	if flag&flagPointer != 0 && !(flag&flagArray != 0) {
-		isb.WriteByte('*')
+	if flag&flagPointer != 0 && (flag&flagArray == 0) {
+		fi.TypeLabel += "*"
 	}
-	isb.WriteString(typ)
+	fi.TypeLabel += typ
+	fi.Type = typ
+
 	//Do not capitalize the tag.
 	var dbName = objectName + "." + name
+	//Ensure for reverse fields the reverse field is used instead.
 	if parseState == "dgraph" && flag&flagReverse > 0 && flag&flagArray > 0 {
 		dbName = "~" + typ + "." + directiveName
 	}
 	fi.Tag = dbName
-	fi.TypeLabel = isb.String()
-	sb.WriteString(strings.Title(name))
 
+	sb.WriteString(strings.Title(name))
 	//Here, we also have to consider the metadata values.
 	meta := getMetaValue(dbName)
 	if meta != nil {
 		fi.IsPassword = meta.Password
+		if meta.Facet != "" {
+			dbName = meta.Facet +"|"+ name
+		}
 		//TODO: Should fix be
-		fi.WrittenTag = dbName + ",omitempty"
+		if fi.IsPassword || meta.Facet != ""{
+			fi.WrittenTag = dbName + ",omitempty"
+		}
 	} else {
 		fi.WrittenTag = dbName
 	}
@@ -279,7 +298,7 @@ func iterate(objName string, data *schema.Field, field common.Type, sb *bytes.Bu
 			val := dir.Args.MustGet("field")
 			dirName = val.String()
 		}
-		var ff = writeField(objName, name, typ, sb, f, dirName)
+		var ff = createField(objName, name, typ, sb, f, dirName)
 		ff.Directives = data.Directives
 		return &ff
 	}
@@ -330,7 +349,7 @@ func verifyDirectives(field *schema.Field, created Field) error {
 	for _, v := range field.Directives {
 		if v.Name.Name == "hasInverse" {
 			if created.flags&flagScalar != 0 {
-				return errors.New("cannot use hasInverse on scalar.")
+				return errors.New("cannot use hasInverse on scalar")
 			}
 		}
 	}

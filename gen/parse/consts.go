@@ -33,4 +33,5 @@ const (
 	flagEnum
 	flagReverse
 	flagObject
+	flagFacet
 )

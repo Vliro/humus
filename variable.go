@@ -21,3 +21,4 @@ func processInterface(value interface{}) (string, VarType) {
 		return fmt.Sprintf("%s", a), TypeStr
 	}
 }
+

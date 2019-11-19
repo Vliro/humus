@@ -1,3 +1,4 @@
 [Question]
-    [Question.id]
-        Password=true
+    [Question.sick]
+        Facet = "test"
+        Type = "string"

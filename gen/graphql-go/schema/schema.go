@@ -46,6 +46,7 @@ type Schema struct {
 
 	entryPointNames map[string]string
 	objects         []*Object
+	interfaces      []*Interface
 	unions          []*Union
 	enums           []*Enum
 	extensions      []*Extension
@@ -53,6 +54,14 @@ type Schema struct {
 
 func (s *Schema) Objects() []*Object {
 	return s.objects
+}
+
+func (s *Schema) Interfaces() []*Interface {
+	return s.interfaces
+}
+
+func (s *Schema) Enums() []*Enum {
+	return s.enums
 }
 
 // Resolve a named type in the schema by its name.
@@ -526,7 +535,7 @@ func parseSchema(s *Schema, l *common.Lexer) {
 			iface := parseInterfaceDef(l)
 			iface.Desc = desc
 			s.Types[iface.Name] = iface
-
+			s.interfaces = append(s.interfaces, iface)
 		case "union":
 			union := parseUnionDef(l)
 			union.Desc = desc

@@ -111,7 +111,7 @@ require('./src/validation/__tests__/VariablesInAllowedPosition-test');
 let output = JSON.stringify({
 	schemas: schemas.map(s => printSchema(s)),
 	tests: tests,
-}, null, 2)
+}, null, 2);
 output = output.replace(' Did you mean to use an inline fragment on \\"Dog\\" or \\"Cat\\"?', '');
 output = output.replace(' Did you mean to use an inline fragment on \\"Being\\", \\"Pet\\", \\"Canine\\", \\"Dog\\", or \\"Cat\\"?', '');
 output = output.replace(' Did you mean \\"Pet\\"?', '');

@@ -5,6 +5,15 @@ import (
 	"io"
 )
 
+type FnCreator struct {
+	Fields map[string][]Field
+}
+
+func (f FnCreator) Create(i *Generator, w io.Writer) {
+	i.writeImports(fnImports, w)
+	f.processFunctions(i.schema, i.outputs[FunctionFileName], f.Fields)
+}
+
 type fieldTemplate struct {
 	Name   string
 	Parent string
@@ -26,9 +35,9 @@ var fnImports = []string{
 	processFunctions is the entrypoint for declaring all predeclared functions
 */
 
-func processFunctions(sch *schema.Schema, writer io.Writer, m map[string][]Field) {
+func (f FnCreator) processFunctions(sch *schema.Schema, writer io.Writer, m map[string][]Field) {
 	obj := sch.Objects()
-	writeImports(fnImports, writer)
+	//writeImports(fnImports, writer)
 	for _, v := range obj {
 		processFieldTemplates(v, writer, m)
 	}

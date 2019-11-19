@@ -7,231 +7,73 @@ import (
 )
 
 //Populates the field of r.
-func (r *Level) GetLevelOwner(filter *mulbase.Filter, db mulbase.Querier) error {
+func (r *Question) GetQuestionYes(count int, filter *mulbase.Filter, db mulbase.Querier) ([]Comment, error) {
 	if r.UID() == "" {
-		return mulbase.ErrUID
+		return nil, mulbase.ErrUID
 	}
-	q := mulbase.GetChild(r, "Level.owner", UserFields, -1, filter)
+	q := mulbase.GetChild(r, "Question.yes", CommentFields, count, filter)
 	if q == nil {
-		return newError("could not create query")
+		return nil, newError("could not create query")
 	}
-	err := db.Query(context.Background(), q, &r.Owner)
-	return err
+	var typ []Comment
+	err := db.Query(context.Background(), q, &typ)
+	return typ, err
 }
 
 //TODO. Don't use this.
-func (r *Level) AddLevelOwner(input *User, db mulbase.Querier) error {
+func (r *Question) AddQuestionYes(input *Comment, db mulbase.Querier) error {
 	if input.UID() == "" {
 		return mulbase.ErrUID
 	}
-	mut := mulbase.AddToList(r, "Level.owner", input)
+	mut := mulbase.AddToList(r, "Question.yes", input)
 	_, err := db.Mutate(context.Background(), mut)
 	return err
 }
 
 //Populates the field of r.
-func (r *Level) GetLevelVersion(filter *mulbase.Filter, db mulbase.Querier) error {
+func (r *Comment) GetCommentCommentsOn(filter *mulbase.Filter, db mulbase.Querier) ([]Post, error) {
 	if r.UID() == "" {
-		return mulbase.ErrUID
+		return nil, mulbase.ErrUID
 	}
-	q := mulbase.GetChild(r, "Level.version", LevelVersionFields, -1, filter)
+	q := mulbase.GetChild(r, "Comment.commentsOn", PostFields, -1, filter)
 	if q == nil {
-		return newError("could not create query")
+		return nil, newError("could not create query")
 	}
-	err := db.Query(context.Background(), q, &r.Version)
-	return err
+	var typ []Post
+	err := db.Query(context.Background(), q, &typ)
+	return typ, err
 }
 
 //TODO. Don't use this.
-func (r *Level) AddLevelVersion(input *LevelVersion, db mulbase.Querier) error {
+func (r *Comment) AddCommentCommentsOn(input *Post, db mulbase.Querier) error {
 	if input.UID() == "" {
 		return mulbase.ErrUID
 	}
-	mut := mulbase.AddToList(r, "Level.version", input)
+	mut := mulbase.AddToList(r, "Comment.commentsOn", input)
 	_, err := db.Mutate(context.Background(), mut)
 	return err
 }
 
 //Populates the field of r.
-func (r *Level) GetLevelVersions(count int, filter *mulbase.Filter, db mulbase.Querier) error {
+func (r *Comment) GetCommentYolo(filter *mulbase.Filter, db mulbase.Querier) ([]Comment, error) {
 	if r.UID() == "" {
-		return mulbase.ErrUID
+		return nil, mulbase.ErrUID
 	}
-	q := mulbase.GetChild(r, "Level.versions", LevelVersionFields, count, filter)
+	q := mulbase.GetChild(r, "Comment.yolo", CommentFields, -1, filter)
 	if q == nil {
-		return newError("could not create query")
+		return nil, newError("could not create query")
 	}
-	err := db.Query(context.Background(), q, &r.Versions)
-	return err
+	var typ []Comment
+	err := db.Query(context.Background(), q, &typ)
+	return typ, err
 }
 
 //TODO. Don't use this.
-func (r *Level) AddLevelVersions(input *LevelVersion, db mulbase.Querier) error {
+func (r *Comment) AddCommentYolo(input *Comment, db mulbase.Querier) error {
 	if input.UID() == "" {
 		return mulbase.ErrUID
 	}
-	mut := mulbase.AddToList(r, "Level.versions", input)
-	_, err := db.Mutate(context.Background(), mut)
-	return err
-}
-
-//Populates the field of r.
-func (r *PM) GetPMTo(filter *mulbase.Filter, db mulbase.Querier) error {
-	if r.UID() == "" {
-		return mulbase.ErrUID
-	}
-	q := mulbase.GetChild(r, "PM.to", UserFields, -1, filter)
-	if q == nil {
-		return newError("could not create query")
-	}
-	err := db.Query(context.Background(), q, &r.To)
-	return err
-}
-
-//TODO. Don't use this.
-func (r *PM) AddPMTo(input *User, db mulbase.Querier) error {
-	if input.UID() == "" {
-		return mulbase.ErrUID
-	}
-	mut := mulbase.AddToList(r, "PM.to", input)
-	_, err := db.Mutate(context.Background(), mut)
-	return err
-}
-
-//Populates the field of r.
-func (r *Page) GetPageLevels(count int, filter *mulbase.Filter, db mulbase.Querier) error {
-	if r.UID() == "" {
-		return mulbase.ErrUID
-	}
-	q := mulbase.GetChild(r, "Page.levels", PageLevelFields, count, filter)
-	if q == nil {
-		return newError("could not create query")
-	}
-	err := db.Query(context.Background(), q, &r.Levels)
-	return err
-}
-
-//TODO. Don't use this.
-func (r *Page) AddPageLevels(input *PageLevel, db mulbase.Querier) error {
-	if input.UID() == "" {
-		return mulbase.ErrUID
-	}
-	mut := mulbase.AddToList(r, "Page.levels", input)
-	_, err := db.Mutate(context.Background(), mut)
-	return err
-}
-
-//Populates the field of r.
-func (r *PageLevel) GetPageLevelLevel(filter *mulbase.Filter, db mulbase.Querier) error {
-	if r.UID() == "" {
-		return mulbase.ErrUID
-	}
-	q := mulbase.GetChild(r, "PageLevel.level", LevelFields, -1, filter)
-	if q == nil {
-		return newError("could not create query")
-	}
-	err := db.Query(context.Background(), q, &r.Level)
-	return err
-}
-
-//TODO. Don't use this.
-func (r *PageLevel) AddPageLevelLevel(input *Level, db mulbase.Querier) error {
-	if input.UID() == "" {
-		return mulbase.ErrUID
-	}
-	mut := mulbase.AddToList(r, "PageLevel.level", input)
-	_, err := db.Mutate(context.Background(), mut)
-	return err
-}
-
-//Populates the field of r.
-func (r *User) GetUserLevels(count int, filter *mulbase.Filter, db mulbase.Querier) error {
-	if r.UID() == "" {
-		return mulbase.ErrUID
-	}
-	q := mulbase.GetChild(r, "~Level.owner", LevelFields, count, filter)
-	if q == nil {
-		return newError("could not create query")
-	}
-	err := db.Query(context.Background(), q, &r.Levels)
-	return err
-}
-
-//TODO. Don't use this.
-func (r *User) AddUserLevels(input *Level, db mulbase.Querier) error {
-	if input.UID() == "" {
-		return mulbase.ErrUID
-	}
-	mut := mulbase.AddToList(r, "~Level.owner", input)
-	_, err := db.Mutate(context.Background(), mut)
-	return err
-}
-
-//Populates the field of r.
-func (r *User) GetUserIgnored(count int, filter *mulbase.Filter, db mulbase.Querier) error {
-	if r.UID() == "" {
-		return mulbase.ErrUID
-	}
-	q := mulbase.GetChild(r, "User.ignored", UserFields, count, filter)
-	if q == nil {
-		return newError("could not create query")
-	}
-	err := db.Query(context.Background(), q, &r.Ignored)
-	return err
-}
-
-//TODO. Don't use this.
-func (r *User) AddUserIgnored(input *User, db mulbase.Querier) error {
-	if input.UID() == "" {
-		return mulbase.ErrUID
-	}
-	mut := mulbase.AddToList(r, "User.ignored", input)
-	_, err := db.Mutate(context.Background(), mut)
-	return err
-}
-
-//Populates the field of r.
-func (r *User) GetUserFriends(count int, filter *mulbase.Filter, db mulbase.Querier) error {
-	if r.UID() == "" {
-		return mulbase.ErrUID
-	}
-	q := mulbase.GetChild(r, "User.friends", UserFields, count, filter)
-	if q == nil {
-		return newError("could not create query")
-	}
-	err := db.Query(context.Background(), q, &r.Friends)
-	return err
-}
-
-//TODO. Don't use this.
-func (r *User) AddUserFriends(input *User, db mulbase.Querier) error {
-	if input.UID() == "" {
-		return mulbase.ErrUID
-	}
-	mut := mulbase.AddToList(r, "User.friends", input)
-	_, err := db.Mutate(context.Background(), mut)
-	return err
-}
-
-//Populates the field of r.
-func (r *User) GetUserMessages(count int, filter *mulbase.Filter, db mulbase.Querier) error {
-	if r.UID() == "" {
-		return mulbase.ErrUID
-	}
-	q := mulbase.GetChild(r, "~PM.to", PMFields, count, filter)
-	if q == nil {
-		return newError("could not create query")
-	}
-	err := db.Query(context.Background(), q, &r.Messages)
-	return err
-}
-
-//TODO. Don't use this.
-func (r *User) AddUserMessages(input *PM, db mulbase.Querier) error {
-	if input.UID() == "" {
-		return mulbase.ErrUID
-	}
-	mut := mulbase.AddToList(r, "~PM.to", input)
+	mut := mulbase.AddToList(r, "Comment.yolo", input)
 	_, err := db.Mutate(context.Background(), mut)
 	return err
 }

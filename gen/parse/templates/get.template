@@ -1,19 +1,19 @@
 {{/*Generates Getters/Setters for database relations.
 This needs to be updated for 1-1 relations.
 */}}
-
 {{range .Fields}}
     //Populates the field of r.
-    func (r *{{.Parent}}) Get{{.Parent}}{{.Name}} ({{if .IsArray}}count int,{{end}}filter *mulbase.Filter, db mulbase.Querier) error{
+    func (r *{{.Parent}}) Get{{.Parent}}{{.Name}} ({{if .IsArray}}count int,{{end}}filter *mulbase.Filter, db mulbase.Querier) ([]{{.Type}}, error) {
         if r.UID() == "" {
-            return mulbase.ErrUID
+            return nil, mulbase.ErrUID
         }
         q := mulbase.GetChild(r,"{{.Tag}}",{{.Type}}Fields,{{if .IsArray}}count,{{else}}-1,{{end}} filter)
         if q == nil {
-            return newError("could not create query")
+            return nil, newError("could not create query")
         }
-        err := db.Query(context.Background(), q, &r.{{.Name}})
-        return err
+        var typ []{{.Type}}
+        err := db.Query(context.Background(), q, &typ)
+        return typ, err
     }
     //TODO. Don't use this.
     func (r *{{.Parent}}) Add{{.Parent}}{{.Name}}(input *{{.Type}}, db mulbase.Querier) error {
@@ -24,6 +24,4 @@ This needs to be updated for 1-1 relations.
         _, err := db.Mutate(context.Background(), mut)
         return err
     }
-
-
 {{end}}

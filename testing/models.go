@@ -4,833 +4,263 @@ package gen
 import (
 	"context"
 	"github.com/Vliro/mulbase"
-	"time"
 )
 
 //Created from a GraphQL interface.
-type Message struct {
+type Post struct {
 	//This line declares basic properties for a database node.
 	mulbase.Node
-	From    *User     `json:"Message.from"`
-	Content string    `json:"Message.content"`
-	Time    time.Time `json:"Message.time"`
+	Text          string    `json:"Post.text"`
+	DatePublished time.Time `json:"Post.datePublished"`
 }
 
-var MessageFields mulbase.FieldList = []mulbase.Field{MakeField("Message.from", 0|mulbase.MetaObject), MakeField("Message.content", 0), MakeField("Message.time", 0)}
+var PostFields mulbase.FieldList = []mulbase.Field{MakeField("Post.text", 0), MakeField("Post.datePublished", 0)}
 
 //Generating constant field values.
 const (
-	MessageFromField    mulbase.Predicate = "Message.from"
-	MessageContentField mulbase.Predicate = "Message.content"
-	MessageTimeField    mulbase.Predicate = "Message.time"
+	PostTextField          mulbase.Predicate = "Post.text"
+	PostDatePublishedField mulbase.Predicate = "Post.datePublished"
 )
 
 //SaveValues saves the node values that
 //do not contain any references to other objects.
-func (r *Message) SaveValues(ctx context.Context, txn *mulbase.Txn) error {
+func (r *Post) SaveValues(ctx context.Context, txn *mulbase.Txn) error {
 	mut := mulbase.CreateMutation(r.Values(), mulbase.QuerySet)
 	err := txn.Query(ctx, mut)
 	return err
 }
 
 //Fields returns all Scalar fields for this value.
-func (r *Message) Fields() mulbase.FieldList {
-	return MessageFields
+func (r *Post) Fields() mulbase.FieldList {
+	return PostFields
 }
 
 //Sets the types. This DOES NOT include interfaces!
 //as they are set in dgraph already.
-func (r *Message) SetType() {
+func (r *Post) SetType() {
 	r.Type = []string{
-		"Message",
+		"Post",
 	}
 }
 
 //Values returns all the scalar values for this node.
-func (r *Message) Values() mulbase.DNode {
-	var m MessageScalars
-	m.Content = r.Content
-	m.Time = r.Time
+func (r *Post) Values() mulbase.DNode {
+	var m PostScalars
+	m.Text = r.Text
+	m.DatePublished = r.DatePublished
 	r.SetType()
 	m.Node = r.Node
 	return &m
 }
 
 //Values returns all the scalar values for this node.
-func (r *Message) MapValues() mulbase.Mapper {
+func (r *Post) MapValues() mulbase.Mapper {
 	var m = make(map[string]interface{}, 2)
-	m["Message.content"] = r.Content
-	m["Message.time"] = r.Time
+	m["Post.text"] = r.Text
+	m["Post.datePublished"] = r.DatePublished
 	m["uid"] = r.Uid
 	r.SetType()
 	m["dgraph.type"] = r.Type
 	return m
 }
 
-//MessageScalars is simply to avoid a map[string]interface{}
+//PostScalars is simply to avoid a map[string]interface{}
 //It is a mirror of the previous struct with all scalar values.
-type MessageScalars struct {
+type PostScalars struct {
 	mulbase.Node
-	Content string    `json:"Message.content"`
-	Time    time.Time `json:"Message.time"`
+	Text          string    `json:"Post.text"`
+	DatePublished time.Time `json:"Post.datePublished"`
 }
 
-func (s *MessageScalars) Values() mulbase.DNode {
+func (s *PostScalars) Values() mulbase.DNode {
 	return s
 }
 
-func (s *MessageScalars) MapValues() mulbase.Mapper {
-	panic("MessageScalars called, use the original one instead")
+func (s *PostScalars) MapValues() mulbase.Mapper {
+	panic("PostScalars called, use the original one instead")
 }
 
-func (s *MessageScalars) Fields() mulbase.FieldList {
-	return MessageFields
-}
-
-//End of model.template
-type Level struct {
-	//This line declares basic properties for a database node.
-	mulbase.Node
-	//Regular fields
-	Name      string         `json:"Level.name"`
-	Password  string         `json:"Level.password"`
-	Hash      string         `json:"Level.hash"`
-	Size      int            `json:"Level.size"`
-	Updated   time.Time      `json:"Level.updated"`
-	PlayCount int            `json:"Level.playCount"`
-	Live      bool           `json:"Level.live"`
-	Rating    float64        `json:"Level.rating"`
-	Owner     *User          `json:"Level.owner"`
-	Version   *LevelVersion  `json:"Level.version"`
-	Versions  []LevelVersion `json:"Level.versions"`
-}
-
-var LevelFields mulbase.FieldList = []mulbase.Field{MakeField("Level.name", 0), MakeField("Level.password", 0), MakeField("Level.hash", 0), MakeField("Level.size", 0), MakeField("Level.updated", 0), MakeField("Level.playCount", 0), MakeField("Level.live", 0), MakeField("Level.rating", 0), MakeField("Level.owner", 0|mulbase.MetaObject|mulbase.MetaReverse), MakeField("Level.version", 0|mulbase.MetaObject), MakeField("Level.versions", 0|mulbase.MetaObject|mulbase.MetaList)}
-
-//Generating constant field values.
-const (
-	LevelNameField      mulbase.Predicate = "Level.name"
-	LevelPasswordField  mulbase.Predicate = "Level.password"
-	LevelHashField      mulbase.Predicate = "Level.hash"
-	LevelSizeField      mulbase.Predicate = "Level.size"
-	LevelUpdatedField   mulbase.Predicate = "Level.updated"
-	LevelPlayCountField mulbase.Predicate = "Level.playCount"
-	LevelLiveField      mulbase.Predicate = "Level.live"
-	LevelRatingField    mulbase.Predicate = "Level.rating"
-	LevelOwnerField     mulbase.Predicate = "Level.owner"
-	LevelVersionField   mulbase.Predicate = "Level.version"
-	LevelVersionsField  mulbase.Predicate = "Level.versions"
-)
-
-//SaveValues saves the node values that
-//do not contain any references to other objects.
-func (r *Level) SaveValues(ctx context.Context, txn *mulbase.Txn) error {
-	mut := mulbase.CreateMutation(r.Values(), mulbase.QuerySet)
-	err := txn.Query(ctx, mut)
-	return err
-}
-
-//Fields returns all Scalar fields for this value.
-func (r *Level) Fields() mulbase.FieldList {
-	return LevelFields
-}
-
-//Sets the types. This DOES NOT include interfaces!
-//as they are set in dgraph already.
-func (r *Level) SetType() {
-	r.Type = []string{
-		"Level",
-	}
-}
-
-//Values returns all the scalar values for this node.
-func (r *Level) Values() mulbase.DNode {
-	var m LevelScalars
-	m.Name = r.Name
-	m.Password = r.Password
-	m.Hash = r.Hash
-	m.Size = r.Size
-	m.PlayCount = r.PlayCount
-	m.Live = r.Live
-	m.Rating = r.Rating
-	r.SetType()
-	m.Node = r.Node
-	return &m
-}
-
-//Values returns all the scalar values for this node.
-func (r *Level) MapValues() mulbase.Mapper {
-	var m = make(map[string]interface{}, 7)
-	m["Level.name"] = r.Name
-	m["Level.password"] = r.Password
-	m["Level.hash"] = r.Hash
-	m["Level.size"] = r.Size
-	m["Level.playCount"] = r.PlayCount
-	m["Level.live"] = r.Live
-	m["Level.rating"] = r.Rating
-	m["uid"] = r.Uid
-	r.SetType()
-	m["dgraph.type"] = r.Type
-	return m
-}
-
-//LevelScalars is simply to avoid a map[string]interface{}
-//It is a mirror of the previous struct with all scalar values.
-type LevelScalars struct {
-	mulbase.Node
-	Name      string  `json:"Level.name"`
-	Password  string  `json:"Level.password"`
-	Hash      string  `json:"Level.hash"`
-	Size      int     `json:"Level.size"`
-	PlayCount int     `json:"Level.playCount"`
-	Live      bool    `json:"Level.live"`
-	Rating    float64 `json:"Level.rating"`
-}
-
-func (s *LevelScalars) Values() mulbase.DNode {
-	return s
-}
-
-func (s *LevelScalars) MapValues() mulbase.Mapper {
-	panic("LevelScalars called, use the original one instead")
-}
-
-func (s *LevelScalars) Fields() mulbase.FieldList {
-	return LevelFields
+func (s *PostScalars) Fields() mulbase.FieldList {
+	return PostFields
 }
 
 //End of model.template
-type LevelVersion struct {
-	//This line declares basic properties for a database node.
-	mulbase.Node
-	//Regular fields
-	Version     int       `json:"LevelVersion.version"`
-	MaxTime     int       `json:"LevelVersion.maxTime"`
-	MinLevel    int       `json:"LevelVersion.minLevel"`
-	Description string    `json:"LevelVersion.description"`
-	GameMode    string    `json:"LevelVersion.gameMode"`
-	Song        int       `json:"LevelVersion.song"`
-	Gravity     float64   `json:"LevelVersion.gravity"`
-	Items       []Item    `json:"LevelVersion.items"`
-	Credits     string    `json:"LevelVersion.credits"`
-	Created     time.Time `json:"LevelVersion.created"`
-}
-
-var LevelVersionFields mulbase.FieldList = []mulbase.Field{MakeField("LevelVersion.version", 0), MakeField("LevelVersion.maxTime", 0), MakeField("LevelVersion.minLevel", 0), MakeField("LevelVersion.description", 0), MakeField("LevelVersion.gameMode", 0), MakeField("LevelVersion.song", 0), MakeField("LevelVersion.gravity", 0), MakeField("LevelVersion.items", 0|mulbase.MetaList), MakeField("LevelVersion.credits", 0), MakeField("LevelVersion.created", 0)}
-
-//Generating constant field values.
-const (
-	LevelVersionVersionField     mulbase.Predicate = "LevelVersion.version"
-	LevelVersionMaxTimeField     mulbase.Predicate = "LevelVersion.maxTime"
-	LevelVersionMinLevelField    mulbase.Predicate = "LevelVersion.minLevel"
-	LevelVersionDescriptionField mulbase.Predicate = "LevelVersion.description"
-	LevelVersionGameModeField    mulbase.Predicate = "LevelVersion.gameMode"
-	LevelVersionSongField        mulbase.Predicate = "LevelVersion.song"
-	LevelVersionGravityField     mulbase.Predicate = "LevelVersion.gravity"
-	LevelVersionItemsField       mulbase.Predicate = "LevelVersion.items"
-	LevelVersionCreditsField     mulbase.Predicate = "LevelVersion.credits"
-	LevelVersionCreatedField     mulbase.Predicate = "LevelVersion.created"
-)
-
-//SaveValues saves the node values that
-//do not contain any references to other objects.
-func (r *LevelVersion) SaveValues(ctx context.Context, txn *mulbase.Txn) error {
-	mut := mulbase.CreateMutation(r.Values(), mulbase.QuerySet)
-	err := txn.Query(ctx, mut)
-	return err
-}
-
-//Fields returns all Scalar fields for this value.
-func (r *LevelVersion) Fields() mulbase.FieldList {
-	return LevelVersionFields
-}
-
-//Sets the types. This DOES NOT include interfaces!
-//as they are set in dgraph already.
-func (r *LevelVersion) SetType() {
-	r.Type = []string{
-		"LevelVersion",
-	}
-}
-
-//Values returns all the scalar values for this node.
-func (r *LevelVersion) Values() mulbase.DNode {
-	var m LevelVersionScalars
-	m.Version = r.Version
-	m.MaxTime = r.MaxTime
-	m.MinLevel = r.MinLevel
-	m.Description = r.Description
-	m.GameMode = r.GameMode
-	m.Song = r.Song
-	m.Gravity = r.Gravity
-	m.Items = r.Items
-	m.Credits = r.Credits
-	m.Created = r.Created
-	r.SetType()
-	m.Node = r.Node
-	return &m
-}
-
-//Values returns all the scalar values for this node.
-func (r *LevelVersion) MapValues() mulbase.Mapper {
-	var m = make(map[string]interface{}, 10)
-	m["LevelVersion.version"] = r.Version
-	m["LevelVersion.maxTime"] = r.MaxTime
-	m["LevelVersion.minLevel"] = r.MinLevel
-	m["LevelVersion.description"] = r.Description
-	m["LevelVersion.gameMode"] = r.GameMode
-	m["LevelVersion.song"] = r.Song
-	m["LevelVersion.gravity"] = r.Gravity
-	m["LevelVersion.items"] = r.Items
-	m["LevelVersion.credits"] = r.Credits
-	m["LevelVersion.created"] = r.Created
-	m["uid"] = r.Uid
-	r.SetType()
-	m["dgraph.type"] = r.Type
-	return m
-}
-
-//LevelVersionScalars is simply to avoid a map[string]interface{}
-//It is a mirror of the previous struct with all scalar values.
-type LevelVersionScalars struct {
-	mulbase.Node
-	Version     int       `json:"LevelVersion.version"`
-	MaxTime     int       `json:"LevelVersion.maxTime"`
-	MinLevel    int       `json:"LevelVersion.minLevel"`
-	Description string    `json:"LevelVersion.description"`
-	GameMode    string    `json:"LevelVersion.gameMode"`
-	Song        int       `json:"LevelVersion.song"`
-	Gravity     float64   `json:"LevelVersion.gravity"`
-	Items       []Item    `json:"LevelVersion.items"`
-	Credits     string    `json:"LevelVersion.credits"`
-	Created     time.Time `json:"LevelVersion.created"`
-}
-
-func (s *LevelVersionScalars) Values() mulbase.DNode {
-	return s
-}
-
-func (s *LevelVersionScalars) MapValues() mulbase.Mapper {
-	panic("LevelVersionScalars called, use the original one instead")
-}
-
-func (s *LevelVersionScalars) Fields() mulbase.FieldList {
-	return LevelVersionFields
-}
-
-//End of model.template
-type PM struct {
+type Question struct {
 	//This line declares basic properties for a database node.
 	mulbase.Node
 	//List of interfaces implemented.
-	Message
+	Post
 	//Regular fields
-	To *User `json:"PM.to"`
+	Title []Episode `json:"Question.title"`
+	Id    int       `json:"Question.id"`
+	Yes   []Comment `json:"Question.yes"`
 }
 
-var PMFields mulbase.FieldList = []mulbase.Field{MakeField("PM.to", 0|mulbase.MetaObject|mulbase.MetaReverse), MakeField("Message.from", 0|mulbase.MetaObject), MakeField("Message.content", 0), MakeField("Message.time", 0)}
+var QuestionFields mulbase.FieldList = []mulbase.Field{MakeField("Question.title", 0|mulbase.MetaList), MakeField("Question.id", 0), MakeField("Question.yes", 0|mulbase.MetaObject|mulbase.MetaList|mulbase.MetaReverse), MakeField("Post.text", 0), MakeField("Post.datePublished", 0)}
 
 //Generating constant field values.
 const (
-	PMToField      mulbase.Predicate = "PM.to"
-	PMFromField    mulbase.Predicate = "Message.from"
-	PMContentField mulbase.Predicate = "Message.content"
-	PMTimeField    mulbase.Predicate = "Message.time"
+	QuestionTitleField         mulbase.Predicate = "Question.title"
+	QuestionIdField            mulbase.Predicate = "Question.id"
+	QuestionYesField           mulbase.Predicate = "Question.yes"
+	QuestionTextField          mulbase.Predicate = "Post.text"
+	QuestionDatePublishedField mulbase.Predicate = "Post.datePublished"
 )
 
 //SaveValues saves the node values that
 //do not contain any references to other objects.
-func (r *PM) SaveValues(ctx context.Context, txn *mulbase.Txn) error {
+func (r *Question) SaveValues(ctx context.Context, txn *mulbase.Txn) error {
 	mut := mulbase.CreateMutation(r.Values(), mulbase.QuerySet)
 	err := txn.Query(ctx, mut)
 	return err
 }
 
 //Fields returns all Scalar fields for this value.
-func (r *PM) Fields() mulbase.FieldList {
-	return PMFields
+func (r *Question) Fields() mulbase.FieldList {
+	return QuestionFields
 }
 
 //Sets the types. This DOES NOT include interfaces!
 //as they are set in dgraph already.
-func (r *PM) SetType() {
+func (r *Question) SetType() {
 	r.Type = []string{
-		"PM",
+		"Question",
 	}
 }
 
 //Values returns all the scalar values for this node.
-func (r *PM) Values() mulbase.DNode {
-	var m PMScalars
-	m.Content = r.Content
-	m.Time = r.Time
+func (r *Question) Values() mulbase.DNode {
+	var m QuestionScalars
+	m.Title = r.Title
+	m.Id = r.Id
+	m.Text = r.Text
+	m.DatePublished = r.DatePublished
 	r.SetType()
 	m.Node = r.Node
 	return &m
 }
 
 //Values returns all the scalar values for this node.
-func (r *PM) MapValues() mulbase.Mapper {
-	var m = make(map[string]interface{}, 2)
-	m["Message.content"] = r.Content
-	m["Message.time"] = r.Time
+func (r *Question) MapValues() mulbase.Mapper {
+	var m = make(map[string]interface{}, 4)
+	m["Question.title"] = r.Title
+	m["Question.id"] = r.Id
+	m["Post.text"] = r.Text
+	m["Post.datePublished"] = r.DatePublished
 	m["uid"] = r.Uid
 	r.SetType()
 	m["dgraph.type"] = r.Type
 	return m
 }
 
-//PMScalars is simply to avoid a map[string]interface{}
+//QuestionScalars is simply to avoid a map[string]interface{}
 //It is a mirror of the previous struct with all scalar values.
-type PMScalars struct {
+type QuestionScalars struct {
 	mulbase.Node
-	Content string    `json:"Message.content"`
-	Time    time.Time `json:"Message.time"`
+	Title         []Episode `json:"Question.title"`
+	Id            int       `json:"Question.id"`
+	Text          string    `json:"Post.text"`
+	DatePublished time.Time `json:"Post.datePublished"`
 }
 
-func (s *PMScalars) Values() mulbase.DNode {
+func (s *QuestionScalars) Values() mulbase.DNode {
 	return s
 }
 
-func (s *PMScalars) MapValues() mulbase.Mapper {
-	panic("PMScalars called, use the original one instead")
+func (s *QuestionScalars) MapValues() mulbase.Mapper {
+	panic("QuestionScalars called, use the original one instead")
 }
 
-func (s *PMScalars) Fields() mulbase.FieldList {
-	return PMFields
+func (s *QuestionScalars) Fields() mulbase.FieldList {
+	return QuestionFields
 }
 
 //End of model.template
-type ChatMessage struct {
+type Comment struct {
 	//This line declares basic properties for a database node.
 	mulbase.Node
 	//List of interfaces implemented.
-	Message
+	Post
 	//Regular fields
-	Room string `json:"ChatMessage.room"`
+	CommentsOn *Post    `json:"Comment.commentsOn"`
+	Test       Episode  `json:"Comment.test"`
+	Yolo       *Comment `json:"Comment.yolo"`
 }
 
-var ChatMessageFields mulbase.FieldList = []mulbase.Field{MakeField("ChatMessage.room", 0), MakeField("Message.from", 0|mulbase.MetaObject), MakeField("Message.content", 0), MakeField("Message.time", 0)}
+var CommentFields mulbase.FieldList = []mulbase.Field{MakeField("Comment.commentsOn", 0|mulbase.MetaObject|mulbase.MetaReverse), MakeField("Comment.test", 0), MakeField("Comment.yolo", 0|mulbase.MetaObject), MakeField("Post.text", 0), MakeField("Post.datePublished", 0)}
 
 //Generating constant field values.
 const (
-	ChatMessageRoomField    mulbase.Predicate = "ChatMessage.room"
-	ChatMessageFromField    mulbase.Predicate = "Message.from"
-	ChatMessageContentField mulbase.Predicate = "Message.content"
-	ChatMessageTimeField    mulbase.Predicate = "Message.time"
+	CommentCommentsOnField    mulbase.Predicate = "Comment.commentsOn"
+	CommentTestField          mulbase.Predicate = "Comment.test"
+	CommentYoloField          mulbase.Predicate = "Comment.yolo"
+	CommentTextField          mulbase.Predicate = "Post.text"
+	CommentDatePublishedField mulbase.Predicate = "Post.datePublished"
 )
 
 //SaveValues saves the node values that
 //do not contain any references to other objects.
-func (r *ChatMessage) SaveValues(ctx context.Context, txn *mulbase.Txn) error {
+func (r *Comment) SaveValues(ctx context.Context, txn *mulbase.Txn) error {
 	mut := mulbase.CreateMutation(r.Values(), mulbase.QuerySet)
 	err := txn.Query(ctx, mut)
 	return err
 }
 
 //Fields returns all Scalar fields for this value.
-func (r *ChatMessage) Fields() mulbase.FieldList {
-	return ChatMessageFields
+func (r *Comment) Fields() mulbase.FieldList {
+	return CommentFields
 }
 
 //Sets the types. This DOES NOT include interfaces!
 //as they are set in dgraph already.
-func (r *ChatMessage) SetType() {
+func (r *Comment) SetType() {
 	r.Type = []string{
-		"ChatMessage",
+		"Comment",
 	}
 }
 
 //Values returns all the scalar values for this node.
-func (r *ChatMessage) Values() mulbase.DNode {
-	var m ChatMessageScalars
-	m.Room = r.Room
-	m.Content = r.Content
-	m.Time = r.Time
+func (r *Comment) Values() mulbase.DNode {
+	var m CommentScalars
+	m.Test = r.Test
+	m.Text = r.Text
+	m.DatePublished = r.DatePublished
 	r.SetType()
 	m.Node = r.Node
 	return &m
 }
 
 //Values returns all the scalar values for this node.
-func (r *ChatMessage) MapValues() mulbase.Mapper {
+func (r *Comment) MapValues() mulbase.Mapper {
 	var m = make(map[string]interface{}, 3)
-	m["ChatMessage.room"] = r.Room
-	m["Message.content"] = r.Content
-	m["Message.time"] = r.Time
+	m["Comment.test"] = r.Test
+	m["Post.text"] = r.Text
+	m["Post.datePublished"] = r.DatePublished
 	m["uid"] = r.Uid
 	r.SetType()
 	m["dgraph.type"] = r.Type
 	return m
 }
 
-//ChatMessageScalars is simply to avoid a map[string]interface{}
+//CommentScalars is simply to avoid a map[string]interface{}
 //It is a mirror of the previous struct with all scalar values.
-type ChatMessageScalars struct {
+type CommentScalars struct {
 	mulbase.Node
-	Room    string    `json:"ChatMessage.room"`
-	Content string    `json:"Message.content"`
-	Time    time.Time `json:"Message.time"`
+	Test          Episode   `json:"Comment.test"`
+	Text          string    `json:"Post.text"`
+	DatePublished time.Time `json:"Post.datePublished"`
 }
 
-func (s *ChatMessageScalars) Values() mulbase.DNode {
+func (s *CommentScalars) Values() mulbase.DNode {
 	return s
 }
 
-func (s *ChatMessageScalars) MapValues() mulbase.Mapper {
-	panic("ChatMessageScalars called, use the original one instead")
+func (s *CommentScalars) MapValues() mulbase.Mapper {
+	panic("CommentScalars called, use the original one instead")
 }
 
-func (s *ChatMessageScalars) Fields() mulbase.FieldList {
-	return ChatMessageFields
-}
-
-//End of model.template
-type Page struct {
-	//This line declares basic properties for a database node.
-	mulbase.Node
-	//Regular fields
-	Levels     []PageLevel `json:"Page.levels"`
-	Identifier string      `json:"Page.identifier"`
-}
-
-var PageFields mulbase.FieldList = []mulbase.Field{MakeField("Page.levels", 0|mulbase.MetaObject|mulbase.MetaList), MakeField("Page.identifier", 0)}
-
-//Generating constant field values.
-const (
-	PageLevelsField     mulbase.Predicate = "Page.levels"
-	PageIdentifierField mulbase.Predicate = "Page.identifier"
-)
-
-//SaveValues saves the node values that
-//do not contain any references to other objects.
-func (r *Page) SaveValues(ctx context.Context, txn *mulbase.Txn) error {
-	mut := mulbase.CreateMutation(r.Values(), mulbase.QuerySet)
-	err := txn.Query(ctx, mut)
-	return err
-}
-
-//Fields returns all Scalar fields for this value.
-func (r *Page) Fields() mulbase.FieldList {
-	return PageFields
-}
-
-//Sets the types. This DOES NOT include interfaces!
-//as they are set in dgraph already.
-func (r *Page) SetType() {
-	r.Type = []string{
-		"Page",
-	}
-}
-
-//Values returns all the scalar values for this node.
-func (r *Page) Values() mulbase.DNode {
-	var m PageScalars
-	m.Identifier = r.Identifier
-	r.SetType()
-	m.Node = r.Node
-	return &m
-}
-
-//Values returns all the scalar values for this node.
-func (r *Page) MapValues() mulbase.Mapper {
-	var m = make(map[string]interface{}, 1)
-	m["Page.identifier"] = r.Identifier
-	m["uid"] = r.Uid
-	r.SetType()
-	m["dgraph.type"] = r.Type
-	return m
-}
-
-//PageScalars is simply to avoid a map[string]interface{}
-//It is a mirror of the previous struct with all scalar values.
-type PageScalars struct {
-	mulbase.Node
-	Identifier string `json:"Page.identifier"`
-}
-
-func (s *PageScalars) Values() mulbase.DNode {
-	return s
-}
-
-func (s *PageScalars) MapValues() mulbase.Mapper {
-	panic("PageScalars called, use the original one instead")
-}
-
-func (s *PageScalars) Fields() mulbase.FieldList {
-	return PageFields
-}
-
-//End of model.template
-type PageLevel struct {
-	//This line declares basic properties for a database node.
-	mulbase.Node
-	//Regular fields
-	Order int    `json:"PageLevel.order"`
-	Level *Level `json:"PageLevel.level"`
-}
-
-var PageLevelFields mulbase.FieldList = []mulbase.Field{MakeField("PageLevel.order", 0), MakeField("PageLevel.level", 0|mulbase.MetaObject)}
-
-//Generating constant field values.
-const (
-	PageLevelOrderField mulbase.Predicate = "PageLevel.order"
-	PageLevelLevelField mulbase.Predicate = "PageLevel.level"
-)
-
-//SaveValues saves the node values that
-//do not contain any references to other objects.
-func (r *PageLevel) SaveValues(ctx context.Context, txn *mulbase.Txn) error {
-	mut := mulbase.CreateMutation(r.Values(), mulbase.QuerySet)
-	err := txn.Query(ctx, mut)
-	return err
-}
-
-//Fields returns all Scalar fields for this value.
-func (r *PageLevel) Fields() mulbase.FieldList {
-	return PageLevelFields
-}
-
-//Sets the types. This DOES NOT include interfaces!
-//as they are set in dgraph already.
-func (r *PageLevel) SetType() {
-	r.Type = []string{
-		"PageLevel",
-	}
-}
-
-//Values returns all the scalar values for this node.
-func (r *PageLevel) Values() mulbase.DNode {
-	var m PageLevelScalars
-	m.Order = r.Order
-	r.SetType()
-	m.Node = r.Node
-	return &m
-}
-
-//Values returns all the scalar values for this node.
-func (r *PageLevel) MapValues() mulbase.Mapper {
-	var m = make(map[string]interface{}, 1)
-	m["PageLevel.order"] = r.Order
-	m["uid"] = r.Uid
-	r.SetType()
-	m["dgraph.type"] = r.Type
-	return m
-}
-
-//PageLevelScalars is simply to avoid a map[string]interface{}
-//It is a mirror of the previous struct with all scalar values.
-type PageLevelScalars struct {
-	mulbase.Node
-	Order int `json:"PageLevel.order"`
-}
-
-func (s *PageLevelScalars) Values() mulbase.DNode {
-	return s
-}
-
-func (s *PageLevelScalars) MapValues() mulbase.Mapper {
-	panic("PageLevelScalars called, use the original one instead")
-}
-
-func (s *PageLevelScalars) Fields() mulbase.FieldList {
-	return PageLevelFields
-}
-
-//End of model.template
-type User struct {
-	//This line declares basic properties for a database node.
-	mulbase.Node
-	//Regular fields
-	Password     string    `json:"User.password,omitempty"`
-	Name         string    `json:"User.name"`
-	Email        string    `json:"User.email"`
-	Registered   time.Time `json:"User.registered"`
-	Active       bool      `json:"User.active"`
-	LastLogin    time.Time `json:"User.lastLogin"`
-	Rank         int       `json:"User.rank"`
-	Exp          int       `json:"User.exp"`
-	Speed        int       `json:"User.speed"`
-	Jump         int       `json:"User.jump"`
-	Acceleration int       `json:"User.acceleration"`
-	Power        int       `json:"User.power"`
-	Hats         []Hat     `json:"User.hats"`
-	Heads        []Head    `json:"User.heads"`
-	Bodies       []Body    `json:"User.bodies"`
-	Feets        []Feet    `json:"User.feets"`
-	Hat          Hat       `json:"User.hat"`
-	Head         Head      `json:"User.head"`
-	Body         Body      `json:"User.body"`
-	Feet         Feet      `json:"User.feet"`
-	Levels       []Level   `json:"~Level.owner"`
-	HatColor     int       `json:"User.hatColor"`
-	HeadColor    int       `json:"User.headColor"`
-	BodyColor    int       `json:"User.bodyColor"`
-	FeetColor    int       `json:"User.feetColor"`
-	Ignored      []User    `json:"User.ignored"`
-	Friends      []User    `json:"User.friends"`
-	Messages     []PM      `json:"~PM.to"`
-}
-
-var _ = MakeField("User.password", 0)
-var UserFields mulbase.FieldList = []mulbase.Field{MakeField("User.name", 0), MakeField("User.email", 0), MakeField("User.registered", 0), MakeField("User.active", 0), MakeField("User.lastLogin", 0), MakeField("User.rank", 0), MakeField("User.exp", 0), MakeField("User.speed", 0), MakeField("User.jump", 0), MakeField("User.acceleration", 0), MakeField("User.power", 0), MakeField("User.hats", 0|mulbase.MetaList), MakeField("User.heads", 0|mulbase.MetaList), MakeField("User.bodies", 0|mulbase.MetaList), MakeField("User.feets", 0|mulbase.MetaList), MakeField("User.hat", 0), MakeField("User.head", 0), MakeField("User.body", 0), MakeField("User.feet", 0), MakeField("~Level.owner", 0|mulbase.MetaObject|mulbase.MetaList|mulbase.MetaReverse), MakeField("User.hatColor", 0), MakeField("User.headColor", 0), MakeField("User.bodyColor", 0), MakeField("User.feetColor", 0), MakeField("User.ignored", 0|mulbase.MetaObject|mulbase.MetaList), MakeField("User.friends", 0|mulbase.MetaObject|mulbase.MetaList), MakeField("~PM.to", 0|mulbase.MetaObject|mulbase.MetaList|mulbase.MetaReverse)}
-
-//Generating constant field values.
-const (
-	UserPasswordField     mulbase.Predicate = "User.password"
-	UserNameField         mulbase.Predicate = "User.name"
-	UserEmailField        mulbase.Predicate = "User.email"
-	UserRegisteredField   mulbase.Predicate = "User.registered"
-	UserActiveField       mulbase.Predicate = "User.active"
-	UserLastLoginField    mulbase.Predicate = "User.lastLogin"
-	UserRankField         mulbase.Predicate = "User.rank"
-	UserExpField          mulbase.Predicate = "User.exp"
-	UserSpeedField        mulbase.Predicate = "User.speed"
-	UserJumpField         mulbase.Predicate = "User.jump"
-	UserAccelerationField mulbase.Predicate = "User.acceleration"
-	UserPowerField        mulbase.Predicate = "User.power"
-	UserHatsField         mulbase.Predicate = "User.hats"
-	UserHeadsField        mulbase.Predicate = "User.heads"
-	UserBodiesField       mulbase.Predicate = "User.bodies"
-	UserFeetsField        mulbase.Predicate = "User.feets"
-	UserHatField          mulbase.Predicate = "User.hat"
-	UserHeadField         mulbase.Predicate = "User.head"
-	UserBodyField         mulbase.Predicate = "User.body"
-	UserFeetField         mulbase.Predicate = "User.feet"
-	UserLevelsField       mulbase.Predicate = "~Level.owner"
-	UserHatColorField     mulbase.Predicate = "User.hatColor"
-	UserHeadColorField    mulbase.Predicate = "User.headColor"
-	UserBodyColorField    mulbase.Predicate = "User.bodyColor"
-	UserFeetColorField    mulbase.Predicate = "User.feetColor"
-	UserIgnoredField      mulbase.Predicate = "User.ignored"
-	UserFriendsField      mulbase.Predicate = "User.friends"
-	UserMessagesField     mulbase.Predicate = "~PM.to"
-)
-
-//SaveValues saves the node values that
-//do not contain any references to other objects.
-func (r *User) SaveValues(ctx context.Context, txn *mulbase.Txn) error {
-	mut := mulbase.CreateMutation(r.Values(), mulbase.QuerySet)
-	err := txn.Query(ctx, mut)
-	return err
-}
-
-//Fields returns all Scalar fields for this value.
-func (r *User) Fields() mulbase.FieldList {
-	return UserFields
-}
-
-//Sets the types. This DOES NOT include interfaces!
-//as they are set in dgraph already.
-func (r *User) SetType() {
-	r.Type = []string{
-		"User",
-	}
-}
-
-//Values returns all the scalar values for this node.
-func (r *User) Values() mulbase.DNode {
-	var m UserScalars
-	m.Name = r.Name
-	m.Email = r.Email
-	m.Registered = r.Registered
-	m.Active = r.Active
-	m.LastLogin = r.LastLogin
-	m.Rank = r.Rank
-	m.Exp = r.Exp
-	m.Speed = r.Speed
-	m.Jump = r.Jump
-	m.Acceleration = r.Acceleration
-	m.Power = r.Power
-	m.Hats = r.Hats
-	m.Heads = r.Heads
-	m.Bodies = r.Bodies
-	m.Feets = r.Feets
-	m.Hat = r.Hat
-	m.Head = r.Head
-	m.Body = r.Body
-	m.Feet = r.Feet
-	m.HatColor = r.HatColor
-	m.HeadColor = r.HeadColor
-	m.BodyColor = r.BodyColor
-	m.FeetColor = r.FeetColor
-	r.SetType()
-	m.Node = r.Node
-	return &m
-}
-
-//Values returns all the scalar values for this node.
-func (r *User) MapValues() mulbase.Mapper {
-	var m = make(map[string]interface{}, 24)
-	m["User.name"] = r.Name
-	m["User.email"] = r.Email
-	m["User.registered"] = r.Registered
-	m["User.active"] = r.Active
-	m["User.lastLogin"] = r.LastLogin
-	m["User.rank"] = r.Rank
-	m["User.exp"] = r.Exp
-	m["User.speed"] = r.Speed
-	m["User.jump"] = r.Jump
-	m["User.acceleration"] = r.Acceleration
-	m["User.power"] = r.Power
-	m["User.hats"] = r.Hats
-	m["User.heads"] = r.Heads
-	m["User.bodies"] = r.Bodies
-	m["User.feets"] = r.Feets
-	m["User.hat"] = r.Hat
-	m["User.head"] = r.Head
-	m["User.body"] = r.Body
-	m["User.feet"] = r.Feet
-	m["User.hatColor"] = r.HatColor
-	m["User.headColor"] = r.HeadColor
-	m["User.bodyColor"] = r.BodyColor
-	m["User.feetColor"] = r.FeetColor
-	m["uid"] = r.Uid
-	r.SetType()
-	m["dgraph.type"] = r.Type
-	return m
-}
-
-//UserScalars is simply to avoid a map[string]interface{}
-//It is a mirror of the previous struct with all scalar values.
-type UserScalars struct {
-	mulbase.Node
-	Password     string    `json:"User.password,omitempty"`
-	Name         string    `json:"User.name"`
-	Email        string    `json:"User.email"`
-	Registered   time.Time `json:"User.registered"`
-	Active       bool      `json:"User.active"`
-	LastLogin    time.Time `json:"User.lastLogin"`
-	Rank         int       `json:"User.rank"`
-	Exp          int       `json:"User.exp"`
-	Speed        int       `json:"User.speed"`
-	Jump         int       `json:"User.jump"`
-	Acceleration int       `json:"User.acceleration"`
-	Power        int       `json:"User.power"`
-	Hats         []Hat     `json:"User.hats"`
-	Heads        []Head    `json:"User.heads"`
-	Bodies       []Body    `json:"User.bodies"`
-	Feets        []Feet    `json:"User.feets"`
-	Hat          Hat       `json:"User.hat"`
-	Head         Head      `json:"User.head"`
-	Body         Body      `json:"User.body"`
-	Feet         Feet      `json:"User.feet"`
-	HatColor     int       `json:"User.hatColor"`
-	HeadColor    int       `json:"User.headColor"`
-	BodyColor    int       `json:"User.bodyColor"`
-	FeetColor    int       `json:"User.feetColor"`
-}
-
-func (s *UserScalars) Values() mulbase.DNode {
-	return s
-}
-
-func (s *UserScalars) MapValues() mulbase.Mapper {
-	panic("UserScalars called, use the original one instead")
-}
-
-func (s *UserScalars) Fields() mulbase.FieldList {
-	return UserFields
+func (s *CommentScalars) Fields() mulbase.FieldList {
+	return CommentFields
 }
 
 //End of model.template

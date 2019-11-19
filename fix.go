@@ -1,7 +1,5 @@
 package mulbase
 
-import "fmt"
-
 //StaticQuery represents a static query.
 type StaticQuery struct {
 	Query []byte
@@ -12,7 +10,7 @@ func (s *StaticQuery) SetVar(key string, val interface{}) *StaticQuery {
 	if s.vars == nil {
 		s.vars = make(map[string]string)
 	}
-	s.vars[key] = fmt.Sprintf("%v", val)
+	s.vars[key],_ = processInterface(val)
 	return s
 }
 //Type satisfies the interface Query.

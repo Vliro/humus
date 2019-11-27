@@ -1,5 +1,5 @@
 [Question.meta]
     fields = ["id", "datePublished"]
 
-[Question.test]
+[Question.published]
     fields = ["datePublished"]

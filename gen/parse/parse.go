@@ -5,7 +5,6 @@ import (
 	"fmt"
 	"github.com/gobuffalo/packr/v2"
 	"go/format"
-	"strings"
 	"text/template"
 )
 
@@ -22,9 +21,6 @@ var parseState string
 //converts graphql -> go
 func getBuiltIn(key string) (string, bool) {
 	val,ok := builtins[key]
-	if arr := strings.Split(val, "."); len(arr) > 1 {
-		modelImports = addImport(arr[0], modelImports)
-	}
 	return val, ok
 }
 
@@ -41,6 +37,7 @@ const (
 )
 
 func (g *Generator) writeHeader(w *bytes.Buffer) {
+	return
 	_, _ = w.WriteString("package " + g.config.Package + " \n")
 	_, _ = w.WriteString(preamble)
 	_ = w.WriteByte('\n')

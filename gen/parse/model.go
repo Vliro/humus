@@ -28,23 +28,19 @@ const fieldDeclObj = `var _ = %s
 
 type ModelCreator struct {}
 
-var modelImports = []string{
-	"github.com/Vliro/mulbase",
-	"context",
-}
+
 
 func (m ModelCreator) Create(i *Generator, w io.Writer) {
 	var buffer bytes.Buffer
-	i.writeImports(modelImports, &buffer)
 	var interfaceMap = make(map[string][]Field)
 	var fieldMap = make(map[string][]Field)
 	for _,v := range i.getInterfaces() {
-		byt, field := m.makeGoInterface(v)
+		byt, field := m.makeGoInterface(v, i)
 		interfaceMap[v.Name] = field
 		_, _ = io.Copy(&buffer, byt)
 	}
 	for _,v := range i.getObjects() {
-		byt, field := m.makeGoStruct(v, interfaceMap)
+		byt, field := m.makeGoStruct(v, interfaceMap, i)
 		fieldMap[v.Name] = field
 		_, _ = io.Copy(&buffer, byt)
 	}
@@ -58,7 +54,7 @@ func (m ModelCreator) Create(i *Generator, w io.Writer) {
 
 //genFields generates the actual fields for the go definition.
 //Returns the list of fields created! This includes scalars.
-func (mc ModelCreator) makeGoStruct(o *schema.Object, m map[string][]Field) (*bytes.Buffer, []Field) {
+func (mc ModelCreator) makeGoStruct(o *schema.Object, m map[string][]Field, g *Generator) (*bytes.Buffer, []Field) {
 	var sb bytes.Buffer
 	var fields []Field
 	sb.WriteString(fmt.Sprintf(topLine, o.Name))
@@ -72,9 +68,9 @@ func (mc ModelCreator) makeGoStruct(o *schema.Object, m map[string][]Field) (*by
 	}
 	sb.WriteString("//Regular fields \n")
 	for _, v := range o.Fields {
-		var fi = iterate(o.Name, v, v.Type, &sb, 0)
-		if fi != nil {
-			fields = append(fields, *fi)
+		var fi = iterate(o.Name, v, v.Type, &sb, 0, g)
+		if fi.Name != ""  {
+			fields = append(fields, fi)
 		}
 	}
 	val, ok := meta[o.Name]
@@ -85,7 +81,7 @@ func (mc ModelCreator) makeGoStruct(o *schema.Object, m map[string][]Field) (*by
 				fi.flags |= flagFacet
 				fi.Type = v.Type
 				fi.Name = v.Facet + "|" + nam
-				createField(v.Facet, fi.Name, v.Type, &sb, fi.flags, "")
+				createField(v.Facet, fi.Name, v.Type, &sb, fi.flags, "", g)
 			}
 		}
 	}
@@ -100,7 +96,7 @@ func (mc ModelCreator) makeGoStruct(o *schema.Object, m map[string][]Field) (*by
 		val := m[v.Name]
 		fieldsInterface = append(fieldsInterface, val...)
 	}
-	makeFieldList(o.Name, fieldsInterface, &sb, true)
+	makeFieldList(o.Name, fieldsInterface, &sb, true, g)
 	modelTemplate(o.Interfaces, o.Name, fieldsInterface, &sb)
 
 	if _, ok := globalFields[o.Name]; !ok {
@@ -119,7 +115,7 @@ func (mc ModelCreator) makeGoStruct(o *schema.Object, m map[string][]Field) (*by
 //implements embeds, the go-way.
 //You could probably merge makeGoInterface and makeGoStruct but
 //whatever, it works just fine.
-func (mc ModelCreator) makeGoInterface(o *schema.Interface) (*bytes.Buffer, []Field) {
+func (mc ModelCreator) makeGoInterface(o *schema.Interface, g *Generator) (*bytes.Buffer, []Field) {
 	var sb bytes.Buffer
 	var fields []Field
 	sb.WriteString("//Created from a GraphQL interface. \n")
@@ -127,19 +123,19 @@ func (mc ModelCreator) makeGoInterface(o *schema.Interface) (*bytes.Buffer, []Fi
 	//Declare this as a node.
 	sb.WriteString("//This line declares basic properties for a database node. \nmulbase.Node \n")
 	for _, v := range o.Fields {
-		var fi = iterate(o.Name, v, v.Type, &sb, 0)
-		if fi == nil { // || fi.IsPassword {
+		var fi = iterate(o.Name, v, v.Type, &sb, 0, g)
+		if fi.Name == "" { // || fi.IsPassword {
 			continue
 		}
 		//dereference the field.
-		fields = append(fields, *fi)
-		err := verifyDirectives(v, *fi)
+		fields = append(fields, fi)
+		err := verifyDirectives(v, fi)
 		if err != nil {
 			panic(err)
 		}
 	}
 	sb.WriteString(bottomLine)
-	makeFieldList(o.Name, fields, &sb, true)
+	makeFieldList(o.Name, fields, &sb, true, g)
 	modelTemplate(nil, o.Name, fields, &sb)
 
 	if _, ok := globalFields[o.Name]; !ok {
@@ -161,7 +157,7 @@ func embedInterface(name string, sb *bytes.Buffer) {
 //makeFieldList generates the field declarations, ie var Name FieldList = ...
 //and writes it to sb. It also ensures the proper generation of flag metadata.
 //This also applies to the scalar fields.
-func makeFieldList(name string, fi []Field, sb *bytes.Buffer, allowUnderscore bool) {
+func makeFieldList(name string, fi []Field, sb *bytes.Buffer, allowUnderscore bool, g *Generator) {
 	var isb bytes.Buffer
 	for k, v := range fi {
 		if v.Type == "UID" {
@@ -184,7 +180,7 @@ func makeFieldList(name string, fi []Field, sb *bytes.Buffer, allowUnderscore bo
 			flagBuilder.WriteString("|mulbase.MetaReverse")
 		}
 
-		if v.IsPassword { //|| obj > 0 {
+		if v.Nofield { //|| obj > 0 {
 			if allowUnderscore {
 				sb.WriteString(fmt.Sprintf(fieldDeclObj, fmt.Sprintf(makeFieldName, "\""+v.Tag+"\"", flagBuilder.String())))
 			}
@@ -201,12 +197,12 @@ func makeFieldList(name string, fi []Field, sb *bytes.Buffer, allowUnderscore bo
 //Create the field declaration as well as the Field object. These field objects are used in template generation.
 //This ensures the values in json tags will match the database.
 //directive name is used for facet.
-func createField(objectName string, name string, typ string, sb *bytes.Buffer, flag flags, directiveName string) Field {
+func createField(objectName string, name string, typ string, sb *bytes.Buffer, flag flags, directiveName string, g *Generator) Field {
 	var fi Field
 	if flag&flagArray != 0 {
 		fi.TypeLabel += "[]"
 	}
-	if flag&flagPointer != 0 && (flag&flagArray == 0) {
+	if (flag&flagPointer != 0 && (flag&flagArray == 0) ) || typ == "time.Time" {
 		fi.TypeLabel += "*"
 	}
 	fi.TypeLabel += typ
@@ -222,19 +218,25 @@ func createField(objectName string, name string, typ string, sb *bytes.Buffer, f
 
 	sb.WriteString(strings.Title(name))
 	//Here, we also have to consider the metadata values.
-	meta := getMetaValue(dbName)
+	meta := g.meta[objectName][name]
 	if meta != nil {
-		fi.IsPassword = meta.Password
+		if meta.Nofield {
+			fi.Nofield = meta.Nofield
+		}
+		fi.Nosave = meta.Nosave
 		if meta.Facet != "" {
 			dbName = meta.Facet +"|"+ name
 		}
-		//TODO: Should fix be
-		if fi.IsPassword || meta.Facet != ""{
+		//TODO: Should we always include ,omitempty for written tag?
+		/*if true {//fi.IsPassword || meta.Facet != ""{
 			fi.WrittenTag = dbName + ",omitempty"
-		}
+		}*/
+		fi.WrittenTag = dbName
 	} else {
 		fi.WrittenTag = dbName
 	}
+	//All tags are omitempty.
+	fi.WrittenTag += ",omitempty"
 
 	//TODO: Right now there is an omitempty on non-mandatory fields. This should work I believe.
 
@@ -251,13 +253,13 @@ func createField(objectName string, name string, typ string, sb *bytes.Buffer, f
 
 //Returns the field name relevant for the database. Iterates over non-null & list and marks flags.
 //TODO: Do not return pointer!
-func iterate(objName string, data *schema.Field, field common.Type, sb *bytes.Buffer, f flags) *Field {
+func iterate(objName string, data *schema.Field, field common.Type, sb *bytes.Buffer, f flags, g *Generator) Field {
 	var typ string
 	switch a := field.(type) {
 	case *common.NonNull:
-		return iterate(objName, data, a.OfType, sb, f|flagNotNull)
+		return iterate(objName, data, a.OfType, sb, f|flagNotNull, g)
 	case *common.List:
-		return iterate(objName, data, a.OfType, sb, f|flagArray)
+		return iterate(objName, data, a.OfType, sb, f|flagArray, g)
 	case *schema.Object:
 		typ = a.Name
 		/*
@@ -298,11 +300,11 @@ func iterate(objName string, data *schema.Field, field common.Type, sb *bytes.Bu
 			val := dir.Args.MustGet("field")
 			dirName = val.String()
 		}
-		var ff = createField(objName, name, typ, sb, f, dirName)
+		var ff = createField(objName, name, typ, sb, f, dirName, g)
 		ff.Directives = data.Directives
-		return &ff
+		return ff
 	}
-	return nil
+	return Field{}
 }
 
 //The input struct for model template.

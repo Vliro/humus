@@ -8,11 +8,13 @@ func GetField(name mulbase.Predicate) mulbase.Field {
 }
 
 func MakeField(name mulbase.Predicate, flags mulbase.FieldMeta) mulbase.Field {
-    var field = mulbase.Field{Name:name, Meta:flags}
-    if _,ok := globalFields[name]; !ok {
-        globalFields[name] = field
-    }
-    return field
+    //var field = mulbase.Field{Name:name, Meta:flags}
+    //if _,ok := globalFields[name]; !ok {
+    //    globalFields[name] = field
+    //}
+    var fi = mulbase.Field{Name:name, Meta:flags}
+    globalFields[name] = fi
+    return fi
 }
 
 func GetGlobalFields() map[mulbase.Predicate]mulbase.Field {

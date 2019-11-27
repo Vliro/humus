@@ -30,7 +30,7 @@ type Fields interface {
 
 func Select(sch SchemaList, names ...Predicate) Fields {
 	var fields = make(NewList, len(names))
-	for k,v := range names {
+	for k, v := range names {
 		fields[k] = sch[v]
 	}
 	return fields
@@ -102,9 +102,10 @@ func (f FieldList) Facet(facetName string, alias string) Fields {
 	if n != len(f) {
 		panic("fieldList sub: invalid length! something went wrong")
 	}
-	newArr[len(f)] = MakeField(Predicate(facetName), 0 | MetaFacet)
+	newArr[len(f)] = MakeField(Predicate(facetName), 0|MetaFacet)
 	return newArr
 }
+
 //These lists do not need copying as they are never global.
 func (f NewList) Sub(name Predicate, fl Fields) Fields {
 	//linear search but fast either way.
@@ -118,7 +119,7 @@ func (f NewList) Sub(name Predicate, fl Fields) Fields {
 }
 
 func (f NewList) Facet(facetName string, alias string) Fields {
-	return append(f, MakeField(Predicate(facetName), 0 | MetaFacet))
+	return append(f, MakeField(Predicate(facetName), 0|MetaFacet))
 }
 
 func Sub(name Predicate, fl []Field, sch SchemaList) NewList {
@@ -140,15 +141,16 @@ func Sub(name Predicate, fl []Field, sch SchemaList) NewList {
 func (f NewList) Add(fi Field) Fields {
 	return append(f, fi)
 }
+
 //CreatePath creates a nested path using paths of the form Pred1/Pred2...
 func CreatePath(paths ...Predicate) Predicate {
 	var sum = 0
-	for _,v := range paths {
+	for _, v := range paths {
 		sum += len(v)
 	}
 	var buf = strings.Builder{}
-	buf.Grow(sum + len(paths)-1)
-	for _,v := range paths {
+	buf.Grow(sum + len(paths) - 1)
+	for _, v := range paths {
 		buf.WriteString(string(v))
 		buf.WriteByte('/')
 	}
@@ -181,7 +183,7 @@ type Count struct {
 //A meta field for schemas.
 //This simply defines properties surrounding fields such as language etc.
 //This is used in generating the queries.
-type FieldMeta int
+type FieldMeta uint16
 
 func (f FieldMeta) Lang() bool {
 	return f&MetaLang > 0
@@ -210,12 +212,12 @@ const (
 
 // Field is a recursive data struct which represents a GraphQL query field.
 type Field struct {
+	Meta   FieldMeta
 	Name   Predicate
 	Fields Fields
-	Meta   FieldMeta
-	Local bool
 	//Type VarType
 }
+
 //Sub here simply uses fields as Field { fields}.
 //That is, you use this if you only want to get a relation.
 //Name here does not matter actually.
@@ -236,7 +238,7 @@ func (f Field) Add(fi Field) Fields {
 }
 
 func (f Field) Facet(facetName string, alias string) Fields {
-	return append(NewList{}, f, MakeField(Predicate(facetName), 0 | MetaFacet))
+	return append(NewList{}, f, MakeField(Predicate(facetName), 0|MetaFacet))
 }
 
 func (f Field) Get() []Field {
@@ -249,7 +251,6 @@ func MakeField(name Predicate, meta FieldMeta) Field {
 	var x = Field{Name: name, Meta: meta}
 	return x
 }
-
 
 func (f *Field) writeLanguageTag(sb *bytes.Buffer, l Language) {
 	if l != LanguageDefault && l != LanguageNone {
@@ -348,7 +349,7 @@ func (f *Field) check(q *GeneratedQuery) error {
 		return errors.New("missing name in field")
 	}
 	if f.Fields != nil {
-		for _,v := range f.Fields.Get() {
+		for _, v := range f.Fields.Get() {
 			if err := v.check(q); err != nil {
 				return err
 			}

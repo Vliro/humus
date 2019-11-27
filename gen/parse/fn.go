@@ -23,7 +23,7 @@ type fieldTemplate struct {
 }
 
 type GetTemplate struct {
-	Fields []fieldTemplate
+	Fields []Field
 	Name   string
 }
 
@@ -67,12 +67,13 @@ func processFieldTemplates(obj *schema.Object, w io.Writer, m map[string][]Field
 		if v.flags & flagScalar != 0 || v.flags & flagEnum != 0{
 			continue
 		}
-		var data fieldTemplate
+		var data Field
 		data.Type = v.Type
 		data.Name = v.Name
 		data.Parent = obj.GetName()
 		data.IsArray = v.flags & flagArray > 0
 		data.Tag = v.Tag
+		data.TypeLabel = v.TypeLabel
 		output.Fields = append(output.Fields, data)
 	}
 	output.Name = obj.Name

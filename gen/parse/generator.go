@@ -26,7 +26,7 @@ type Generator struct {
 	//the active schema.
 	schema *schema.Schema
 	//metadata
-	meta map[string]map[string]Meta
+	meta map[string]map[string]*Meta
 	//custom fields.
 	customs map[string]map[string]Customs
 	//To set states from certain function
@@ -62,6 +62,10 @@ func (g *Generator) enums() []*schema.Enum {
 
 func (g *Generator) Run() {
 	var inter Creator
+	templ := getTemplate("All")
+	for _,v := range g.outputs {
+		_ = templ.Execute(v, g.config.Package)
+	}
 	inter = ModelCreator{}
 	g.writeHeader(g.outputs[ModelFileName])
 	inter.Create(g, g.outputs[ModelFileName])
@@ -78,6 +82,7 @@ func (g *Generator) Run() {
 }
 
 func (g *Generator) writeImports(imports []string, out io.Writer) {
+	return
 	if out == nil {
 		return
 	}
@@ -164,21 +169,6 @@ func (g *Generator) prepare() error {
 	sc := graphql.MustParseSchema(resultingFile.String(), nil)
 	g.schema = sc.Schema
 
-	if parseState == "graphql" {
-		sch, err := os.Create(config.Output + SchemaName)
-		if err != nil {
-			panic(err)
-		}
-		defer sch.Close()
-	}
-	if parseState == "dgraph" {
-		dgraphSch, err := os.Create(config.Output + "/dgraph.txt")
-		if err != nil {
-			panic(err)
-		}
-		defer dgraphSch.Close()
-		makeSchema(dgraphSch)
-	}
 	customs, err := ioutil.ReadFile(config.Input + "/custom.toml")
 	if len(customs) > 0 {
 		buf := new(bytes.Buffer)
@@ -190,6 +180,21 @@ func (g *Generator) prepare() error {
 }
 
 func (g *Generator) finish() {
+	if g.config.State == "graphql" {
+		sch, err := os.Create(g.config.Output + SchemaName)
+		if err != nil {
+			panic(err)
+		}
+		defer sch.Close()
+	}
+	if g.config.State == "dgraph" {
+		dgraphSch, err := os.Create(g.config.Output + "/dgraph.txt")
+		if err != nil {
+			panic(err)
+		}
+		defer dgraphSch.Close()
+		makeSchema(dgraphSch)
+	}
 	for k,v := range g.outputs {
 		if v.Len() > 0 {
 			newbuf := goFmt(v.Bytes())

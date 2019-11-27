@@ -41,6 +41,7 @@ type Config struct {
 //DNode represents an object that can be safely stored
 //in the database. It includes all necessary fields for
 //automatic generation.
+//This is a big interface but it is automatically satisfied by all values.
 type DNode interface {
 	//Returns the UID of this node.
 	UID() UID
@@ -48,6 +49,8 @@ type DNode interface {
 	SetUID(uid UID)
 	//Sets all types of this node. This has to be done at least once.
 	SetType()
+	//Returns the type.
+	GetType() []string
 	//Returns all scalar fields for this node. This is not of Fields interface
 	//as they default nods always return a FieldList and not a NewList for instance.
 	Fields() FieldList
@@ -78,7 +81,10 @@ type AsyncQuerier interface {
 }
 
 func NewMapper(uid UID, typ []string) Mapper {
-	return Mapper{"uid": uid, "dgraph.type": typ}
+	if len(typ) > 0 {
+		return Mapper{"uid": uid, "dgraph.type": typ}
+	}
+	return Mapper{"uid": uid}
 }
 
 //UidObject is embedded in maps to ensure proper serialization.
@@ -102,6 +108,20 @@ func (m Mapper) UID() UID {
 		return val
 	}
 	return ""
+}
+
+//SetFunctionValue is used in relation to upsert.
+//For instance, storing uid in "result" variable. This will set the value
+//on the edge predicate to the value. This is a simple case and for more complicated
+//queries manually edit the Mapper to look correct.
+func (m Mapper) SetFunctionValue(variableName string, predicate Predicate) {
+	uid := UID("uid(" + variableName + ")")
+	m[string(predicate)] = Uid(uid)
+}
+
+func (m Mapper) GetType() []string {
+	fmt.Println("GetType called on Mapper. Is this intended?")
+	return nil
 }
 
 func (m Mapper) SetUID(uid UID) {
@@ -130,8 +150,28 @@ func (m Mapper) Set(child Predicate, all bool, obj DNode) Mapper {
 	if checkNil(obj) {
 		//TODO: what should actually happen here?
 		//panic for now.
-		panic("nil not expected in Mapper set")
+		return m
 	}
+	obj.SetType()
+	if all {
+		if val, ok := obj.(Saver); ok {
+			m[string(child)] = val.Save()
+		} else {
+			m[string(child)] = obj
+		}
+	} else {
+		m[string(child)] = Uid(obj.UID())
+	}
+	return m
+}
+
+func (m Mapper) MustSet(child Predicate, all bool, obj DNode) Mapper {
+	if checkNil(obj) {
+		//TODO: what should actually happen here?
+		//panic for now.
+		panic("mapper MustSet nil value")
+	}
+	obj.SetType()
 	if all {
 		if val, ok := obj.(Saver); ok {
 			m[string(child)] = val.Save()
@@ -155,6 +195,7 @@ func checkNil(c DNode) bool {
 func (m Mapper) SetArray(child string, all bool, objs ...DNode) Mapper {
 	var output = make([]interface{}, len(objs))
 	for k, v := range objs {
+		v.SetType()
 		if all {
 			if val, ok := v.(Saver); ok {
 				output[k] = val.Save()
@@ -221,10 +262,25 @@ func (d *DB) Query(ctx context.Context, q Query, objs ...interface{}) error {
 		return Error(errInvalidType)
 	}
 	txn := d.NewTxn(true)
+	defer txn.Discard(context.Background())
 	err := txn.Query(ctx, q, objs...)
 	//TODO: Can we do this for readonly?
-	_ = txn.Discard(ctx)
 	return err
+}
+
+//SetValue is a simple wrapper to set a single value in the database
+//for a given node. It exists for convenience.
+func (d *DB) SetValue(node DNode, pred Predicate, value interface{}) error {
+	txn := d.NewTxn(true)
+	defer txn.Discard(context.Background())
+	var m = NewMapper(node.UID(), nil)
+	m[string(pred)] = value
+	_, err := txn.Mutate(context.Background(), CreateMutation(m, QuerySet))
+	if err != nil {
+		return err
+	} else {
+		return txn.Commit(context.Background())
+	}
 }
 
 func (d *DB) Commit(ctx context.Context) error {
@@ -242,13 +298,19 @@ func (d *DB) Mutate(ctx context.Context, q Query) (*api.Response, error) {
 		return nil, Error(errInvalidType)
 	}
 	txn := d.NewTxn(false)
+	defer txn.Discard(context.Background())
 	resp, err := txn.Mutate(ctx, q)
 	if err != nil {
-		_ = txn.Discard(ctx)
+		fmt.Println(err)
 	} else {
 		_ = txn.Commit(ctx)
 	}
 	return resp, err
+}
+
+//Cleanup should be defered at the main function.
+func (d *DB) Cleanup(ctx context.Context) {
+	d.pool.StopWait()
 }
 
 //Simply performs the alter command.
@@ -267,7 +329,10 @@ func (d *DB) logError(ctx context.Context, err error) {
 		result.Message = value
 		result.Time = time.Now()
 		result.ErrorType = errorName
-		_, _ = d.Mutate(context.Background(), CreateMutation(&result, QuerySet))
+		_, err := d.Mutate(context.Background(), CreateMutation(&result, QuerySet))
+		if err != nil {
+			fmt.Printf("Error logging %s \n", err.Error())
+		}
 	}
 	d.pool.Submit(f)
 	return
@@ -334,7 +399,7 @@ func connect(conf *Config, sch SchemaList) *DB {
 	}
 	//Run an empty query to ensure connection.
 	db.pool = workerpool.New(workers)
-	_ = db.Query(context.Background(), NewStaticQuery(""), nil)
+	//_ = db.Query(context.Background(), NewStaticQuery(""), nil)
 	return db
 }
 
@@ -371,8 +436,14 @@ func (t *Txn) mutate(ctx context.Context, q Query) (*api.Response, error) {
 	if q.Type() == QueryDelete {
 		//TODO: fix this
 		m.DeleteJson = byt
+		if t.db.c.LogQueries {
+			fmt.Println(string(m.DeleteJson))
+		}
 	} else if q.Type() == QuerySet {
 		m.SetJson = byt
+		if t.db.c.LogQueries {
+			fmt.Println(string(m.SetJson))
+		}
 	}
 	a, err := t.txn.Mutate(ctx, &m)
 	if err != nil {
@@ -383,24 +454,24 @@ func (t *Txn) mutate(ctx context.Context, q Query) (*api.Response, error) {
 
 //Upsert follows the new 1.1 api and performs an upsert.
 //TODO: I really don't know what this does so work on it later.
-func (t *Txn) Upsert(ctx context.Context, q Query, cond string, mutations ...Query) (int, error) {
+func (t *Txn) Upsert(ctx context.Context, q Query, cond string, mutations ...Query) (*api.Response, error) {
 	if t.txn == nil {
-		return 0, Error(errTransaction)
+		return nil, Error(errTransaction)
 	}
 	b, ma, err := q.Process(t.db.schema)
 	if err != nil {
-		return 0, Error(err)
+		return nil, Error(err)
 	}
 	var muts = make([]*api.Mutation, len(mutations))
 	for k := range muts {
 		if mutations[k].Type() == QueryRegular {
-			return 0, errInvalidType
+			return nil, errInvalidType
 		}
 		muts[k] = new(api.Mutation)
 		v := muts[k]
 		b, _, err := mutations[k].Process(t.db.schema)
 		if err != nil {
-			return 0, err
+			return nil, err
 		}
 		v.SetJson = b
 		v.Cond = cond
@@ -413,10 +484,10 @@ func (t *Txn) Upsert(ctx context.Context, q Query, cond string, mutations ...Que
 	}
 	resp, err := t.txn.Do(ctx, &req)
 	if err != nil {
-		return 0, Error(err)
+		return nil, Error(err)
 	}
 	//err = HandleResponse(resp.Json, obj)
-	return len(resp.Uids), nil
+	return resp, nil
 }
 
 func (t *Txn) query(ctx context.Context, q Query, objs []interface{}) error {
@@ -424,16 +495,23 @@ func (t *Txn) query(ctx context.Context, q Query, objs []interface{}) error {
 	if err != nil {
 		return err
 	}
+	if t.db.c.LogQueries {
+		log.Printf("Query input: %s \n", string(str))
+	}
 	resp, err := t.txn.QueryWithVars(ctx, bytesToStringUnsafe(str), m)
 	if err != nil {
 		t.db.logError(context.Background(), err)
 		return Error(err)
 	}
 	if t.db.c.LogQueries {
-		log.Printf("Query input: %s \n Query output: %s", string(str), string(resp.Json))
+		log.Printf("Query output: %s", string(resp.Json))
 	}
 	//This deserializes using reflect.
 	err = HandleResponse(resp.Json, objs)
+	//TODO: Ignore this error.
+	if _, ok := err.(*time.ParseError); ok {
+		return nil
+	}
 	if err != nil {
 		return Error(err)
 	}

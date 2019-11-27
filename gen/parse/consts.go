@@ -9,6 +9,7 @@ var templates = map[string]string {
 	"Async": "async.template",
 	"Model": "model.template",
 	"Enum": "enum.template",
+	"All": "allfiles.template",
 }
 
 //Scalar builtin types.

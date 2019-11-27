@@ -119,7 +119,7 @@ func SaveNodes(vals ...DNode) *MutationQuery {
 //deleter only the top-level uid is deleted.
 func DeleteNode(node DNode) SingleMutation {
 	return SingleMutation{
-		Object:    NewMapper(node.UID()),
+		Object:    NewMapper(node.UID(), node.GetType()),
 		QueryType: QueryDelete,
 	}
 }

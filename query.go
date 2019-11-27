@@ -5,8 +5,17 @@ import (
 	"fmt"
 	"strconv"
 	"strings"
+	"sync"
 	"time"
 )
+
+var pool sync.Pool
+
+func init() {
+	pool.New = func() interface{} {
+		return new(GeneratedQuery)
+	}
+}
 
 /*
 	UID represents the primary UID class used in communication with DGraph.
@@ -22,7 +31,7 @@ func (u UID) Int() int64 {
 	return val
 }
 
-func (u UID) IntString() string{
+func (u UID) IntString() string {
 	val, err := strconv.ParseInt(string(u), 16, 64)
 	if err != nil {
 		return ""
@@ -31,7 +40,7 @@ func (u UID) IntString() string{
 }
 
 func StringFromInt(id int64) string {
-	return "0x"+strconv.FormatInt(id, 16)
+	return "0x" + strconv.FormatInt(id, 16)
 }
 
 func UidFromInt(id int64) UID {
@@ -69,6 +78,7 @@ func (q *Queries) Append(qu *GeneratedQuery) *Queries {
 	q.Queries = append(q.Queries, qu)
 	return q
 }
+
 //create the byte representation.
 func (q *Queries) create() ([]byte, map[string]string, error) {
 	var queryStr, final bytes.Buffer
@@ -141,11 +151,10 @@ type GeneratedQuery struct {
 	//The overall language for this query.
 	Language Language
 	//Which directives to apply on this query.
-	Directives  []Directive
-	Deserialize bool
-	Fields      Fields
-	varCounter  int
-	schema      SchemaList
+	Directives []Directive
+	Fields     Fields
+	varCounter int
+	schema     SchemaList
 	//For multiple queries.
 	index int
 }
@@ -197,6 +206,9 @@ func (q *GeneratedQuery) create() ([]byte, map[string]string, error) {
 		return nil, nil, err
 	}
 	var sb = &bytes.Buffer{}
+	//The size of default buffer.
+	const size = 256
+	sb.Grow(size)
 	//Write query header.
 	sb.WriteString("{q")
 	if q.index != 0 {
@@ -222,7 +234,8 @@ func (q *GeneratedQuery) create() ([]byte, map[string]string, error) {
 		}
 		field.create(q, field.Name, sb)
 	}
-	sb.WriteString(tokenSpace + "uid" + tokenSpace + tokenRB + tokenRB)
+	//Add default uid to top level field and close query.
+	sb.WriteString(" uid" + tokenRB + tokenRB)
 	//TODO: Write variable header and create the var map.
 	var varString = q.Variables(true)
 	var result = make([]byte, len(varString)+len(sb.Bytes()))
@@ -325,6 +338,9 @@ func (q *GeneratedQuery) Variables(single bool) string {
 		i++
 	}
 	sb.WriteByte(')')*/
+	if q.varBuilder.Len() == 0 {
+		return ""
+	}
 	if single {
 		return "query test(" + q.varBuilder.String() + ")"
 	}
@@ -395,12 +411,6 @@ func (q *GeneratedQuery) SetFunction(function *Function) *GeneratedQuery {
 //TODO: Multiple filters.
 func (q *GeneratedQuery) SetFilter(filter *Filter) *GeneratedQuery {
 	q.Filter = filter
-	return q
-}
-
-// ShouldDeserialize defines if either an interface{} is returned or it is deserialized to the proper object.
-func (q *GeneratedQuery) ShouldDeserialize(b bool) *GeneratedQuery {
-	q.Deserialize = b
 	return q
 }
 

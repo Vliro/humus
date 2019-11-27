@@ -57,7 +57,7 @@ func makeSchema(output io.Writer) {
 		var written = make(map[string]struct{})
 		var ib bytes.Buffer
 		fieldLoop: for _,v := range val.AllFields {
-			if _,ok := written[v.Name]; ok {
+			if _,ok := written[v.Tag]; ok {
 				continue
 			}
 			var directives bytes.Buffer
@@ -67,7 +67,7 @@ func makeSchema(output io.Writer) {
 					if v.flags & flagArray == 0 {
 						directives.WriteString("@reverse ")
 					} else {
-						break fieldLoop
+						continue fieldLoop
 					}
 				case "search":
 					directives.WriteString("@index(")

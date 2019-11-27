@@ -3,7 +3,7 @@ This needs to be updated for 1-1 relations.
 */}}
 {{range .Fields}}
     //Populates the field of r.
-    func (r *{{.Parent}}) Get{{.Parent}}{{.Name}} ({{if .IsArray}}count int,{{end}}filter *mulbase.Filter, db mulbase.Querier) ([]{{.Type}}, error) {
+    func (r *{{.Parent}}) Get{{.Parent}}{{.Name}} ({{if .IsArray}}count int,{{end}}filter *mulbase.Filter, db mulbase.Querier) ({{.TypeLabel}}, error) {
         if r.UID() == "" {
             return nil, mulbase.ErrUID
         }
@@ -11,7 +11,7 @@ This needs to be updated for 1-1 relations.
         if q == nil {
             return nil, newError("could not create query")
         }
-        var typ []{{.Type}}
+        var typ {{.TypeLabel}}
         err := db.Query(context.Background(), q, &typ)
         return typ, err
     }

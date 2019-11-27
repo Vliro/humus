@@ -10,8 +10,15 @@ const (
 
 //The common node type that is inherited. This differs from the DNode which is an interface.
 type Node struct {
-	Uid  UID      `json:"uid, omitempty"`
-	Type []string `json:"dgraph.type, omitempty"`
+	Uid  UID      `json:"uid,omitempty"`
+	Type []string `json:"dgraph.type,omitempty"`
+}
+
+func (n *Node) GetType() []string {
+	if n.Type == nil {
+		n.SetType()
+	}
+	return n.Type
 }
 
 func (n *Node) SetUID(uid UID) {

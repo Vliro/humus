@@ -5,6 +5,7 @@ import (
 	"io"
 )
 
+//EnumCreator is the creator for the enum file.
 type EnumCreator struct{}
 
 func (e EnumCreator) Create(i *Generator, w io.Writer) {

@@ -2,6 +2,8 @@ package parse
 
 import "github.com/Vliro/mulbase/gen/graphql-go/common"
 
+//Field represents the parsed graphQL field alongside all
+//definitions needed for generation.
 type Field struct {
 	//For  DB name.
 	Tag string
@@ -17,8 +19,12 @@ type Field struct {
 	TypeLabel     string
 	//did this come from the field or from the interface?
 	FromInterface bool
-	IsPassword bool
+	Nosave bool
 	Directives []*common.Directive
+	Nofield bool
+	//For templates.
+	Parent string
+	IsArray bool
 }
 
 func (f *Field) IsScalar() bool {

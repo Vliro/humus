@@ -12,13 +12,14 @@ import (
 //fields to be queried per default and/or mutated at times.
 //Specifying it as a password excludes it from all default queries.
 type Meta struct {
-	Password bool
-	Facet    string
-	Type     string
+	Nofield bool
+	Facet   string
+	Type    string
+	Nosave  bool
 }
 
-func parseMeta(input io.Reader) map[string]map[string]Meta {
-	m := make(map[string]map[string]Meta)
+func parseMeta(input io.Reader) map[string]map[string]*Meta {
+	m := make(map[string]map[string]*Meta)
 	_, err := toml.DecodeReader(input, &m)
 	if err != nil {
 		panic(err)

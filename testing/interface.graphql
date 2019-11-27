@@ -1,18 +1,16 @@
 interface Post {
-    text: String!
+    text: String! @search (by:[hash])
     datePublished: DateTime!
 }
 
 type Question implements Post {
     title: [Episode!]!
     id: Int!
-    yes: [Comment!] @hasInverse(field: commentsOn)
 }
 
 type Comment implements Post {
     commentsOn: Post! @hasInverse(field: yes)
-    test: Episode!
-    yolo: Comment!
+    episode: Episode!
 }
 
 enum Episode {

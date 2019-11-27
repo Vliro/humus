@@ -5,6 +5,8 @@ import (
 	"strconv"
 )
 
+//processInterface takes the type and returns what variable it is.
+//this function is the reason why using the default generated values is important!
 func processInterface(value interface{}) (string, VarType) {
 	switch a := value.(type) {
 	case int:

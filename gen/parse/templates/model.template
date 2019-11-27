@@ -11,6 +11,12 @@ func (r *{{.Name}}) SaveValues(ctx context.Context, txn *mulbase.Txn) error {
      err := txn.Query(ctx, mut)
     return err
 }
+func (r *{{.Name}}) GetType() []string {
+    if r.Type == nil {
+        r.SetType()
+    }
+    return r.Type
+}
 //Fields returns all Scalar fields for this value.
 func (r *{{.Name}}) Fields() mulbase.FieldList {
     return {{.Name}}Fields
@@ -26,7 +32,7 @@ func (r *{{.Name}}) SetType() {
 func (r *{{.Name}}) Values() mulbase.DNode{
    var m {{.Name}}Scalars
    {{range .ScalarFields -}}
-       {{if not .IsPassword -}}
+       {{if not .Nosave -}}
        m.{{.Name}}= r.{{.Name}}
        {{end -}}
    {{end -}}
@@ -38,14 +44,16 @@ func (r *{{.Name}}) Values() mulbase.DNode{
 func (r *{{.Name}}) MapValues() mulbase.Mapper {
    var m = make(map[string]interface{}, {{len .ScalarFields }})
    {{range .ScalarFields -}}
-      {{if not .IsPassword -}}
+      {{if not .Nosave -}}
 m["{{.Tag}}"]= r.{{.Name}}
       {{end -}}
    {{end -}}
-   m["uid"] = r.Uid
+   if r.Uid != "" {
+      m["uid"] = r.Uid
+   }
     r.SetType()
     m["dgraph.type"] = r.Type
-   return m
+    return m
 }
 
 

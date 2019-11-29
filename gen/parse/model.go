@@ -77,7 +77,7 @@ func (mc ModelCreator) makeGoStruct(o *schema.Object, m map[string][]Field, g *G
 			fields = append(fields, fi)
 		}
 	}
-	for _,v := range pushback {
+	for _, v := range pushback {
 		var fi = iterate(o.Name, v, v.Type, &sb, 0, g)
 		if fi.Name != "" {
 			fields = append(fields, fi)
@@ -202,6 +202,7 @@ func makeFieldList(name string, fi []Field, sb *bytes.Buffer, allowUnderscore bo
 //Create the field declaration as well as the Field object. These field objects are used in template generation.
 //This ensures the values in json tags will match the database.
 //directive name is used for facet.
+//TODO: Cleanup this function. It has very mixed logic.
 func createField(objectName string, name string, typ string, sb *bytes.Buffer, flag flags, directiveName string, g *Generator) Field {
 	var fi Field
 	if flag&flagArray != 0 {
@@ -217,7 +218,7 @@ func createField(objectName string, name string, typ string, sb *bytes.Buffer, f
 	//Do not capitalize the tag.
 	var dbName = objectName + "." + name
 	//Ensure for reverse fields the reverse field is used instead.
-	if parseState == "dgraph" && ((flag&flagReverse > 0 && flag&flagArray > 0)) {
+	if parseState == "dgraph" && (flag&flagReverse > 0 && flag&flagArray > 0) {
 		dbName = "~" + typ + "." + directiveName
 	} else if flag&flagTwoWay > 0 {
 		dbName = "~" + typ + "." + directiveName
@@ -226,13 +227,18 @@ func createField(objectName string, name string, typ string, sb *bytes.Buffer, f
 
 	sb.WriteString(strings.Title(name))
 	if flag&flagFacet > 0 {
-		if !(reverseMap[directiveName] != objectName) {
-			fi.WrittenTag = "~"
+		if flag&flagReverse > 0 {
+			if !(reverseMap[directiveName] != objectName) {
+				fi.WrittenTag = "~"
+			}
+			fi.WrittenTag += reverseMap[directiveName] + "." + directiveName + "|" + name
+			fi.Tag = fi.WrittenTag
+		} else {
+			fi.Tag = objectName + "." + directiveName + "|" + name
+			fi.WrittenTag = fi.Tag
 		}
-		fi.WrittenTag += reverseMap[directiveName] + "."+ directiveName + "|" + name
-		fi.Tag = fi.WrittenTag
- 	} else {
- 		fi.WrittenTag = dbName
+	} else {
+		fi.WrittenTag = dbName
 	}
 	//All tags are omitempty.
 	fi.WrittenTag += ",omitempty"
@@ -299,7 +305,7 @@ func iterate(objName string, data *schema.Field, field common.Type, sb *bytes.Bu
 		/*
 			This code is pretty messy but it's important. A reverse edge can be 1-many or many-many.
 			For 1-many always use the 1 edgename, but for many-many it is defined by source.
-		 */
+		*/
 
 		//TODO: don't inline interface like this.
 		type object interface {
@@ -326,7 +332,7 @@ func iterate(objName string, data *schema.Field, field common.Type, sb *bytes.Bu
 							f |= flagTwoWay
 						}
 					} else {
-						if f &flagArray > 0 {
+						if f&flagArray > 0 {
 							//We are the reverse edge.
 							objName = obj.GetName()
 							f |= flagTwoWay
@@ -369,7 +375,7 @@ type modelStruct struct {
 	ScalarFields []Field
 	//used for SetType.
 	Interfaces []string
-	Facets []string
+	Facets     []string
 }
 
 //Executes the model template for all scalar fields.

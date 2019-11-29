@@ -11,11 +11,3 @@ import (
 var _ context.Context
 var _ time.Time
 var _ mulbase.Fields
-
-//Start new enum.
-type Type int
-
-const (
-	First Type = iota
-	Second
-)

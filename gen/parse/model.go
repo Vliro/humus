@@ -26,20 +26,18 @@ const fieldReceiver = "func (r *%s) "
 const fieldDeclObj = `var _ = %s
 `
 
-type ModelCreator struct {}
-
-
+type ModelCreator struct{}
 
 func (m ModelCreator) Create(i *Generator, w io.Writer) {
 	var buffer bytes.Buffer
 	var interfaceMap = make(map[string][]Field)
 	var fieldMap = make(map[string][]Field)
-	for _,v := range i.getInterfaces() {
+	for _, v := range i.getInterfaces() {
 		byt, field := m.makeGoInterface(v, i)
 		interfaceMap[v.Name] = field
 		_, _ = io.Copy(&buffer, byt)
 	}
-	for _,v := range i.getObjects() {
+	for _, v := range i.getObjects() {
 		byt, field := m.makeGoStruct(v, interfaceMap, i)
 		fieldMap[v.Name] = field
 		_, _ = io.Copy(&buffer, byt)
@@ -67,22 +65,22 @@ func (mc ModelCreator) makeGoStruct(o *schema.Object, m map[string][]Field, g *G
 		}
 	}
 	sb.WriteString("//Regular fields \n")
+	//Calculate facets at the end as they depend on their respective edges.
+	var pushback []*schema.Field
 	for _, v := range o.Fields {
+		if dir := v.Directives.Get("facet"); dir != nil {
+			pushback = append(pushback, v)
+			continue
+		}
 		var fi = iterate(o.Name, v, v.Type, &sb, 0, g)
-		if fi.Name != ""  {
+		if fi.Name != "" {
 			fields = append(fields, fi)
 		}
 	}
-	val, ok := meta[o.Name]
-	if ok {
-		for nam,v := range val {
-			if v.Facet != "" {
-				var fi Field
-				fi.flags |= flagFacet
-				fi.Type = v.Type
-				fi.Name = v.Facet + "|" + nam
-				createField(v.Facet, fi.Name, v.Type, &sb, fi.flags, "", g)
-			}
+	for _,v := range pushback {
+		var fi = iterate(o.Name, v, v.Type, &sb, 0, g)
+		if fi.Name != "" {
+			fields = append(fields, fi)
 		}
 	}
 	sb.WriteString(bottomLine)
@@ -97,7 +95,7 @@ func (mc ModelCreator) makeGoStruct(o *schema.Object, m map[string][]Field, g *G
 		fieldsInterface = append(fieldsInterface, val...)
 	}
 	makeFieldList(o.Name, fieldsInterface, &sb, true, g)
-	modelTemplate(o.Interfaces, o.Name, fieldsInterface, &sb)
+	modelTemplate(g.schema, o.Name, fieldsInterface, &sb)
 
 	if _, ok := globalFields[o.Name]; !ok {
 		globalFields[o.Name] = Object{
@@ -136,7 +134,7 @@ func (mc ModelCreator) makeGoInterface(o *schema.Interface, g *Generator) (*byte
 	}
 	sb.WriteString(bottomLine)
 	makeFieldList(o.Name, fields, &sb, true, g)
-	modelTemplate(nil, o.Name, fields, &sb)
+	modelTemplate(g.schema, o.Name, fields, &sb)
 
 	if _, ok := globalFields[o.Name]; !ok {
 		globalFields[o.Name] = Object{
@@ -179,8 +177,15 @@ func makeFieldList(name string, fi []Field, sb *bytes.Buffer, allowUnderscore bo
 		if v.flags&flagReverse != 0 {
 			flagBuilder.WriteString("|mulbase.MetaReverse")
 		}
+		if v.flags&flagFacet != 0 {
+			flagBuilder.WriteString("|mulbase.MetaFacet")
+		}
+		if v.flags&flagLang != 0 {
+			flagBuilder.WriteString("|mulbase.MetaLang")
+		}
+		nofield := v.HasDirective("ignore") != nil
 
-		if v.Nofield { //|| obj > 0 {
+		if nofield { //|| obj > 0 {
 			if allowUnderscore {
 				sb.WriteString(fmt.Sprintf(fieldDeclObj, fmt.Sprintf(makeFieldName, "\""+v.Tag+"\"", flagBuilder.String())))
 			}
@@ -202,7 +207,8 @@ func createField(objectName string, name string, typ string, sb *bytes.Buffer, f
 	if flag&flagArray != 0 {
 		fi.TypeLabel += "[]"
 	}
-	if (flag&flagPointer != 0 && (flag&flagArray == 0) ) || typ == "time.Time" {
+	//time.Time is a special case as it is a struct and therefore has to be a pointer.
+	if (flag&flagPointer != 0 && (flag&flagArray == 0)) || typ == "time.Time" {
 		fi.TypeLabel += "*"
 	}
 	fi.TypeLabel += typ
@@ -211,29 +217,22 @@ func createField(objectName string, name string, typ string, sb *bytes.Buffer, f
 	//Do not capitalize the tag.
 	var dbName = objectName + "." + name
 	//Ensure for reverse fields the reverse field is used instead.
-	if parseState == "dgraph" && flag&flagReverse > 0 && flag&flagArray > 0 {
+	if parseState == "dgraph" && ((flag&flagReverse > 0 && flag&flagArray > 0)) {
+		dbName = "~" + typ + "." + directiveName
+	} else if flag&flagTwoWay > 0 {
 		dbName = "~" + typ + "." + directiveName
 	}
 	fi.Tag = dbName
 
 	sb.WriteString(strings.Title(name))
-	//Here, we also have to consider the metadata values.
-	meta := g.meta[objectName][name]
-	if meta != nil {
-		if meta.Nofield {
-			fi.Nofield = meta.Nofield
+	if flag&flagFacet > 0 {
+		if !(reverseMap[directiveName] != objectName) {
+			fi.WrittenTag = "~"
 		}
-		fi.Nosave = meta.Nosave
-		if meta.Facet != "" {
-			dbName = meta.Facet +"|"+ name
-		}
-		//TODO: Should we always include ,omitempty for written tag?
-		/*if true {//fi.IsPassword || meta.Facet != ""{
-			fi.WrittenTag = dbName + ",omitempty"
-		}*/
-		fi.WrittenTag = dbName
-	} else {
-		fi.WrittenTag = dbName
+		fi.WrittenTag += reverseMap[directiveName] + "."+ directiveName + "|" + name
+		fi.Tag = fi.WrittenTag
+ 	} else {
+ 		fi.WrittenTag = dbName
 	}
 	//All tags are omitempty.
 	fi.WrittenTag += ",omitempty"
@@ -247,9 +246,11 @@ func createField(objectName string, name string, typ string, sb *bytes.Buffer, f
 	fi.Name = strings.Title(name)
 	fi.Type = typ
 	fi.flags = flag
-
 	return fi
 }
+
+//This map remembers the state of reverse edges.
+var reverseMap = make(map[string]string)
 
 //Returns the field name relevant for the database. Iterates over non-null & list and marks flags.
 //TODO: Do not return pointer!
@@ -295,13 +296,67 @@ func iterate(objName string, data *schema.Field, field common.Type, sb *bytes.Bu
 			Check directives.
 		*/
 		var dirName string
+		/*
+			This code is pretty messy but it's important. A reverse edge can be 1-many or many-many.
+			For 1-many always use the 1 edgename, but for many-many it is defined by source.
+		 */
+
+		//TODO: don't inline interface like this.
+		type object interface {
+			GetField(string) *schema.Field
+			GetName() string
+		}
 		if dir := data.Directives.Get("hasInverse"); dir != nil {
 			f |= flagReverse
 			val := dir.Args.MustGet("field")
+			var obj object
+
+			if val := g.schema.GetObject(typ); val != nil {
+				obj = val
+			} else if val := g.schema.GetInterface(typ); val != nil {
+				obj = val
+			}
+
+			if obj != nil {
+				if objField := obj.GetField(val.String()); objField != nil {
+					if objField.IsArray() && f&flagArray > 0 {
+						//Many-many.
+						if arr := data.Directives.Get("source"); arr == nil {
+							objName = obj.GetName()
+							f |= flagTwoWay
+						}
+					} else {
+						if f &flagArray > 0 {
+							//We are the reverse edge.
+							objName = obj.GetName()
+							f |= flagTwoWay
+						} else if objField.IsArray() {
+							//We are the 1-edge. Nothing to do here.
+						}
+					}
+					reverseMap[val.String()] = objName
+				} else {
+					panic("missing field in hasInverse object: " + val.String())
+				}
+			} else {
+				panic("missing field in edge for hasInverse, misspelled? " + val.String())
+			}
 			dirName = val.String()
 		}
+		if dir := data.Directives.Get("facet"); dir != nil {
+			//Facet value.
+			val := dir.Args.MustGet("edge").String()
+			f |= flagFacet
+			dirName = val
+		}
+		if dir := data.Directives.Get("lang"); dir != nil {
+			f |= flagLang
+		}
+
 		var ff = createField(objName, name, typ, sb, f, dirName, g)
 		ff.Directives = data.Directives
+		ff.Nofield = ff.HasDirective("ignore") != nil
+		ff.Nosave = ff.HasDirective("ignore") != nil
 		return ff
 	}
 	return Field{}
@@ -314,10 +369,11 @@ type modelStruct struct {
 	ScalarFields []Field
 	//used for SetType.
 	Interfaces []string
+	Facets []string
 }
 
 //Executes the model template for all scalar fields.
-func modelTemplate(interf []*schema.Interface, name string, allScalars []Field, sb *bytes.Buffer) {
+func modelTemplate(sch *schema.Schema, name string, allScalars []Field, sb *bytes.Buffer) {
 	templ := getTemplate("Model")
 	if templ == nil {
 		panic("missing Model template")
@@ -326,9 +382,14 @@ func modelTemplate(interf []*schema.Interface, name string, allScalars []Field, 
 		Name:   name,
 		Fields: allScalars,
 	}
-	for _, v := range interf {
+	for _, v := range sch.Interfaces() {
 		m.Interfaces = append(m.Interfaces, v.Name)
 	}
+	/*for _,v := range m.Fields {
+		if v.flags&flagFacet > 0 {
+			m.Facets = append(m.Facets, strings.ToLower(v.Name))
+		}
+	}*/
 	//Create the scalar allScalars, i.e. split it into two slices.
 main:
 	for _, v := range m.Fields {

@@ -18,14 +18,18 @@ type Post struct {
 	mulbase.Node
 	Text          string     `json:"Post.text,omitempty"`
 	DatePublished *time.Time `json:"Post.datePublished,omitempty"`
+	From          *User      `json:"Post.from,omitempty"`
+	Comments      []Comment  `json:"~Comment.commentsOn,omitempty"`
 }
 
-var PostFields mulbase.FieldList = []mulbase.Field{MakeField("Post.text", 0), MakeField("Post.datePublished", 0)}
+var PostFields mulbase.FieldList = []mulbase.Field{MakeField("Post.text", 0|mulbase.MetaLang), MakeField("Post.datePublished", 0), MakeField("Post.from", 0|mulbase.MetaObject), MakeField("~Comment.commentsOn", 0|mulbase.MetaObject|mulbase.MetaList|mulbase.MetaReverse)}
 
 //Generating constant field values.
 const (
 	PostTextField          mulbase.Predicate = "Post.text"
 	PostDatePublishedField mulbase.Predicate = "Post.datePublished"
+	PostFromField          mulbase.Predicate = "Post.from"
+	PostCommentsField      mulbase.Predicate = "~Comment.commentsOn"
 )
 
 //SaveValues saves the node values that
@@ -110,18 +114,16 @@ type Question struct {
 	//List of interfaces implemented.
 	Post
 	//Regular fields
-	Title string `json:"Question.title,omitempty"`
-	Id    int    `json:"Question.id,omitempty"`
 }
 
-var QuestionFields mulbase.FieldList = []mulbase.Field{MakeField("Question.title", 0), MakeField("Question.id", 0), MakeField("Post.text", 0), MakeField("Post.datePublished", 0)}
+var QuestionFields mulbase.FieldList = []mulbase.Field{MakeField("Post.text", 0|mulbase.MetaLang), MakeField("Post.datePublished", 0), MakeField("Post.from", 0|mulbase.MetaObject), MakeField("~Comment.commentsOn", 0|mulbase.MetaObject|mulbase.MetaList|mulbase.MetaReverse)}
 
 //Generating constant field values.
 const (
-	QuestionTitleField         mulbase.Predicate = "Question.title"
-	QuestionIdField            mulbase.Predicate = "Question.id"
 	QuestionTextField          mulbase.Predicate = "Post.text"
 	QuestionDatePublishedField mulbase.Predicate = "Post.datePublished"
+	QuestionFromField          mulbase.Predicate = "Post.from"
+	QuestionCommentsField      mulbase.Predicate = "~Comment.commentsOn"
 )
 
 //SaveValues saves the node values that
@@ -158,8 +160,6 @@ func (r *Question) SetType() {
 //Values returns all the scalar values for this node.
 func (r *Question) Values() mulbase.DNode {
 	var m QuestionScalars
-	m.Title = r.Title
-	m.Id = r.Id
 	m.Text = r.Text
 	m.DatePublished = r.DatePublished
 	r.SetType()
@@ -171,8 +171,6 @@ func (r *Question) Values() mulbase.DNode {
 //Note that this completely ignores any omitempty tags so use with care.
 func (r *Question) MapValues() mulbase.Mapper {
 	var m = make(map[string]interface{})
-	m["Question.title"] = r.Title
-	m["Question.id"] = r.Id
 	m["Post.text"] = r.Text
 	m["Post.datePublished"] = r.DatePublished
 	if r.Uid != "" {
@@ -187,8 +185,6 @@ func (r *Question) MapValues() mulbase.Mapper {
 //It is a mirror of the previous struct with all scalar values.
 type QuestionScalars struct {
 	mulbase.Node
-	Title         string     `json:"Question.title,omitempty"`
-	Id            int        `json:"Question.id,omitempty"`
 	Text          string     `json:"Post.text,omitempty"`
 	DatePublished *time.Time `json:"Post.datePublished,omitempty"`
 }
@@ -212,16 +208,18 @@ type Comment struct {
 	//List of interfaces implemented.
 	Post
 	//Regular fields
-	Episode Type `json:"Comment.episode,omitempty"`
+	CommentsOn *Post `json:"Comment.commentsOn,omitempty"`
 }
 
-var CommentFields mulbase.FieldList = []mulbase.Field{MakeField("Comment.episode", 0), MakeField("Post.text", 0), MakeField("Post.datePublished", 0)}
+var CommentFields mulbase.FieldList = []mulbase.Field{MakeField("Comment.commentsOn", 0|mulbase.MetaObject|mulbase.MetaReverse), MakeField("Post.text", 0|mulbase.MetaLang), MakeField("Post.datePublished", 0), MakeField("Post.from", 0|mulbase.MetaObject), MakeField("~Comment.commentsOn", 0|mulbase.MetaObject|mulbase.MetaList|mulbase.MetaReverse)}
 
 //Generating constant field values.
 const (
-	CommentEpisodeField       mulbase.Predicate = "Comment.episode"
+	CommentCommentsOnField    mulbase.Predicate = "Comment.commentsOn"
 	CommentTextField          mulbase.Predicate = "Post.text"
 	CommentDatePublishedField mulbase.Predicate = "Post.datePublished"
+	CommentFromField          mulbase.Predicate = "Post.from"
+	CommentCommentsField      mulbase.Predicate = "~Comment.commentsOn"
 )
 
 //SaveValues saves the node values that
@@ -258,7 +256,6 @@ func (r *Comment) SetType() {
 //Values returns all the scalar values for this node.
 func (r *Comment) Values() mulbase.DNode {
 	var m CommentScalars
-	m.Episode = r.Episode
 	m.Text = r.Text
 	m.DatePublished = r.DatePublished
 	r.SetType()
@@ -270,7 +267,6 @@ func (r *Comment) Values() mulbase.DNode {
 //Note that this completely ignores any omitempty tags so use with care.
 func (r *Comment) MapValues() mulbase.Mapper {
 	var m = make(map[string]interface{})
-	m["Comment.episode"] = r.Episode
 	m["Post.text"] = r.Text
 	m["Post.datePublished"] = r.DatePublished
 	if r.Uid != "" {
@@ -285,7 +281,6 @@ func (r *Comment) MapValues() mulbase.Mapper {
 //It is a mirror of the previous struct with all scalar values.
 type CommentScalars struct {
 	mulbase.Node
-	Episode       Type       `json:"Comment.episode,omitempty"`
 	Text          string     `json:"Post.text,omitempty"`
 	DatePublished *time.Time `json:"Post.datePublished,omitempty"`
 }
@@ -300,6 +295,97 @@ func (s *CommentScalars) MapValues() mulbase.Mapper {
 
 func (s *CommentScalars) Fields() mulbase.FieldList {
 	return CommentFields
+}
+
+//End of model.template
+type User struct {
+	//This line declares basic properties for a database node.
+	mulbase.Node
+	//Regular fields
+	Name string `json:"User.name,omitempty"`
+	Pass string `json:"User.pass,omitempty"`
+}
+
+var _ = MakeField("User.pass", 0)
+var UserFields mulbase.FieldList = []mulbase.Field{MakeField("User.name", 0)}
+
+//Generating constant field values.
+const (
+	UserNameField mulbase.Predicate = "User.name"
+	UserPassField mulbase.Predicate = "User.pass"
+)
+
+//SaveValues saves the node values that
+//do not contain any references to other objects.
+func (r *User) SaveValues(ctx context.Context, txn *mulbase.Txn) error {
+	mut := mulbase.CreateMutation(r.Values(), mulbase.MutateSet)
+	_, err := txn.Mutate(ctx, mut)
+	return err
+}
+func (r *User) GetType() []string {
+	if r.Type == nil {
+		r.SetType()
+	}
+	return r.Type
+}
+
+func (r *User) Facets() []string {
+	return nil
+}
+
+//Fields returns all Scalar fields for this value.
+func (r *User) Fields() mulbase.FieldList {
+	return UserFields
+}
+
+//Sets the types. This DOES NOT include interfaces!
+//as they are set in dgraph already.
+func (r *User) SetType() {
+	r.Type = []string{
+		"User",
+	}
+}
+
+//Values returns all the scalar values for this node.
+func (r *User) Values() mulbase.DNode {
+	var m UserScalars
+	m.Name = r.Name
+	r.SetType()
+	m.Node = r.Node
+	return &m
+}
+
+//Values returns all the scalar values for this node.
+//Note that this completely ignores any omitempty tags so use with care.
+func (r *User) MapValues() mulbase.Mapper {
+	var m = make(map[string]interface{})
+	m["User.name"] = r.Name
+	if r.Uid != "" {
+		m["uid"] = r.Uid
+	}
+	r.SetType()
+	m["dgraph.type"] = r.Type
+	return m
+}
+
+//UserScalars is simply to avoid a map[string]interface{}
+//It is a mirror of the previous struct with all scalar values.
+type UserScalars struct {
+	mulbase.Node
+	Name string `json:"User.name,omitempty"`
+	Pass string `json:"User.pass,omitempty"`
+}
+
+func (s *UserScalars) Values() mulbase.DNode {
+	return s
+}
+
+func (s *UserScalars) MapValues() mulbase.Mapper {
+	panic("UserScalars called, use the original one instead")
+}
+
+func (s *UserScalars) Fields() mulbase.FieldList {
+	return UserFields
 }
 
 //End of model.template

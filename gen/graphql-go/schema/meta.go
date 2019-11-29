@@ -62,6 +62,16 @@ var metaSrc = `
 	directive @hasInverse(
 	  field: String
 	) on FIELD_DEFINITION | ENUM_VALUE
+	#Allow DGraph facet. 
+	directive @facet(
+	  edge: String
+	) on FIELD_DEFINITION | ENUM_VALUE
+	directive @source (
+	) on FIELD_DEFINITION | ENUM_VALUE
+	directive @ignore (
+	) on FIELD_DEFINITION | ENUM_VALUE
+	directive @lang (
+	) on FIELD_DEFINITION | ENUM_VALUE
 	# A Directive provides a way to describe alternate runtime execution and type validation behavior in a GraphQL document.
 	#
 	# In some cases, you need to provide options to alter GraphQL's execution behavior

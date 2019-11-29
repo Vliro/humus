@@ -14,7 +14,11 @@ func (c CustomCreator) Create(i *Generator, w io.Writer) {
 	if w == nil {
 		return
 	}
-	c.writeCustoms(i.States[CustomsFileName].(map[string]map[string]Customs), w, i)
+	val, ok := i.States[CustomsFileName]
+	if !ok {
+		return
+	}
+	c.writeCustoms(val.(map[string]map[string]Customs), w, i)
 }
 
 type Customs struct {

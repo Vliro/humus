@@ -33,12 +33,15 @@ const schemaDecl = "%s: %s %s . \n"
 
 //makeSchema generates a regular graphQL schema for dgraph.
 //it is very much temporary!
-func makeSchema(output io.Writer) {
+func makeSchema(output io.Writer, g *Generator) {
 	var buffer bytes.Buffer
 	for name, val := range globalFields {
 		//Emit types first.
 		var ib bytes.Buffer
 		fl: for _,v := range val.AllFields {
+			if val := v.HasDirective("facet"); val != nil {
+				continue fl
+			}
 			for _,val := range v.Directives {
 				if val.Name.Name == "hasInverse" {
 					if v.flags & flagArray != 0 {
@@ -52,6 +55,7 @@ func makeSchema(output io.Writer) {
 		buffer.WriteString(fmt.Sprintf(typeDecl, name, ib.String()))
 		ib = bytes.Buffer{}
 	}
+
 	for _, val := range globalFields {
 		//Emit types first.
 		var written = make(map[string]struct{})
@@ -67,7 +71,11 @@ func makeSchema(output io.Writer) {
 					if v.flags & flagArray == 0 {
 						directives.WriteString("@reverse ")
 					} else {
-						continue fieldLoop
+						if val := v.HasDirective("source"); val != nil {
+							directives.WriteString("@reverse ")
+						} else {
+							continue fieldLoop
+						}
 					}
 				case "search":
 					directives.WriteString("@index(")
@@ -76,6 +84,10 @@ func makeSchema(output io.Writer) {
 						directives.WriteString(str[1:len(str)-1])
 					}
 					directives.WriteString(") ")
+				case "facet":
+					continue fieldLoop
+				case "lang":
+					directives.WriteString("@lang ")
 				}
 			}
 			written[v.Name] = struct{}{}

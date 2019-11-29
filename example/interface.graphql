@@ -1,0 +1,19 @@
+interface Post {
+    text: String! @search (by:[hash]) @lang
+    datePublished: DateTime!
+    from: User!
+    comments: [Comment] @hasInverse(field: commentsOn)
+}
+
+type Question implements Post {
+
+}
+
+type Comment implements Post {
+    commentsOn: Post! @hasInverse(field: comments)
+}
+
+type User {
+    name: String! @search (by:[hash])
+    pass: String! @ignore
+}

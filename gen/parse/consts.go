@@ -35,4 +35,6 @@ const (
 	flagReverse
 	flagObject
 	flagFacet
+	flagTwoWay
+	flagLang
 )

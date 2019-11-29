@@ -1,0 +1,40 @@
+type Post {
+Post.text : string  
+Post.datePublished : datetime  
+Post.from : User  
+}
+type Question {
+Post.text : string  
+Post.datePublished : datetime  
+Post.from : User  
+}
+type Comment {
+Comment.commentsOn : Post  
+Post.text : string  
+Post.datePublished : datetime  
+Post.from : User  
+}
+type User {
+User.name : string  
+User.pass : string  
+}
+type Error {
+Error.message : string  
+Error.errorType : string  
+Error.time : datetime  
+}
+<User.name>: string @index(hash)  . 
+<User.pass>: string  . 
+<Error.message>: string  . 
+<Error.errorType>: string  . 
+<Error.time>: datetime  . 
+<Post.text>: string @index(hash) @lang  . 
+<Post.datePublished>: datetime  . 
+<Post.from>: uid  . 
+<Post.text>: string @index(hash) @lang  . 
+<Post.datePublished>: datetime  . 
+<Post.from>: uid  . 
+<Comment.commentsOn>: uid @reverse  . 
+<Post.text>: string @index(hash) @lang  . 
+<Post.datePublished>: datetime  . 
+<Post.from>: uid  . 

@@ -27,6 +27,15 @@ type Field struct {
 	IsArray bool
 }
 
+func (f *Field) HasDirective(name string) *common.Directive {
+	for _,v := range f.Directives {
+		if v.Name.Name == name {
+			return v
+		}
+	}
+	return nil
+}
+
 func (f *Field) IsScalar() bool {
 	for _,v := range builtins {
 		if v == f.Type {

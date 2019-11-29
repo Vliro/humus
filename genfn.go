@@ -5,7 +5,7 @@ import "fmt"
 //Functions associated with the generated package
 
 //GetChild returns the child of node named child with fields supplied by fields.
-//Count represents how many (sorted by first) to get as well as an interface
+//Pagination represents how many (sorted by first) to get as well as an interface
 //to deserialize to.
 //Do not return interfaces.
 func GetChild(node DNode, child Predicate, fields []Field, count int, filter *Filter) *GeneratedQuery {
@@ -43,7 +43,7 @@ func AttachToListObject(node DNode, field Field, value DNode) SingleMutation {
 	mapVal["uid"] = node.UID()
 	mapVal[string(field.Name)] = MapUid{Uid:value.UID()}
 	//Create mutation.
-	return SingleMutation{QueryType:QuerySet, Object:mapVal}
+	return SingleMutation{MutationType:MutateSet, Object:mapVal}
 }
 //WriteNode saves a single scalar value.
 func SetScalarValue(node DNode, field Field, txn *Txn, value interface{}) (*SingleMutation, error) {
@@ -54,7 +54,7 @@ func SetScalarValue(node DNode, field Field, txn *Txn, value interface{}) (*Sing
 	mapVal["uid"] = node.UID()
 	mapVal[string(field.Name)] = value
 	var m SingleMutation
-	m.QueryType = QuerySet
+	m.MutationType = MutateSet
 	m.Object = mapVal
 	return &m, nil
 }
@@ -65,7 +65,7 @@ func SaveScalars(node DNode) SingleMutation {
 	node.SetType()
 	return SingleMutation{
 		Object:    node.Values(),
-		QueryType: QuerySet,
+		MutationType: MutateSet,
 	}
 }
 
@@ -80,7 +80,7 @@ func SaveManyScalars(vals ...DNode) *MutationQuery {
 		}
 		m.Values = append(m.Values, v.Values())
 	}
-	m.QueryType = QuerySet
+	m.MutationType = MutateSet
 	return &m
 }
 //SaveNode simply serializes an entire node and saves it.
@@ -92,7 +92,7 @@ func SaveNode(node DNode) SingleMutation{
 	}
 	var m = SingleMutation{
 		Object:    node,
-		QueryType: QuerySet,
+		MutationType: MutateSet,
 	}
 	if _, ok := node.(Saver); !ok {
 		fmt.Println("SaveNode called without Saver! Debugging..")
@@ -112,7 +112,7 @@ func SaveNodes(vals ...DNode) *MutationQuery {
 		m.Values = append(m.Values, v)
 	}*/
 	m.Values = vals
-	m.QueryType = QuerySet
+	m.MutationType = MutateSet
 	return &m
 }
 //DeleteNode deletes the node. NOTE: If it does not implement
@@ -120,13 +120,13 @@ func SaveNodes(vals ...DNode) *MutationQuery {
 func DeleteNode(node DNode) SingleMutation {
 	return SingleMutation{
 		Object:    NewMapper(node.UID(), node.GetType()),
-		QueryType: QueryDelete,
+		MutationType: MutateDelete,
 	}
 }
 
 func DeleteNodes(nodes ...DNode) *MutationQuery {
 	return &MutationQuery{
 		Values:    nodes,
-		QueryType: QueryDelete,
+		MutationType: MutateDelete,
 	}
 }

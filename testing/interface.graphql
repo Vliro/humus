@@ -4,17 +4,15 @@ interface Post {
 }
 
 type Question implements Post {
-    title: [Episode!]!
+    title: String!
     id: Int!
 }
 
 type Comment implements Post {
-    commentsOn: Post! @hasInverse(field: yes)
-    episode: Episode!
+    episode: Type!
 }
 
-enum Episode {
-    NEWHOPE
-    EMPIRE
-    JEDI
+enum Type {
+    First
+    Second
 }

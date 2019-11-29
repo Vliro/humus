@@ -48,8 +48,8 @@ const (
 //SaveValues saves the node values that
 //do not contain any references to other objects.
 func (r *dbError) SaveValues(ctx context.Context, txn *Txn) error {
-	mut := CreateMutation(r.Values(), QuerySet)
-	err := txn.Query(ctx, mut)
+	mut := CreateMutation(r.Values(), MutateSet)
+	_, err := txn.Mutate(ctx, mut)
 	return err
 }
 func (r *dbError) GetType() []string {

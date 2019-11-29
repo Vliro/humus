@@ -2,7 +2,6 @@ package gen
 
 import (
 	"context"
-	"fmt"
 	"github.com/Vliro/mulbase"
 	"github.com/dgraph-io/dgo/protos/api"
 	"io/ioutil"
@@ -30,7 +29,7 @@ func TestMain(m *testing.M) {
 	if err != nil {
 		panic(err)
 	}
-	schema, err := ioutil.ReadFile("dgraph.txt")
+	schema, err := ioutil.ReadFile("schema.txt")
 	if err != nil {
 		panic(err)
 	}
@@ -46,7 +45,8 @@ func TestMain(m *testing.M) {
 func TestMutate(t *testing.T) {
 	var p Post
 	p.Text = "Test"
-	p.DatePublished = time.Now()
+	tt := time.Now()
+	p.DatePublished = &tt
 	val, err := db.Mutate(context.Background(), mulbase.SaveNode(&p))
 	if err != nil {
 		t.Error(err)
@@ -67,7 +67,7 @@ func TestMutate(t *testing.T) {
 		return
 	}
 }
-
+/*
 func TestEdge(t *testing.T) {
 	tim := time.Now()
 	var p Comment
@@ -92,8 +92,8 @@ func TestEdge(t *testing.T) {
 		return
 	}
 	fmt.Printf("Time to execute TestEdge %v", time.Now().Sub(tim))
-}
-
+}*/
+/*
 func TestQuery(t *testing.T) {
 	var p Comment
 	p.CommentsOn = &Post{
@@ -113,7 +113,7 @@ func TestQuery(t *testing.T) {
 		t.Fail()
 		return
 	}
-}
+}*/
 
 
 /*

@@ -10,70 +10,76 @@ import (
 //change so a map[string]interface{} is needed for certain mutations.
 type SingleMutation struct {
 	Object DNode
-	QueryType QueryType
+	MutationType MutationType
 }
 
-func (m SingleMutation) Type() QueryType {
-	return m.QueryType
+func (m SingleMutation) Type() MutationType {
+	return m.MutationType
 }
 
-func (m SingleMutation) Process(SchemaList) ([]byte, map[string]string, error) {
+func (m SingleMutation) Mutate() ([]byte, error) {
 	//panic("do not process a single mutation")
 	if m.Object == nil {
-		return nil, nil, errors.New("nil value supplied to process")
+		return nil, errors.New("nil value supplied to process")
+	}
+	if m.Object.UID() == "" {
+		m.Object.SetType()
 	}
 	var b []byte
-	switch m.QueryType {
-	case QuerySet:
+	switch m.MutationType {
+	case MutateSet:
 		if val, ok := m.Object.(Saver); ok {
 			if val == nil {
-				return nil, nil, errors.New("nil value supplied to process")
+				return nil, errors.New("nil value supplied to process")
 			}
 			b, _ = json.Marshal(val.Save())
 		} else {
 			b, _ = json.Marshal(m.Object)
 		}
-	case QueryDelete:
+	case MutateDelete:
 		if val, ok := m.Object.(Deleter); ok {
 			if val == nil {
-				return nil, nil, errors.New("nil value supplied to process")
+				return nil, errors.New("nil value supplied to process")
 			}
 			b, _ = json.Marshal(val.Delete())
 		} else {
 			b, _ = json.Marshal(m.Object)
 		}
 	}
-	return b, nil, nil
+	return b, nil
 }
 
 type MutationQuery struct {
 	Values []DNode
-	QueryType QueryType
+	MutationType MutationType
 }
 
-func (m *MutationQuery) Process(SchemaList) ([]byte, map[string]string, error) {
+func (m *MutationQuery) Mutate() ([]byte, error) {
 	for k,v := range m.Values {
-		switch m.QueryType {
-		case QuerySet:
+		if v.UID() == "" {
+			v.SetType()
+		}
+		switch m.MutationType {
+		case MutateSet:
 			if val, ok := v.(Saver); ok {
 				if val == nil {
-					return nil, nil, errors.New("nil value supplied to process")
+					return nil, errors.New("nil value supplied to process")
 				}
 				m.Values[k] = val.Save()
 			}
-		case QueryDelete:
+		case MutateDelete:
 			if val, ok := v.(Deleter); ok {
 				if val == nil {
-					return nil, nil, errors.New("nil value supplied to process")
+					return nil, errors.New("nil value supplied to process")
 				}
 				m.Values[k] = val.Delete()
 			}
 		}
 	}
 	byt, err := json.Marshal(m.Values)
-	return byt, nil, err
+	return byt, err
 }
 
-func (m *MutationQuery) Type() QueryType {
-	return m.QueryType
+func (m *MutationQuery) Type() MutationType {
+	return m.MutationType
 }

@@ -10,16 +10,7 @@ type FnCreator struct {
 }
 
 func (f FnCreator) Create(i *Generator, w io.Writer) {
-	i.writeImports(fnImports, w)
 	f.processFunctions(i.schema, i.outputs[FunctionFileName], f.Fields)
-}
-
-type fieldTemplate struct {
-	Name   string
-	Parent string
-	Type   string
-	Tag string
-	IsArray bool
 }
 
 type GetTemplate struct {
@@ -27,20 +18,16 @@ type GetTemplate struct {
 	Name   string
 }
 
-var fnImports = []string{
-	"github.com/Vliro/mulbase",
-	"context",
-}
 /*
 	processFunctions is the entrypoint for declaring all predeclared functions
 */
 
 func (f FnCreator) processFunctions(sch *schema.Schema, writer io.Writer, m map[string][]Field) {
-	obj := sch.Objects()
+	//obj := sch.Objects()
 	//writeImports(fnImports, writer)
-	for _, v := range obj {
-		processFieldTemplates(v, writer, m)
-	}
+	//for _, v := range obj {
+	//	processFieldTemplates(v, writer, m)
+	//}
 	makeGlobals(writer)
 }
 //creates global field functions.

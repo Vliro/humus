@@ -16,7 +16,7 @@ func processInterface(value interface{}) (string, VarType) {
 	case string:
 		return a, TypeStr
 	case Predicate:
-		return "<"+string(a)+">", TypePred
+		return string(a), TypePred
 	case UID:
 		return string(a), TypeUid
 	default:

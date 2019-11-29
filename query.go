@@ -2,11 +2,9 @@ package mulbase
 
 import (
 	"bytes"
-	"fmt"
 	"strconv"
 	"strings"
 	"sync"
-	"time"
 )
 
 var pool sync.Pool
@@ -24,7 +22,10 @@ func init() {
 type UID string
 
 func (u UID) Int() int64 {
-	val, err := strconv.ParseInt(string(u), 16, 64)
+	if len(u) < 2 {
+		return -1
+	}
+	val, err := strconv.ParseInt(string(u[2:]), 16, 64)
 	if err != nil {
 		return -1
 	}
@@ -51,8 +52,8 @@ const (
 	// syntax tokens
 	tokenLB     = "{" // Left Brace
 	tokenRB     = "}" // Right Brace
-	tokenLP     = "(" // Left Parenthesis
-	tokenRP     = ")" // Right Parenthesis
+	tokenLP     = "(" // Left parenthesis
+	tokenRP     = ")" // Right parenthesis
 	tokenColumn = ":"
 	tokenComma  = ","
 	tokenSpace  = " "
@@ -70,9 +71,6 @@ func (q *Queries) Process(SchemaList) ([]byte, map[string]string, error) {
 	return q.create()
 }
 
-func (q *Queries) Type() QueryType {
-	return QueryRegular
-}
 
 func (q *Queries) Append(qu *GeneratedQuery) *Queries {
 	q.Queries = append(q.Queries, qu)
@@ -85,30 +83,26 @@ func (q *Queries) create() ([]byte, map[string]string, error) {
 	//The query variable information.
 	final.WriteString("query t")
 	//The global variable counter. It exists in a closure, it's just easy.
-	var varCounter int
+	var varCounter = -1
+	//TODO: Better to not use a closure as to avoid heap allocating an int..
 	varFunc := func() int {
 		varCounter++
-		return varCounter - 1
+		return varCounter
 	}
-	var e error
 	var output = make(map[string]string)
 	for k, qu := range q.Queries {
-		e = qu.check()
-		if e != nil {
-			return nil, nil, e
-		}
 		qu.index = k + 1
-		qu.VarMap = output
+		qu.varMap = output
 		qu.varFunc = varFunc
-		str, _, err := qu.create()
+		str, err := qu.create()
 		if err != nil {
 			return nil, nil, err
 		}
-		queryStr.Write(str)
+		queryStr.WriteString(str)
 	}
 	final.WriteString("(")
 	for k, qu := range q.Queries {
-		str := qu.Variables(false)
+		str := qu.Variables()
 		if str == "" {
 			continue
 		}
@@ -124,12 +118,6 @@ func (q *Queries) create() ([]byte, map[string]string, error) {
 	return final.Bytes(), output, nil
 }
 
-//An aggregate value i.e. sum as well as what alias to name it as.
-type AggregateValues struct {
-	Type  AggregateType
-	Alias string
-}
-
 //The Field maps include a path for the predicate.
 //Root is "", all sub are /Predicate1/Predicate2...
 //It is quite a big allocation.
@@ -140,16 +128,18 @@ type GeneratedQuery struct {
 	//Top level filter.
 	Filter *Filter
 	//All sub parts of the query.
-	FieldFunctions map[Predicate]Function
-	FieldOrderings map[Predicate][]Ordering
-	FieldCount     map[Predicate][]Count
-	FieldAggregate map[Predicate]AggregateValues
-	FieldFilters   map[Predicate]Filter
-	varBuilder     strings.Builder
-	VarMap         map[string]string
-	varFunc        func() int
+	//FieldFunctions map[Predicate]Function
+	//FieldOrderings map[Predicate][]Ordering
+	//FieldCount     map[Predicate][]Pagination
+	//FieldAggregate map[Predicate]AggregateValues
+	//FieldFilters   map[Predicate]Filter
+	modifiers  map[Predicate]modifierList
+	varBuilder strings.Builder
+	varMap     map[string]string
+	varFunc    func() int
 	//The overall language for this query.
 	Language Language
+	strictLanguage bool
 	//Which directives to apply on this query.
 	Directives []Directive
 	Fields     Fields
@@ -164,32 +154,25 @@ func (q *GeneratedQuery) SetFields(f Fields) *GeneratedQuery {
 	return q
 }
 
+func (q *GeneratedQuery) Facets(path Predicate) *GeneratedQuery {
+	q.modifiers[path] = append(q.modifiers[path], facet{})
+	return q
+}
+
 func NewQuery() *GeneratedQuery {
 	return &GeneratedQuery{
-		VarMap: make(map[string]string),
+		varMap:    make(map[string]string),
+		modifiers: make(map[Predicate]modifierList),
 	}
 }
 
-func (q *GeneratedQuery) Process(sch SchemaList) ([]byte, map[string]string, error) {
+func (q *GeneratedQuery) Process(sch SchemaList) (string, error) {
 	q.schema = sch
-	err := q.check()
-	if err != nil {
-		return nil, nil, err
-	}
 	return q.create()
 }
 
-func (q *GeneratedQuery) Type() QueryType {
-	return QueryRegular
-}
-
-func (q *GeneratedQuery) SetSubOrdering(t OrderType, path Predicate, pred Predicate) *GeneratedQuery {
-	if q.FieldOrderings == nil {
-		q.FieldOrderings = make(map[Predicate][]Ordering)
-	}
-	val := q.FieldOrderings[path]
-	val = append(val, Ordering{Type: t, Predicate: pred})
-	q.FieldOrderings[path] = val
+func (q *GeneratedQuery) AddOrdering(t OrderType, path Predicate, pred Predicate) *GeneratedQuery {
+	q.modifiers[path] = append(q.modifiers[path], Ordering{Type: t, Predicate: pred})
 	return q
 }
 
@@ -200,12 +183,9 @@ const (
 	MutateSet    MutationType = "set"
 )
 
-func (q *GeneratedQuery) create() ([]byte, map[string]string, error) {
-	t := time.Now()
-	if err := q.check(); err != nil {
-		return nil, nil, err
-	}
-	var sb = &bytes.Buffer{}
+func (q *GeneratedQuery) create() (string, error) {
+	//t := time.Now()
+	var sb strings.Builder
 	//The size of default buffer.
 	const size = 256
 	sb.Grow(size)
@@ -214,36 +194,63 @@ func (q *GeneratedQuery) create() ([]byte, map[string]string, error) {
 	if q.index != 0 {
 		sb.WriteString(strconv.Itoa(q.index))
 	}
-	sb.WriteString(tokenLP)
-	sb.WriteString("func")
-	sb.WriteString(tokenColumn)
-	sb.WriteString(tokenSpace)
-	q.Function.create(q, "", sb)
+	sb.WriteString(tokenLP + "func" + tokenColumn + tokenSpace)
+	err := q.Function.create(q, &sb)
+	if err != nil {
+		return "", err
+	}
 	sb.WriteString(tokenRP)
 	//optional filter
 	if q.Filter != nil {
-		q.Filter.create(q, "", sb)
+		err := q.Filter.create(q, &sb)
+		if err != nil {
+			return "", err
+		}
 	}
 	for _, v := range q.Directives {
-		sb.WriteString("@" + string(v))
+		sb.WriteByte('@')
+		sb.WriteString(string(v))
 	}
 	sb.WriteString(tokenLB)
+	var parentBuf = make(unsafeSlice,0,64)
 	for i, field := range q.Fields.Get() {
 		if i != 0 {
 			sb.WriteString(tokenSpace)
 		}
-		field.create(q, field.Name, sb)
+		parentBuf = append(parentBuf, field.Name...)
+		err := field.create(q, parentBuf, &sb)
+		if err != nil {
+			return "", err
+		}
+		parentBuf = parentBuf[:0]
 	}
 	//Add default uid to top level field and close query.
 	sb.WriteString(" uid" + tokenRB + tokenRB)
 	//TODO: Write variable header and create the var map.
-	var varString = q.Variables(true)
-	var result = make([]byte, len(varString)+len(sb.Bytes()))
+	//TODO: This is a way to see if it is single. This is not the best!
+	//TODO: Is there anyway to preallocate variables? I don't think so. That would imply
+	//traversing the tree once beforehand and that is unnecessary.
+	vars := q.Variables()
+	var result strings.Builder
+	if q.varFunc == nil {
+		result.Grow(len(vars)+sb.Len() + len("query t(") + 1)
+	} else {
+		result.Grow(sb.Len())
+	}
 	//Copy the query into result.
-	copy(result, varString)
-	copy(result[len(varString):], sb.Bytes())
-	fmt.Println(fmt.Sprintf("Creating query took %v", time.Now().Sub(t)))
-	return result, q.VarMap, nil
+	if q.varFunc == nil {
+		result.WriteString("query t(")
+		result.WriteString(vars)
+		result.WriteString(")")
+	}
+	result.WriteString(sb.String())
+	//fmt.Println(fmt.Sprintf("Creating query took %v", time.Now().Sub(t)))
+	buf := result.String()
+	return buf, nil
+}
+
+func (q *GeneratedQuery) Vars() map[string]string {
+	return q.varMap
 }
 
 func (q *GeneratedQuery) AddDirective(dir Directive) *GeneratedQuery {
@@ -256,103 +263,44 @@ func (q *GeneratedQuery) AddDirective(dir Directive) *GeneratedQuery {
 	return q
 }
 
-func (q *GeneratedQuery) check() error {
-	if err := q.Function.check(q); err != nil {
-		return err
-	}
-	for _, v := range q.FieldFunctions {
-		if err := v.check(q); err != nil {
-			return err
-		}
-	}
-	for _, v := range q.FieldFilters {
-		if err := v.check(q); err != nil {
-			return err
-		}
-	}
-	if err := q.Function.check(q); err != nil {
-		return err
-	}
-	for _, v := range q.Fields.Get() {
-		if err := v.check(q); err != nil {
-			return err
-		}
-	}
-	// check query
-	return nil
-}
-
 //Adds a count to a predicate.
-func (q *GeneratedQuery) AddSubCount(t CountType, path Predicate, value int) *GeneratedQuery {
-	c := Count{Type: t, Value: value}
-	if q.FieldCount == nil {
-		q.FieldCount = make(map[Predicate][]Count)
-	}
-	val := q.FieldCount[path]
-	//can append to nil slice:)
-	q.FieldCount[path] = append(val, c)
+func (q *GeneratedQuery) AddSubCount(t PaginationType, path Predicate, value int) *GeneratedQuery {
+	q.modifiers[path] = append(q.modifiers[path], Pagination{Type: t, Value: value})
+	return q
+}
+//AddAggregation adds aggregation on a value variable.
+//Note that path here is the root level of the aggregation such that
+//empty path corresponds to top level aggregation.
+func (q *GeneratedQuery) AddAggregation(typ AggregateType, path Predicate, alias string) *GeneratedQuery {
+	q.modifiers[path] = append(q.modifiers[path], AggregateValues{Type:typ, Alias: alias})
 	return q
 }
 
 //Adds a subfilter to a predicate.
-func (q *GeneratedQuery) AddSubFilter(f *Function, path Predicate, logical ...string) *GeneratedQuery {
-	if q.FieldFilters == nil {
-		q.FieldFilters = make(map[Predicate]Filter)
-	}
-	val, ok := q.FieldFilters[path]
-	if ok {
-		//All connected functions must have logical
-		//TODO: if already exists
-		return q
-	} else {
-		val = Filter{}
-		val.Function = f
-		q.FieldFilters[path] = val
-		return q
-	}
+func (q *GeneratedQuery) AddSubFilter(f *Function, path Predicate) *GeneratedQuery {
+	q.modifiers[path] = append(q.modifiers[path], MakeFilter(f))
+	return q
 }
 
 //SetLanguage sets the language for the query to apply to all fields.
-//Default english.
-func (q *GeneratedQuery) SetLanguage(l Language) *GeneratedQuery {
+//If strict do not allow untagged language.
+func (q *GeneratedQuery) SetLanguage(l Language, strict bool) *GeneratedQuery {
 	q.Language = l
 	return q
 }
 
 // Returns all the query variables for this query in create form.
 //single for single query
-func (q *GeneratedQuery) Variables(single bool) string {
-	/*sb := bytes.Buffer{}
-	i := 0
-	sb.WriteString("query test(")
-	for k, v := range q.VarMap {
-
-		if v.varType == TypeStr || v.varType == TypeInt {
-			sb.WriteString(k)
-			sb.WriteString(": ")
-			sb.WriteString(string(v.varType))
-		}
-		if i != len(q.VarMap)-1 {
-			sb.WriteByte(',')
-		}
-		i++
-	}
-	sb.WriteByte(')')*/
+func (q *GeneratedQuery) Variables() string {
 	if q.varBuilder.Len() == 0 {
 		return ""
-	}
-	if single {
-		return "query test(" + q.varBuilder.String() + ")"
 	}
 	return q.varBuilder.String()
 }
 
 //The alias is to avoid count(predicate) as name.
 func (q *GeneratedQuery) SetSubAggregate(path Predicate, alias string, aggregate AggregateType) *GeneratedQuery {
-	if q.FieldAggregate == nil {
-		q.FieldAggregate = make(map[Predicate]AggregateValues)
-	}
-	q.FieldAggregate[path] = AggregateValues{aggregate, alias}
+	q.modifiers[path] = append(q.modifiers[path], AggregateValues{aggregate, alias})
 	return q
 }
 
@@ -369,39 +317,12 @@ func (q *GeneratedQuery) registerVariable(typ VarType, value string) string {
 		q.varCounter++
 	}
 	var key = "$" + strconv.Itoa(val)
-	q.varBuilder.WriteString(key + ":" + string(typ))
-	q.VarMap[key] = value
+	q.varBuilder.WriteString(key)
+	q.varBuilder.WriteByte(':')
+	q.varBuilder.WriteString(string(typ))
+	q.varMap[key] = value
 	return key
 }
-
-// JSON returns a json create with "query" field.
-// shouldVar tells if it should print out the GraphQL variable create.
-/*
-func (q *GeneratedQuery) JSON(shouldVar bool) ([]byte, error) {
-	if q.VarMap == nil {
-		q.VarMap = make(map[create]VarObject)
-	}
-	if q.Type == TypeMutate {
-		if len(q.Mutations) == 0 {
-			return nil, fmt.Errorf("no mutations")
-		} else {
-			m := q.Mutations[0]
-			q.getMutateType = m.Type
-		}
-	}
-	s, err := q.Create()
-	if err != nil {
-		return nil, errors.WithStack(err)
-	}
-
-	if q.Type == TypeQuery && shouldVar {
-		var buf bytes.Buffer
-		buf.WriteString(q.createVariableString())
-		buf.Write(s)
-		return buf.Bytes(), err
-	}
-	return s, err
-}*/
 
 func (q *GeneratedQuery) SetFunction(function *Function) *GeneratedQuery {
 	q.Function = function
@@ -413,102 +334,3 @@ func (q *GeneratedQuery) SetFilter(filter *Filter) *GeneratedQuery {
 	q.Filter = filter
 	return q
 }
-
-/*
-func DeleteDNode(d DNode, ctx context.Context, sync bool, txn *TxnQuery) (map[create]create, error) {
-	m := Mutation{}
-	m.Object = d.DeleteUIDS()
-	m.Type = MutateDelete
-	return MutateMany(ctx, sync, nil, m)
-}
-
-func CreateDNode(js DNode, sync bool, txn *TxnQuery) (map[create]create, error) {
-	js.SetType()
-	return saveNodeInternal(js, sync, txn)
-}
-
-func saveInterface(ctx context.Context, txn *TxnQuery, v interface{}) (map[create]create, error) {
-	m := Mutation{}
-	m.Type = MutateSet
-	m.Object = v
-	return MutateMany(ctx, true, txn, m)
-}
-
-func saveInterfaceBuffer(txn *TxnQuery, v interface{}) {
-	m := Mutation{}
-	m.Object = v
-	m.Type = MutateSet
-	MutateMany(context.Background(), false, txn, m)
-}
-
-func deleteInterfaceBuffer(sync bool, txn *TxnQuery, val interface{}) {
-	m := Mutation{}
-	m.Object = val
-	m.Type = MutateDelete
-	MutateMany(context.Background(), false, txn, m)
-}
-
-func saveNodeInternal(js DNode, sync bool, txn *TxnQuery) (map[create]create, error) {
-	m := Mutation{}
-	m.Object = js.GetAllInfo(true)
-	m.Type = MutateSet
-	return MutateMany(context.Background(), sync, nil, m)
-}
-
-func SaveMultiplePreds(uid create, pred []create, ctx context.Context, sync bool, txn *TxnQuery, vals ...interface{}) error {
-	if len(pred) != len(vals) {
-		return errors.New("saveMultiple: invalid pred to vals len")
-	}
-	m := make(H)
-	m["uid"] = uid
-	for k, v := range pred {
-		m[v] = vals[k]
-	}
-	mut := Mutation{Type: MutateSet, Object: m}
-	_, err := MutateMany(ctx, sync, txn, mut)
-	return err
-}
-
-func SaveDNodes(sync bool, txn *TxnQuery, js ...DNode) (map[create]create, error) {
-	var m = make([]Mutation, len(js))
-	for k, v := range js {
-		v.SetType()
-		m[k] = Mutation{
-			Type:   MutateSet,
-			Object: v.GetAllInfo(true),
-		}
-	}
-	if txn != nil {
-		txn.AddManyMutations(m...)
-		return txn.ExecuteLatest(nil, nil)
-	}
-	return MutateMany(nil, sync, txn, m...)
-}
-
-//Returns UID for the "root" node mutation, they are of the form "blank-I", i order of mutation.
-func GetRootUID(ma map[create]create) create {
-	v, _ := ma["blank-0"]
-	return v
-}
-
-func (q *GeneratedQuery) AddDNode(d DNode, new bool, typ MutationType) *GeneratedQuery {
-	if new || d.UID() == "" {
-		d.SetType()
-	}
-	var m Mutation
-	if typ == MutateSet {
-		m.Type = MutateSet
-		m.Object = d.GetAllInfo(true)
-	} else if typ == MutateDelete {
-		m.Type = MutateDelete
-		m.Object = d.DeleteUIDS()
-	}
-	q.Mutations = append(q.Mutations, m)
-	return q
-}
-
-
-*/
-/*
-Returns a Queries object which can be used for multiple queries.
-*/

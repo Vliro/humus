@@ -56,6 +56,24 @@ func (s *Schema) Objects() []*Object {
 	return s.objects
 }
 
+func (s *Schema) GetObject(name string) *Object {
+	for _,v := range s.objects {
+		if v.Name == name {
+			return v
+		}
+	}
+	return nil
+}
+
+func (s *Schema) GetInterface(name string) *Interface {
+	for _,v := range s.interfaces {
+		if v.Name == name {
+			return v
+		}
+	}
+	return nil
+}
+
 func (s *Schema) Interfaces() []*Interface {
 	return s.interfaces
 }
@@ -108,6 +126,15 @@ type Object struct {
 	interfaceNames []string
 }
 
+func (o *Object) GetField(name string) *Field {
+	for _,v := range o.Fields {
+		if v.Name == name {
+			return v
+		}
+	}
+	return nil
+}
+
 func (o *Object) GetName() string {
 	return o.Name
 }
@@ -125,6 +152,20 @@ type Interface struct {
 	Desc          string
 	// TODO: Add a list of directives?
 }
+
+func (i *Interface) GetName() string {
+	return i.Name
+}
+
+func (i *Interface) GetField(name string) *Field {
+	for _,v := range i.Fields {
+		if v.Name == name {
+			return v
+		}
+	}
+	return nil
+}
+
 
 // Union types represent objects that could be one of a list of GraphQL object types, but provides no
 // guaranteed fields between those types.
@@ -204,6 +245,16 @@ func (l FieldList) Get(name string) *Field {
 	return nil
 }
 
+func (l FieldList) Count(name string) int {
+	i := 0
+	for j := range l {
+		if l[j].Name == name {
+			i++
+		}
+	}
+	return i
+}
+
 // Names returns a string slice of the field names in the FieldList.
 func (l FieldList) Names() []string {
 	names := make([]string, len(l))
@@ -261,6 +312,23 @@ type Field struct {
 
 func (f *Field) GetName() string {
 	return strings.Title(f.Name)
+}
+
+func (f *Field) IsArray() bool {
+	var t = f.Type
+	loop: for {
+		switch a := t.(type) {
+		case *common.NonNull:
+			t = a.OfType
+		case *common.List:
+			return true
+		case *Object:
+			return false
+		default:
+			break loop
+		}
+	}
+	return false
 }
 
 // New initializes an instance of Schema.

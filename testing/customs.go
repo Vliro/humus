@@ -13,4 +13,7 @@ var _ time.Time
 var _ mulbase.Fields
 
 // This is a custom field that is defined by custom.toml.
-var UserMetaFields mulbase.FieldList = []mulbase.Field{MakeField("User.name", 0), MakeField("User.rank", 0), MakeField("User.power", 0)}
+var QuestionMetaFields mulbase.FieldList = []mulbase.Field{MakeField("Question.id", 0), MakeField("Post.datePublished", 0)}
+
+// This is a custom field that is defined by custom.toml.
+var QuestionPublishedFields mulbase.FieldList = []mulbase.Field{MakeField("Post.datePublished", 0)}

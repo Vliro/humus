@@ -1,5 +1,7 @@
 package mulbase
 
+import "encoding/json"
+
 //TODO: To define methods of saving.
 type RelationType int
 
@@ -36,10 +38,31 @@ func (n *Node) UID() UID {
 //CreateMutation is a short-hand for creating
 //a single mutation query object.
 //tTODO: Only allow DNodes? Not likely.
-func CreateMutation(obj DNode, typ QueryType) SingleMutation {
+func CreateMutation(obj DNode, typ MutationType) SingleMutation {
 	return SingleMutation{
 		Object:    obj,
-		QueryType: typ,
+		MutationType: typ,
+	}
+}
+
+type customMutation struct {
+	Value interface{}
+	QueryType MutationType
+}
+
+func (c customMutation) Mutate() ([]byte, error) {
+	b, _ := json.Marshal(c.Value)
+	return b, nil
+}
+
+func (c customMutation) Type() MutationType {
+	return c.QueryType
+}
+
+func CreateCustomMutation(obj interface{}, typ MutationType) Mutate {
+	return customMutation{
+		Value: obj,
+		QueryType:  typ,
 	}
 }
 
@@ -61,12 +84,12 @@ func AddScalarList(origin DNode, predicate string, value ...interface{}) SingleM
 	var mapper = make(Mapper)
 	mapper.SetUID(origin.UID())
 	mapper[predicate] = value
-	return CreateMutation(mapper, QuerySet)
+	return CreateMutation(mapper, MutateSet)
 }
 
 func AddToList(origin DNode, predicate string, child DNode) SingleMutation {
 	var mapper = make(Mapper)
 	mapper.SetUID(origin.UID())
 	mapper.SetArray(predicate, false, child)
-	return CreateMutation(mapper, QuerySet)
+	return CreateMutation(mapper, MutateSet)
 }

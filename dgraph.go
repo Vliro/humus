@@ -234,10 +234,16 @@ type DB struct {
 	pool *workerpool.WorkerPool
 	//The endpoint for possible GraphQL.
 	gplPoint string
+	interruptFunc func(i interface{})
 }
-
+//Schema returns the active schema for this database.
 func (d *DB) Schema() SchemaList {
 	return d.schema
+}
+//OnAborted sets the function for which to call
+//when returned error is errAborted.
+func (d *DB) OnAborted(f func(query interface{})) {
+	d.interruptFunc = f
 }
 
 //NewTxn creates a new txn for interacting with database.
@@ -255,12 +261,13 @@ func (d *DB) NewTxn(readonly bool) *Txn {
 	return txn
 }
 
+func (d *DB) Select(vals ...Predicate) Fields {
+	return Select(d.schema, vals...)
+}
+
 //Queries outside a Txn context.
 //This is not intended for mutations.
 func (d *DB) Query(ctx context.Context, q Query, objs ...interface{}) error {
-	if q.Type() != QueryRegular {
-		return Error(errInvalidType)
-	}
 	txn := d.NewTxn(true)
 	defer txn.Discard(context.Background())
 	err := txn.Query(ctx, q, objs...)
@@ -275,7 +282,22 @@ func (d *DB) SetValue(node DNode, pred Predicate, value interface{}) error {
 	defer txn.Discard(context.Background())
 	var m = NewMapper(node.UID(), nil)
 	m[string(pred)] = value
-	_, err := txn.Mutate(context.Background(), CreateMutation(m, QuerySet))
+	_, err := txn.Mutate(context.Background(), CreateMutation(m, MutateSet))
+	if err != nil {
+		return err
+	} else {
+		return txn.Commit(context.Background())
+	}
+}
+
+//SetValueAsync is a simple wrapper to set a single value in the database
+//for a given node. It exists for convenience.
+func (d *DB) SetValueAsync(node DNode, pred Predicate, value interface{}) error {
+	txn := d.NewTxn(true)
+	defer txn.Discard(context.Background())
+	var m = NewMapper(node.UID(), nil)
+	m[string(pred)] = value
+	_, err := txn.Mutate(context.Background(), CreateMutation(m, MutateSet))
 	if err != nil {
 		return err
 	} else {
@@ -293,13 +315,10 @@ func (d *DB) Discard(ctx context.Context) error {
 	//Moot
 }
 
-func (d *DB) Mutate(ctx context.Context, q Query) (*api.Response, error) {
-	if q.Type() != QuerySet && q.Type() != QueryDelete {
-		return nil, Error(errInvalidType)
-	}
+func (d *DB) Mutate(ctx context.Context, m Mutate) (*api.Response, error) {
 	txn := d.NewTxn(false)
 	defer txn.Discard(context.Background())
-	resp, err := txn.Mutate(ctx, q)
+	resp, err := txn.Mutate(ctx, m)
 	if err != nil {
 		fmt.Println(err)
 	} else {
@@ -329,7 +348,7 @@ func (d *DB) logError(ctx context.Context, err error) {
 		result.Message = value
 		result.Time = time.Now()
 		result.ErrorType = errorName
-		_, err := d.Mutate(context.Background(), CreateMutation(&result, QuerySet))
+		_, err := d.Mutate(context.Background(), CreateMutation(&result, MutateSet))
 		if err != nil {
 			fmt.Printf("Error logging %s \n", err.Error())
 		}
@@ -338,20 +357,17 @@ func (d *DB) logError(ctx context.Context, err error) {
 	return
 }
 
-type QueryType uint8
-
-const (
-	QueryRegular QueryType = iota
-	QuerySet
-	QueryDelete
-)
-
 //Allows it to be used in Query.
 type Query interface {
 	//Process the query type in order to send to the database.
-	Process(SchemaList) ([]byte, map[string]string, error)
+	Process(SchemaList) (string, error)
 	//What type of query is this? Mutation(set/delete), regular query?
-	Type() QueryType
+	Vars() map[string]string
+}
+
+type Mutate interface {
+	Mutate() ([]byte, error)
+	Type() MutationType
 }
 
 //Init creates a new database connection using the given config
@@ -410,7 +426,7 @@ type Txn struct {
 	//Allows for safe storage in Queries.
 	sync.Mutex
 	//All queries performed by this transaction.
-	Queries []Query
+	Queries []interface{}
 	//The actual dgraph transaction.
 	txn *dgo.Txn
 	//The database. This is used for worker-pool & schema.
@@ -426,20 +442,20 @@ func (t *Txn) Discard(ctx context.Context) error {
 }
 
 //Perform a single mutation.
-func (t *Txn) mutate(ctx context.Context, q Query) (*api.Response, error) {
+func (t *Txn) mutate(ctx context.Context, q Mutate) (*api.Response, error) {
 	//Add a single mutation to the query list.
-	byt, _, err := q.Process(t.db.schema)
+	byt, err := q.Mutate()
 	if err != nil {
 		return nil, err
 	}
 	var m api.Mutation
-	if q.Type() == QueryDelete {
+	if q.Type() == MutateDelete {
 		//TODO: fix this
 		m.DeleteJson = byt
 		if t.db.c.LogQueries {
 			fmt.Println(string(m.DeleteJson))
 		}
-	} else if q.Type() == QuerySet {
+	} else if q.Type() == MutateSet {
 		m.SetJson = byt
 		if t.db.c.LogQueries {
 			fmt.Println(string(m.SetJson))
@@ -449,27 +465,27 @@ func (t *Txn) mutate(ctx context.Context, q Query) (*api.Response, error) {
 	if err != nil {
 		t.db.logError(context.Background(), err)
 	}
+	if err == dgo.ErrAborted && t.db.interruptFunc != nil {
+		t.db.interruptFunc(q)
+	}
 	return a, err
 }
 
 //Upsert follows the new 1.1 api and performs an upsert.
 //TODO: I really don't know what this does so work on it later.
-func (t *Txn) Upsert(ctx context.Context, q Query, cond string, mutations ...Query) (*api.Response, error) {
+func (t *Txn) Upsert(ctx context.Context, q Query, cond string, mutations ...Mutate) (*api.Response, error) {
 	if t.txn == nil {
 		return nil, Error(errTransaction)
 	}
-	b, ma, err := q.Process(t.db.schema)
+	b, err := q.Process(t.db.schema)
 	if err != nil {
 		return nil, Error(err)
 	}
 	var muts = make([]*api.Mutation, len(mutations))
 	for k := range muts {
-		if mutations[k].Type() == QueryRegular {
-			return nil, errInvalidType
-		}
 		muts[k] = new(api.Mutation)
 		v := muts[k]
-		b, _, err := mutations[k].Process(t.db.schema)
+		b, err := mutations[k].Mutate()
 		if err != nil {
 			return nil, err
 		}
@@ -478,8 +494,8 @@ func (t *Txn) Upsert(ctx context.Context, q Query, cond string, mutations ...Que
 	}
 	var req = api.Request{
 		//TODO: Dont use create(b) as that performs unnecessary allocations. We do not perform any changes to b which should not cause any issues.
-		Query:     bytesToStringUnsafe(b),
-		Vars:      ma,
+		Query:     b,
+		Vars:      q.Vars(),
 		Mutations: muts,
 	}
 	resp, err := t.txn.Do(ctx, &req)
@@ -491,14 +507,14 @@ func (t *Txn) Upsert(ctx context.Context, q Query, cond string, mutations ...Que
 }
 
 func (t *Txn) query(ctx context.Context, q Query, objs []interface{}) error {
-	str, m, err := q.Process(t.db.schema)
+	str, err := q.Process(t.db.schema)
 	if err != nil {
 		return err
 	}
 	if t.db.c.LogQueries {
-		log.Printf("Query input: %s \n", string(str))
+		log.Printf("Query input: %s \n", str)
 	}
-	resp, err := t.txn.QueryWithVars(ctx, bytesToStringUnsafe(str), m)
+	resp, err := t.txn.QueryWithVars(ctx, str, q.Vars())
 	if err != nil {
 		t.db.logError(context.Background(), err)
 		return Error(err)
@@ -508,9 +524,12 @@ func (t *Txn) query(ctx context.Context, q Query, objs []interface{}) error {
 	}
 	//This deserializes using reflect.
 	err = HandleResponse(resp.Json, objs)
-	//TODO: Ignore this error.
+	//TODO: Ignore this error for now.
 	if _, ok := err.(*time.ParseError); ok {
 		return nil
+	}
+	if err == dgo.ErrAborted && t.db.interruptFunc != nil {
+		t.db.interruptFunc(q)
 	}
 	if err != nil {
 		return Error(err)
@@ -547,32 +566,17 @@ func (t *Txn) Query(ctx context.Context, q Query, objs ...interface{}) error {
 	t.Lock()
 	defer t.Unlock()
 	t.Queries = append(t.Queries, q)
-	switch q.Type() {
-	case QueryRegular:
-		//No need for the response.
-		return Error(t.query(ctx, q, objs))
-	default:
-		return errInvalidType
-	}
+	return Error(t.query(ctx, q, objs))
 }
 
-func (t *Txn) Mutate(ctx context.Context, q Query) (*api.Response, error) {
+func (t *Txn) Mutate(ctx context.Context, q Mutate) (*api.Response, error) {
 	t.Lock()
 	defer t.Unlock()
-	typ := q.Type()
-	if typ != QuerySet && typ != QueryDelete {
-		t.Unlock()
-		return nil, errInvalidType
-	}
 	t.Queries = append(t.Queries, q)
 	return t.mutate(ctx, q)
 }
 
-func (t *Txn) MutateAsync(ctx context.Context, q Query) chan Result {
-	typ := q.Type()
-	if typ != QuerySet && typ != QueryDelete {
-		return nil
-	}
+func (t *Txn) MutateAsync(ctx context.Context, q Mutate) chan Result {
 	var ch = make(chan Result)
 	f := func() {
 		resp, err := t.mutate(ctx, q)

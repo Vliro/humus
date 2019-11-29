@@ -7,8 +7,8 @@ const (
 //SaveValues saves the node values that
 //do not contain any references to other objects.
 func (r *{{.Name}}) SaveValues(ctx context.Context, txn *mulbase.Txn) error {
-    mut := mulbase.CreateMutation(r.Values(), mulbase.QuerySet)
-     err := txn.Query(ctx, mut)
+    mut := mulbase.CreateMutation(r.Values(), mulbase.MutateSet)
+    _,err := txn.Mutate(ctx, mut)
     return err
 }
 func (r *{{.Name}}) GetType() []string {
@@ -17,6 +17,18 @@ func (r *{{.Name}}) GetType() []string {
     }
     return r.Type
 }
+
+func (r *{{.Name}}) Facets() []string {
+    {{if eq (len .Facets) 0 -}}
+        return nil
+    {{else}}return []string{
+        {{range .Facets -}}
+            "{{.}}",
+        {{end -}}
+        }
+    {{end -}}
+}
+
 //Fields returns all Scalar fields for this value.
 func (r *{{.Name}}) Fields() mulbase.FieldList {
     return {{.Name}}Fields
@@ -41,8 +53,9 @@ func (r *{{.Name}}) Values() mulbase.DNode{
    return &m
 }
 //Values returns all the scalar values for this node.
+//Note that this completely ignores any omitempty tags so use with care.
 func (r *{{.Name}}) MapValues() mulbase.Mapper {
-   var m = make(map[string]interface{}, {{len .ScalarFields }})
+   var m = make(map[string]interface{})
    {{range .ScalarFields -}}
       {{if not .Nosave -}}
 m["{{.Tag}}"]= r.{{.Name}}

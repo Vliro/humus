@@ -27,8 +27,6 @@ const typeDecl = `type %s {
 
 const typeFieldDecl = "%s : %s  \n"
 
-
-
 const schemaDecl = "%s: %s %s . \n"
 
 //makeSchema generates a regular graphQL schema for dgraph.
@@ -38,13 +36,14 @@ func makeSchema(output io.Writer, g *Generator) {
 	for name, val := range globalFields {
 		//Emit types first.
 		var ib bytes.Buffer
-		fl: for _,v := range val.AllFields {
+	fl:
+		for _, v := range val.AllFields {
 			if val := v.HasDirective("facet"); val != nil {
 				continue fl
 			}
-			for _,val := range v.Directives {
+			for _, val := range v.Directives {
 				if val.Name.Name == "hasInverse" {
-					if v.flags & flagArray != 0 {
+					if v.flags&flagArray != 0 {
 						continue fl
 
 					}
@@ -55,20 +54,20 @@ func makeSchema(output io.Writer, g *Generator) {
 		buffer.WriteString(fmt.Sprintf(typeDecl, name, ib.String()))
 		ib = bytes.Buffer{}
 	}
-
+	var written = make(map[string]struct{})
 	for _, val := range globalFields {
 		//Emit types first.
-		var written = make(map[string]struct{})
 		var ib bytes.Buffer
-		fieldLoop: for _,v := range val.AllFields {
-			if _,ok := written[v.Tag]; ok {
-				continue
+	fieldLoop:
+		for _, v := range val.AllFields {
+			if _, ok := written[v.Tag]; ok {
+				continue fieldLoop
 			}
 			var directives bytes.Buffer
-			for _,dir := range v.Directives {
+			for _, dir := range v.Directives {
 				switch dir.Name.Name {
 				case "hasInverse":
-					if v.flags & flagArray == 0 {
+					if v.flags&flagArray == 0 {
 						directives.WriteString("@reverse ")
 					} else {
 						if val := v.HasDirective("source"); val != nil {
@@ -79,9 +78,9 @@ func makeSchema(output io.Writer, g *Generator) {
 					}
 				case "search":
 					directives.WriteString("@index(")
-					for _,v := range dir.Args {
+					for _, v := range dir.Args {
 						str := v.Value.String()
-						directives.WriteString(str[1:len(str)-1])
+						directives.WriteString(str[1 : len(str)-1])
 					}
 					directives.WriteString(") ")
 				case "facet":
@@ -90,7 +89,7 @@ func makeSchema(output io.Writer, g *Generator) {
 					directives.WriteString("@lang ")
 				}
 			}
-			written[v.Name] = struct{}{}
+			written[v.Tag] = struct{}{}
 			ib.WriteString(fmt.Sprintf(schemaDecl, "<"+v.Tag+">", v.getDgraphSchema(false), directives.String()))
 		}
 		_, _ = io.Copy(&buffer, &ib)
@@ -103,7 +102,7 @@ func makeSchema(output io.Writer, g *Generator) {
 func (f *Field) getDgraphSchema(forType bool) string {
 	var typ string
 	switch {
-	case f.flags & flagArray > 0:
+	case f.flags&flagArray > 0:
 		typ = "[" + toDgraphType(f.Type, f.flags, forType) + "]"
 	default:
 		typ = toDgraphType(f.Type, f.flags, forType)
@@ -112,10 +111,10 @@ func (f *Field) getDgraphSchema(forType bool) string {
 }
 
 func toDgraphType(str string, flag flags, forType bool) string {
-	if flag & flagObject != 0 && !forType {
+	if flag&flagObject != 0 && !forType {
 		return "uid"
 	}
-	if flag & flagEnum != 0 && !forType{
+	if flag&flagEnum != 0 && !forType {
 		return "int"
 	}
 	switch str {

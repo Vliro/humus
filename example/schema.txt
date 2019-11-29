@@ -1,3 +1,8 @@
+type Error {
+Error.message : string  
+Error.errorType : string  
+Error.time : datetime  
+}
 type Post {
 Post.text : string  
 Post.datePublished : datetime  
@@ -18,23 +23,12 @@ type User {
 User.name : string  
 User.pass : string  
 }
-type Error {
-Error.message : string  
-Error.errorType : string  
-Error.time : datetime  
-}
+<Comment.commentsOn>: uid @reverse  . 
+<Post.text>: string @index(hash) @lang  . 
+<Post.datePublished>: datetime  . 
+<Post.from>: uid  . 
 <User.name>: string @index(hash)  . 
 <User.pass>: string  . 
 <Error.message>: string  . 
 <Error.errorType>: string  . 
 <Error.time>: datetime  . 
-<Post.text>: string @index(hash) @lang  . 
-<Post.datePublished>: datetime  . 
-<Post.from>: uid  . 
-<Post.text>: string @index(hash) @lang  . 
-<Post.datePublished>: datetime  . 
-<Post.from>: uid  . 
-<Comment.commentsOn>: uid @reverse  . 
-<Post.text>: string @index(hash) @lang  . 
-<Post.datePublished>: datetime  . 
-<Post.from>: uid  . 

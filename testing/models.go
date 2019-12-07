@@ -42,11 +42,21 @@ func (r *Post) GetType() []string {
 	return r.Type
 }
 
+//Reset resets the node to only its UID
+//component. Useful for saving to the database.
+//Calling this function ensures that, at most,
+//the uid and type is serialized.
+func (r *Post) Reset() {
+	if r != nil {
+		*r = Post{Node: r.Node}
+	}
+}
+
 func (r *Post) Facets() []string {
 	return nil
 }
 
-//fields returns all Scalar fields for this value.
+//Fields returns all Scalar fields for this value.
 func (r *Post) Fields() humus.FieldList {
 	return PostFields
 }
@@ -59,7 +69,7 @@ func (r *Post) SetType() {
 	}
 }
 
-//values returns all the scalar values for this node.
+//Values returns all the scalar values for this node.
 func (r *Post) Values() humus.DNode {
 	var m PostScalars
 	m.Text = r.Text
@@ -69,7 +79,7 @@ func (r *Post) Values() humus.DNode {
 	return &m
 }
 
-//values returns all the scalar values for this node.
+//Values returns all the scalar values for this node.
 //Note that this completely ignores any omitempty tags so use with care.
 func (r *Post) MapValues() humus.Mapper {
 	var m = make(map[string]interface{})
@@ -138,11 +148,21 @@ func (r *Question) GetType() []string {
 	return r.Type
 }
 
+//Reset resets the node to only its UID
+//component. Useful for saving to the database.
+//Calling this function ensures that, at most,
+//the uid and type is serialized.
+func (r *Question) Reset() {
+	if r != nil {
+		*r = Question{Node: r.Node}
+	}
+}
+
 func (r *Question) Facets() []string {
 	return nil
 }
 
-//fields returns all Scalar fields for this value.
+//Fields returns all Scalar fields for this value.
 func (r *Question) Fields() humus.FieldList {
 	return QuestionFields
 }
@@ -155,7 +175,7 @@ func (r *Question) SetType() {
 	}
 }
 
-//values returns all the scalar values for this node.
+//Values returns all the scalar values for this node.
 func (r *Question) Values() humus.DNode {
 	var m QuestionScalars
 	m.Title = r.Title
@@ -167,7 +187,7 @@ func (r *Question) Values() humus.DNode {
 	return &m
 }
 
-//values returns all the scalar values for this node.
+//Values returns all the scalar values for this node.
 //Note that this completely ignores any omitempty tags so use with care.
 func (r *Question) MapValues() humus.Mapper {
 	var m = make(map[string]interface{})
@@ -238,11 +258,21 @@ func (r *Comment) GetType() []string {
 	return r.Type
 }
 
+//Reset resets the node to only its UID
+//component. Useful for saving to the database.
+//Calling this function ensures that, at most,
+//the uid and type is serialized.
+func (r *Comment) Reset() {
+	if r != nil {
+		*r = Comment{Node: r.Node}
+	}
+}
+
 func (r *Comment) Facets() []string {
 	return nil
 }
 
-//fields returns all Scalar fields for this value.
+//Fields returns all Scalar fields for this value.
 func (r *Comment) Fields() humus.FieldList {
 	return CommentFields
 }
@@ -255,7 +285,7 @@ func (r *Comment) SetType() {
 	}
 }
 
-//values returns all the scalar values for this node.
+//Values returns all the scalar values for this node.
 func (r *Comment) Values() humus.DNode {
 	var m CommentScalars
 	m.Episode = r.Episode
@@ -266,7 +296,7 @@ func (r *Comment) Values() humus.DNode {
 	return &m
 }
 
-//values returns all the scalar values for this node.
+//Values returns all the scalar values for this node.
 //Note that this completely ignores any omitempty tags so use with care.
 func (r *Comment) MapValues() humus.Mapper {
 	var m = make(map[string]interface{})
@@ -335,11 +365,21 @@ func (r *Error) GetType() []string {
 	return r.Type
 }
 
+//Reset resets the node to only its UID
+//component. Useful for saving to the database.
+//Calling this function ensures that, at most,
+//the uid and type is serialized.
+func (r *Error) Reset() {
+	if r != nil {
+		*r = Error{Node: r.Node}
+	}
+}
+
 func (r *Error) Facets() []string {
 	return nil
 }
 
-//fields returns all Scalar fields for this value.
+//Fields returns all Scalar fields for this value.
 func (r *Error) Fields() humus.FieldList {
 	return ErrorFields
 }
@@ -352,7 +392,7 @@ func (r *Error) SetType() {
 	}
 }
 
-//values returns all the scalar values for this node.
+//Values returns all the scalar values for this node.
 func (r *Error) Values() humus.DNode {
 	var m ErrorScalars
 	m.Message = r.Message
@@ -363,7 +403,7 @@ func (r *Error) Values() humus.DNode {
 	return &m
 }
 
-//values returns all the scalar values for this node.
+//Values returns all the scalar values for this node.
 //Note that this completely ignores any omitempty tags so use with care.
 func (r *Error) MapValues() humus.Mapper {
 	var m = make(map[string]interface{})

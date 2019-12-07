@@ -445,7 +445,6 @@ func (f *Field) create(q *GeneratedQuery, parent unsafeSlice, sb *strings.Builde
 			}
 		}
 		sb.WriteString("uid" + tokenRB)
-		sb.WriteByte('}')
 		//Always add the uid field. I don't think this will be very expensive in terms of dgraph performance.
 	}
 	return nil

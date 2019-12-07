@@ -60,27 +60,24 @@ func TestBigQuery(t *testing.T) {
 var fields = ErrorFields.Sub(ErrorMessageField, ErrorFields)
 
 func TestQuery(t *testing.T) {
-	const expected = "query t($0:string,$1:string){q(func: eq(<Error.message>,$0)){Error.message (first:1,after:1)(orderasc: Error.time))@filter(eq(<Error.message>,$1))@facets{Error.message (first:1){Error.message  Error.errorType  Error.time uid} Error.errorType  Error.time uid} Error.errorType (first:1) Error.time (first:1) uid}}"
+	const expected = "query t($0:string,$1:string,$2:string){q(func: eq(<Error.message>,$2),orderasc: Error.time)@cascade@normalize{Error.message@filter(eq(<Error.message>,$0))(first:1,after:1)(orderasc: Error.time)@facets{Error.message(first:1) Error.errorType Error.time varr as ErrorTimeField  test : sum(val(varr)) uid} Error.errorType@filter(eq(<Error.message>,$1))(first:1) Error.time(first:1)  uid}}"
 	q := NewQuery(fields)
 	q.Function(Equals).PredValue(ErrorMessageField, "Test")
-
-
-	q.Order(Ascending, ErrorMessageField, ErrorTimeField)
-	/*q.Count(CountFirst, ErrorMessageField, 1)
+	q.Count(CountFirst, ErrorMessageField, 1)
 	q.Count(CountFirst, ErrorTimeField, 1)
 	q.Count(CountFirst, ErrorErrorTypeField, 1)
 	q.Count(CountAfter, ErrorMessageField, 1)
 	q.Order(Ascending, ErrorMessageField, ErrorTimeField)
-	q.Count(CountFirst, ErrorMessageField + ErrorMessageField, 1)*/
+	q.Count(CountFirst, ErrorMessageField + ErrorMessageField, 1)
 	q.Agg(TypeSum, ErrorMessageField, "varr","test")
+	q.Variable("varr", ErrorMessageField, "ErrorTimeField", false)
 	q.Order(Ascending, "", ErrorTimeField)
-	/*q.AddDirective(Cascade)
+	q.AddDirective(Cascade)
 	q.AddDirective(Normalize)
-	q.Filter(newFunction(Equals).PredValue(ErrorMessageField, "Test"), ErrorMessageField)
-	q.Filter(newFunction(Equals).PredValue(ErrorMessageField, "Test"), ErrorErrorTypeField)
-	q.Facets(ErrorMessageField)*/
-	//q.Language(LanguageDefault, true)
-
+	q.Filter(MakeFilter(Equals).PredValue(ErrorMessageField, "Test"), ErrorMessageField)
+	q.Filter(MakeFilter(Equals).PredValue(ErrorMessageField, "Test"), ErrorErrorTypeField)
+	q.Facets(ErrorMessageField)
+	q.Language(LanguageDefault, true)
 	err := newTest(expected).Query(context.Background(), q)
 	if err != nil {
 		t.Fail()
@@ -136,7 +133,7 @@ func TestQueryFilter(t *testing.T) {
 }
 
 func TestQueries(t *testing.T) {
-	const expected = "query t($0:int,$2:string,$1:string,$3:string){q1(func: eq(<Error.time>,$2),first:5,orderasc: Error.time){Error.message@filter(eq(<Error.time>,$0)) Error.errorType Error.timeuid}}{q2(func: eq(<Error.time>,$3),first:5,orderasc: Error.time){Error.message Error.errorType Error.time@filter(eq(<Error.time>,$1))uid}}"
+	const expected = "query t($0:int,$2:string,$1:string,$3:string){q1(func: eq(<Error.time>,$2),first:5,orderasc: Error.time){Error.message@filter(eq(<Error.time>,$0)) Error.errorType Error.time  uid}}{q2(func: eq(<Error.time>,$3),first:5,orderasc: Error.time){Error.message Error.errorType Error.time@filter(eq(<Error.time>,$1))  uid}}"
 	list := NewQueries()
 	q := list.NewQuery(ErrorFields)
 	q.Function(Equals).PredValue(ErrorTimeField, "testFunctionOne")
@@ -157,7 +154,7 @@ func TestQueries(t *testing.T) {
 		t.Fail()
 		return
 	}
-	//Check variables.
+	//Check variables to ensure the variable mapping is not broken.
 	one := q.function.Variables[1]
 	if list.vars[one.Value] != "testFunctionOne" {
 		t.Fail()
@@ -179,7 +176,8 @@ func TestQueries(t *testing.T) {
 		return
 	}
 }
-
+//should average about 4 µs per query generation and 40 allocations.
+//can it be better?
 func BenchmarkQueries(b *testing.B) {
 	//defer profile.Start(profile.MemProfile).Stop()
 	for i := 0; i < b.N; i++ {
@@ -200,10 +198,10 @@ func BenchmarkQueries(b *testing.B) {
 }
 
 func TestVariable(t *testing.T) {
-	const expected = "query{q(func: has(<Error.message>),first:5,orderasc: Error.time){Error.message Error.errorType Error.time test : math(p) p as ErrorTimeField  uid}}"
+	const expected = "query{q(func: has(<Error.message>),first:5,orderasc: Error.time){Error.message Error.errorType Error.time  test : math(p)  p as ErrorTimeField  uid}}"
 	q := NewQuery(ErrorFields)
-	q.Variable("test", "math(p)",true, "")
-	q.Variable("p", "ErrorTimeField", false,"")
+	q.Variable("test", "", "math(p)",true)
+	q.Variable("p", "","ErrorTimeField", false)
 	q.Function(Has).Pred(ErrorMessageField)
 	//q.Filter(MakeFilter(Equals).PredValue(ErrorTimeField, "testFilter"), "")
 	q.Order(Ascending, "", ErrorTimeField)

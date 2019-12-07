@@ -2,10 +2,18 @@ package parse
 
 import (
 	"testing"
-	"time"
 )
 
 func TestParse(t *testing.T) {
-	Parse("testdata", "/tmp")
-	time.Sleep(time.Second)
+	defer func() {
+		if r := recover(); r != nil {
+			t.Error(r)
+		}
+	}()
+	Parse(&Config{
+		State:   "dgraph",
+		Input:   "../../testing/",
+		Output:  "../../testing/",
+		Package: "gen",
+	})
 }

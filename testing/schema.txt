@@ -1,8 +1,3 @@
-type Error {
-Error.message : string  
-Error.errorType : string  
-Error.time : datetime  
-}
 type Post {
 Post.text : string  
 Post.datePublished : datetime  
@@ -14,19 +9,20 @@ Post.text : string
 Post.datePublished : datetime  
 }
 type Comment {
-Comment.episode : Type  
+Comment.episode : int  
 Post.text : string  
 Post.datePublished : datetime  
 }
+type Error {
+Error.message : string  
+Error.errorType : string  
+Error.time : datetime  
+}
+<Post.text>: string @index(hash)  . 
+<Post.datePublished>: datetime  . 
 <Question.title>: string  . 
 <Question.id>: int  . 
-<Post.text>: string @index(hash)  . 
-<Post.datePublished>: datetime  . 
 <Comment.episode>: int  . 
-<Post.text>: string @index(hash)  . 
-<Post.datePublished>: datetime  . 
 <Error.message>: string  . 
 <Error.errorType>: string  . 
 <Error.time>: datetime  . 
-<Post.text>: string @index(hash)  . 
-<Post.datePublished>: datetime  . 

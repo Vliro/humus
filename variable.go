@@ -45,6 +45,7 @@ func (v variable) apply(root *GeneratedQuery, meta FieldMeta, mt modifierSource,
 	if v.name == "" || v.value == "" {
 		return 0, errors.New("missing values in graphVariable")
 	}
+	sb.WriteByte(' ')
 	sb.WriteString(v.name)
 	if v.alias {
 		sb.WriteString(" : ")

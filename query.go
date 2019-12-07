@@ -364,7 +364,7 @@ func (q *GeneratedQuery) variables() string {
 //result is a variable 'test as math(p+q)' at the path given by path.
 //isAlias simply means that rather than a value variable it is
 //test : math(p+q)
-func (q *GeneratedQuery) Variable(name string, value string, isAlias bool, path Predicate) *GeneratedQuery {
+func (q *GeneratedQuery) Variable(name string, path Predicate, value string, isAlias bool) *GeneratedQuery {
 	q.modifiers[path] = append(q.modifiers[path], variable{
 		name:  name,
 		value: value,

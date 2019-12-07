@@ -358,6 +358,7 @@ func (q *GeneratedQuery) Language(l Language, strict bool) *GeneratedQuery {
 func (q *GeneratedQuery) variables() string {
 	return q.varBuilder.String()
 }
+
 //Variable adds a value variable of the form name as value.
 //Value can be anything from a math expression to a count.
 //Example: if name is test and value is math(p+q) then
@@ -396,6 +397,20 @@ func (q *GeneratedQuery) registerVariable(typ varType, value string) string {
 	q.varBuilder.WriteString(string(typ))
 	q.varMap[key] = value
 	return key
+}
+
+//Static create a static query from the generated version.
+//Since this is performed at init, panic if the query
+//creation does not work. V
+func (q *GeneratedQuery) Static() StaticQuery {
+	str, err := q.create(nil)
+	if err != nil {
+		panic(err)
+	}
+	return StaticQuery{
+		Query: str,
+		vars:  nil,
+	}
 }
 
 //Function related functions. These are wrappers over the function.

@@ -37,7 +37,8 @@ func makeSchema(output io.Writer, g *Generator) {
 		//Emit types first.
 		var ib bytes.Buffer
 	fl:
-		for _, v := range val.AllFields {
+		//Change this to globalFields to put all values in type declaration.
+		for _, v := range val.Fields {
 			if val := v.HasDirective("facet"); val != nil {
 				continue fl
 			}

@@ -13,7 +13,7 @@ var _ time.Time
 var _ humus.Fields
 
 // This is a custom field that is defined by custom.toml.
-var QuestionMetaFields humus.FieldList = []humus.Field{MakeField("Question.id", 0), MakeField("Post.datePublished", 0)}
+var QuestionPublishedFields humus.FieldList = []humus.Field{MakeField("Post.datePublished", 0)}
 
 // This is a custom field that is defined by custom.toml.
-var QuestionPublishedFields humus.FieldList = []humus.Field{MakeField("Post.datePublished", 0)}
+var QuestionMetaFields humus.FieldList = []humus.Field{MakeField("Question.id", 0), MakeField("Post.datePublished", 0)}

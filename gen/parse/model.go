@@ -89,13 +89,15 @@ func (mc ModelCreator) makeGoStruct(o *schema.Object, m map[string][]Field, g *G
 	*/
 	var fieldsInterface = make([]Field, len(fields))
 	copy(fieldsInterface, fields)
+	var impl = make([]string, 0, len(o.Interfaces))
 	for _, v := range o.Interfaces {
 		//It should always exist
 		val := m[v.Name]
 		fieldsInterface = append(fieldsInterface, val...)
+		impl = append(impl, v.Name)
 	}
 	makeFieldList(o.Name, fieldsInterface, &sb, true, g)
-	modelTemplate(g.schema, o.Name, fieldsInterface, &sb)
+	modelTemplate(g.schema, o.Name, fieldsInterface, &sb, impl)
 
 	if _, ok := globalFields[o.Name]; !ok {
 		globalFields[o.Name] = Object{
@@ -134,7 +136,7 @@ func (mc ModelCreator) makeGoInterface(o *schema.Interface, g *Generator) (*byte
 	}
 	sb.WriteString(bottomLine)
 	makeFieldList(o.Name, fields, &sb, true, g)
-	modelTemplate(g.schema, o.Name, fields, &sb)
+	modelTemplate(g.schema, o.Name, fields, &sb, nil)
 
 	if _, ok := globalFields[o.Name]; !ok {
 		globalFields[o.Name] = Object{
@@ -208,6 +210,7 @@ func createField(objectName string, name string, typ string, sb *bytes.Buffer, f
 		fi.TypeLabel += "[]"
 	}
 	//time.Time is a special case as it is a struct and therefore has to be a pointer.
+	//TODO: Should array be poointer?
 	if (flag&flagPointer != 0 && (flag&flagArray == 0)) || typ == "time.Time" {
 		fi.TypeLabel += "*"
 	}
@@ -378,7 +381,7 @@ type modelStruct struct {
 }
 
 //Executes the model template for all scalar fields.
-func modelTemplate(sch *schema.Schema, name string, allScalars []Field, sb *bytes.Buffer) {
+func modelTemplate(sch *schema.Schema, name string, allScalars []Field, sb *bytes.Buffer, implements []string) {
 	templ := getTemplate("Model")
 	if templ == nil {
 		panic("missing Model template")
@@ -387,8 +390,8 @@ func modelTemplate(sch *schema.Schema, name string, allScalars []Field, sb *byte
 		Name:   name,
 		Fields: allScalars,
 	}
-	for _, v := range sch.Interfaces() {
-		m.Interfaces = append(m.Interfaces, v.Name)
+	for _, v := range implements {
+		m.Interfaces = append(m.Interfaces, v)
 	}
 	/*for _,v := range m.fields {
 		if v.flags&flagFacet > 0 {

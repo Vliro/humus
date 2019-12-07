@@ -172,6 +172,7 @@ func (r *Question) Fields() humus.FieldList {
 func (r *Question) SetType() {
 	r.Type = []string{
 		"Question",
+		"Post",
 	}
 }
 
@@ -282,6 +283,7 @@ func (r *Comment) Fields() humus.FieldList {
 func (r *Comment) SetType() {
 	r.Type = []string{
 		"Comment",
+		"Post",
 	}
 }
 

@@ -47,7 +47,9 @@ func (r *{{.Name}}) Fields() humus.FieldList {
 //as they are set in dgraph already.
 func (r *{{.Name}}) SetType() {
     r.Type = []string {
-        "{{.Name}}",
+        "{{.Name}}",{{range .Interfaces}}
+        "{{.}}",
+        {{end}}
     }
 }
 //Values returns all the scalar values for this node.

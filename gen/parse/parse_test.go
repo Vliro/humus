@@ -5,11 +5,11 @@ import (
 )
 
 func TestParse(t *testing.T) {
-	defer func() {
+	/*defer func() {
 		if r := recover(); r != nil {
 			t.Error(r)
 		}
-	}()
+	}()*/
 	Parse(&Config{
 		State:   "dgraph",
 		Input:   "../../testing/",

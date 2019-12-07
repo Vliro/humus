@@ -5,13 +5,9 @@ Post.datePublished : datetime
 type Question {
 Question.title : string  
 Question.id : int  
-Post.text : string  
-Post.datePublished : datetime  
 }
 type Comment {
 Comment.episode : int  
-Post.text : string  
-Post.datePublished : datetime  
 }
 type Error {
 Error.message : string  

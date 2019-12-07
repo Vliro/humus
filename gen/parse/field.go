@@ -1,6 +1,6 @@
 package parse
 
-import "github.com/Vliro/mulbase/gen/graphql-go/common"
+import "github.com/Vliro/humus/gen/graphql-go/common"
 
 //Field represents the parsed graphQL field alongside all
 //definitions needed for generation.

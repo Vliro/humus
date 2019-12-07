@@ -1,4 +1,4 @@
-package mulbase
+package humus
 
 import (
 	"context"
@@ -59,7 +59,7 @@ func (r *dbError) GetType() []string {
 	return r.Type
 }
 
-//Fields returns all Scalar fields for this value.
+//fields returns all Scalar fields for this value.
 func (r *dbError) Fields() FieldList {
 	return ErrorFields
 }
@@ -72,7 +72,7 @@ func (r *dbError) SetType() {
 	}
 }
 
-//Values returns all the scalar values for this node.
+//values returns all the scalar values for this node.
 func (r *dbError) Values() DNode {
 	var m ErrorScalars
 	m.Message = r.Message
@@ -83,7 +83,7 @@ func (r *dbError) Values() DNode {
 	return &m
 }
 
-//Values returns all the scalar values for this node.
+//values returns all the scalar values for this node.
 func (r *dbError) MapValues() Mapper {
 	var m = make(map[string]interface{}, 3)
 	m["Error.message"] = r.Message

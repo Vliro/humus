@@ -4,28 +4,28 @@ package gen
 
 import (
 	"context"
-	"github.com/Vliro/mulbase"
+	"github.com/Vliro/humus"
 	"time"
 )
 
 var _ context.Context
 var _ time.Time
-var _ mulbase.Fields
+var _ humus.Fields
 
 //Beginning of field.template. General functions.
-var globalFields = make(map[mulbase.Predicate]mulbase.Field)
+var globalFields = make(map[humus.Predicate]humus.Field)
 
-func GetField(name mulbase.Predicate) mulbase.Field {
+func GetField(name humus.Predicate) humus.Field {
 	return globalFields[name]
 }
 
-func MakeField(name mulbase.Predicate, flags mulbase.FieldMeta) mulbase.Field {
-	var fi = mulbase.Field{Name: name, Meta: flags}
+func MakeField(name humus.Predicate, flags humus.FieldMeta) humus.Field {
+	var fi = humus.Field{Name: name, Meta: flags}
 	globalFields[name] = fi
 	return fi
 }
 
-func GetGlobalFields() map[mulbase.Predicate]mulbase.Field {
+func GetGlobalFields() map[humus.Predicate]humus.Field {
 	return globalFields
 }
 

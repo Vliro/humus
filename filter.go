@@ -1,22 +1,31 @@
-package mulbase
+package humus
 
 import (
 	"errors"
-	"fmt"
 	"strings"
 )
 
-//Filter represents an object in the query that will be serialized as @filter (function...)
+type logicalOp uint8
+
+const (
+	logicalOr logicalOp = iota
+	logicalAnd
+	logicalNot
+)
+
+//filter represents an object in the query that will be serialized as @filter (function...)
 //It just holds a function.
 type Filter struct {
-	Function *Function
+//	op logicalOp
+	function
+//	node *Filter
 }
 
 func (f *Filter) canApply(mt modifierSource) bool {
 	return true
 }
 
-func (f *Filter) apply(root *GeneratedQuery, meta FieldMeta, name string, sb *strings.Builder) (modifierType, error) {
+func (f *Filter) apply(root *GeneratedQuery, meta FieldMeta, mt modifierSource, sb *strings.Builder) (modifierType, error) {
 	err := f.create(root, sb)
 	return 0, err
 }
@@ -25,34 +34,59 @@ func (f *Filter) priority() modifierType {
 	return modifierFilter
 }
 
-func MakeFilter(f *Function) *Filter {
-	return &Filter{Function:f}
+func MakeFilter(typ FunctionType) *Filter {
+	return &Filter{function: newFunction(typ)}
 }
 
 func (f *Filter) parenthesis() bool {
 	return false
 }
 
-func (f *Filter) create(q *GeneratedQuery, sb *strings.Builder) error {
-	//No nil checks. Done during check.
-	sb.WriteString(tokenFilter)
-	sb.WriteString(tokenLP)
-	if f.Function != nil {
-		err := f.Function.create(q , sb)
+func (f *Filter) stringify(q *GeneratedQuery, sb *strings.Builder) error {
+	if f != nil {
+		err := f.function.create(q , sb)
 		if err != nil {
 			return err
 		}
 	} else {
-		return errors.New("missing function in mulbase filter")
+		return errors.New("missing function in humus filter")
 	}
-	sb.WriteString(tokenRP)
 	return nil
 }
 
-func (f *Filter) check(q *GeneratedQuery) error {
-	// check query
-	if f == nil {
-		return fmt.Errorf(fErrNil, "filter")
-	}
-	return f.Function.check(q)
+func (f *Filter) create(q *GeneratedQuery, sb *strings.Builder) error {
+	//No nil checks. Done during check.
+	sb.WriteString(tokenFilter)
+	sb.WriteByte('(')
+	err := f.stringify(q, sb)
+	sb.WriteByte(')')
+	return err
+}
+
+//Function related calls.
+
+//Pred sets a predicate variable, for a has function.
+func (f *Filter) Pred(pred Predicate) *Filter {
+	f.function.pred(pred)
+	return f
+}
+//PredValue sets a predicate alongside a value, useful for eq.
+func (f *Filter) PredValue(pred Predicate, value interface{}) *Filter {
+	f.function.predValue(pred, value)
+	return f
+}
+//PredValues sets a predicate alongside a list
+func (f *Filter) PredValues(pred Predicate, value ...interface{}) *Filter {
+	f.function.predMultiple(pred, value)
+	return f
+}
+//Value is a wrapper to add a value to this filter.
+func (f *Filter) Value(v interface{}) *Filter {
+	f.function.value(v)
+	return f
+}
+//Values is a wrapper to add a list of values to this filter.
+func (f *Filter) Values(v ...interface{}) *Filter {
+	f.function.values(v)
+	return f
 }

@@ -5,8 +5,8 @@ import (
 	"strings"
 	"text/scanner"
 
-	"github.com/Vliro/mulbase/gen/graphql-go/common"
-	"github.com/Vliro/mulbase/gen/graphql-go/errors"
+	"github.com/Vliro/humus/gen/graphql-go/common"
+	"github.com/Vliro/humus/gen/graphql-go/errors"
 )
 
 // Schema represents a GraphQL service's collective type system capabilities.
@@ -35,7 +35,7 @@ type Schema struct {
 	// TODO: Type extensions?
 	// http://facebook.github.io/graphql/draft/#sec-Type-Extensions
 
-	// Directives are used to annotate various parts of a GraphQL document as an indicator that they
+	// directives are used to annotate various parts of a GraphQL document as an indicator that they
 	// should be evaluated differently by a validator, executor, or client tool such as a code
 	// generator.
 	//
@@ -228,7 +228,7 @@ type Extension struct {
 	// TODO: Add a list of directives
 }
 
-// FieldsList is a list of an Object's Fields.
+// FieldsList is a list of an Object's fields.
 //
 // http://facebook.github.io/graphql/draft/#FieldsDefinition
 type FieldList []*Field
@@ -391,7 +391,7 @@ func (s *Schema) Parse(schemaString string, useStringDescriptions bool) error {
 				//Instead, simply add the field in all its glory to the object.
 				if obj.Fields.Get(f) == nil {
 					//return errors.Errorf("interface %q expects field %q but %q does not provide it", intfName, f, obj.Name)
-					//obj.Fields = append(obj.Fields, intf.Fields[k])
+					//obj.fields = append(obj.fields, intf.fields[k])
 					//TODO: Do not add the fields.
 				} else {
 					return errors.Errorf("interface %q expects field %q to not exist but %q provides it", intfName, f, obj.Name)

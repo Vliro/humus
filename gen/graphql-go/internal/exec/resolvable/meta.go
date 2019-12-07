@@ -4,9 +4,9 @@ import (
 	"fmt"
 	"reflect"
 
-	"github.com/Vliro/mulbase/gen/graphql-go/common"
-	"github.com/Vliro/mulbase/gen/graphql-go/introspection"
-	"github.com/Vliro/mulbase/gen/graphql-go/schema"
+	"github.com/Vliro/humus/gen/graphql-go/common"
+	"github.com/Vliro/humus/gen/graphql-go/introspection"
+	"github.com/Vliro/humus/gen/graphql-go/schema"
 )
 
 // Meta defines the details of the metadata schema for introspection.

@@ -1,7 +1,7 @@
-package mulbase
+package humus
 
 import (
-	"bytes"
+	"sort"
 	"strconv"
 	"strings"
 	"sync"
@@ -63,59 +63,64 @@ const (
 //TODO: These have not been tested yet. Only GeneratedQuery.
 //TODO: Should this allow arbitrary Query interfaces and type switch?
 type Queries struct {
-	Queries []*GeneratedQuery
+	q          []*GeneratedQuery
+	varCounter func() int
+	currentVar int
+	vars       map[string]string
 }
 
 //Satisfy the Query interface.
-func (q *Queries) Process(SchemaList) ([]byte, map[string]string, error) {
+func (q *Queries) Process() (string, error) {
 	return q.create()
 }
 
-
-func (q *Queries) Append(qu *GeneratedQuery) *Queries {
-	q.Queries = append(q.Queries, qu)
-	return q
+func (q *Queries) NewQuery(f Fields) *GeneratedQuery {
+	newq := NewQuery(f)
+	newq.varFunc = q.varCounter
+	q.q = append(q.q, newq)
+	return newq
 }
 
 //create the byte representation.
-func (q *Queries) create() ([]byte, map[string]string, error) {
-	var queryStr, final bytes.Buffer
+func (q *Queries) create() (string, error) {
+	var final strings.Builder
+	final.Grow(512)
 	//The query variable information.
 	final.WriteString("query t")
 	//The global variable counter. It exists in a closure, it's just easy.
-	var varCounter = -1
-	//TODO: Better to not use a closure as to avoid heap allocating an int..
-	varFunc := func() int {
-		varCounter++
-		return varCounter
-	}
-	var output = make(map[string]string)
-	for k, qu := range q.Queries {
-		qu.index = k + 1
-		qu.varMap = output
-		qu.varFunc = varFunc
-		str, err := qu.create()
-		if err != nil {
-			return nil, nil, err
-		}
-		queryStr.WriteString(str)
-	}
 	final.WriteString("(")
-	for k, qu := range q.Queries {
-		str := qu.Variables()
+	for k, qu := range q.q {
+		qu.mapVariables(qu)
+		str := qu.variables()
 		if str == "" {
 			continue
 		}
 		//TODO: Make it more like a strings.Join to avoid all these error-prone additions.
-		if len(q.Queries) > 1 && k > 0 {
+		if len(q.q) > 1 && k > 0 {
 			final.WriteByte(',')
 		}
 		final.WriteString(str)
 	}
-	final.WriteString("){")
-	final.WriteString(queryStr.String())
-	final.WriteString("}")
-	return final.Bytes(), output, nil
+	final.WriteByte(')')
+	var output = make(map[string]string)
+	for k, qu := range q.q {
+		final.WriteByte('{')
+		qu.index = k + 1
+		_, err := qu.create(&final)
+		if err != nil {
+			return "", err
+		}
+		final.WriteByte('}')
+		for k, v := range qu.varMap {
+			output[k] = v
+		}
+	}
+	q.vars = output
+	return final.String(), nil
+}
+
+func (q *Queries) Vars() map[string]string {
+	return q.vars
 }
 
 //The Field maps include a path for the predicate.
@@ -124,54 +129,72 @@ func (q *Queries) create() ([]byte, map[string]string, error) {
 //TODO: All maps kept separate? They might not be used that often.
 type GeneratedQuery struct {
 	//The root function.
-	Function *Function
+	//Since all queries have a graph function this is an embedded struct.
+	//(It is embedded for convenient access as well as unnecessary pointer traversal).
+	function
+	//If it is a var query.
+	v bool
 	//Top level filter.
-	Filter *Filter
-	//All sub parts of the query.
-	//FieldFunctions map[Predicate]Function
-	//FieldOrderings map[Predicate][]Ordering
-	//FieldCount     map[Predicate][]Pagination
-	//FieldAggregate map[Predicate]AggregateValues
-	//FieldFilters   map[Predicate]Filter
-	modifiers  map[Predicate]modifierList
+	//filter *Filter
+	//List of modifiers, i.e. order, pagination etc.
+	modifiers map[Predicate]modifierList
+	//Builder for variables.
 	varBuilder strings.Builder
-	varMap     map[string]string
-	varFunc    func() int
+	//Map for dealing with GraphQL variables.
+	varMap map[string]string
+	//function for getting next query value in multi-query.
+	varFunc func() int
 	//The overall language for this query.
-	Language Language
+	language Language
+	//Whether to allow untagged.
 	strictLanguage bool
 	//Which directives to apply on this query.
-	Directives []Directive
-	Fields     Fields
+	directives []Directive
+	//The list of fields
+	fields Fields
+	//Current GraphQL variable.
 	varCounter int
-	schema     SchemaList
 	//For multiple queries.
 	index int
 }
 
-func (q *GeneratedQuery) SetFields(f Fields) *GeneratedQuery {
-	q.Fields = f
+/*
+func (q *GeneratedQuery) Var(v bool) *GeneratedQuery {
+	q.v = v
 	return q
 }
-
+*/
 func (q *GeneratedQuery) Facets(path Predicate) *GeneratedQuery {
 	q.modifiers[path] = append(q.modifiers[path], facet{})
 	return q
 }
 
-func NewQuery() *GeneratedQuery {
+func NewQuery(f Fields) *GeneratedQuery {
 	return &GeneratedQuery{
 		varMap:    make(map[string]string),
 		modifiers: make(map[Predicate]modifierList),
+		fields:    f,
 	}
 }
 
-func (q *GeneratedQuery) Process(sch SchemaList) (string, error) {
-	q.schema = sch
-	return q.create()
+func NewQueries() *Queries {
+	qu := new(Queries)
+	qu.q = make([]*GeneratedQuery, 0, 2)
+	qu.currentVar = -1
+	qu.varCounter = func() int {
+		qu.currentVar++
+		return qu.currentVar
+	}
+	return qu
 }
 
-func (q *GeneratedQuery) AddOrdering(t OrderType, path Predicate, pred Predicate) *GeneratedQuery {
+func (q *GeneratedQuery) Process() (string, error) {
+	return q.create(nil)
+}
+
+//Order adds an ordering of type t at the given object path to the predicate pred.
+//Requires is that the path points to an object predicate where pred is a predicate in the given object.
+func (q *GeneratedQuery) Order(t OrderType, path Predicate, pred Predicate) *GeneratedQuery {
 	q.modifiers[path] = append(q.modifiers[path], Ordering{Type: t, Predicate: pred})
 	return q
 }
@@ -183,70 +206,102 @@ const (
 	MutateSet    MutationType = "set"
 )
 
-func (q *GeneratedQuery) create() (string, error) {
+func (q *GeneratedQuery) create(sb *strings.Builder) (string, error) {
 	//t := time.Now()
-	var sb strings.Builder
-	//The size of default buffer.
-	const size = 256
-	sb.Grow(size)
+	//sb == nil implies this is a solo query. This means we need to map the GraphQL
+	//variables beforehand as it is otherwise calculated in the Queries calculation in Queries.create()
+	if sb == nil {
+		sb = new(strings.Builder)
+		q.mapVariables(q)
+		sb.Grow(512)
+	}
+	if err := q.function.check(q); err != nil {
+		return "", err
+	}
+	//Single query.
+	if q.varFunc == nil {
+		vars := q.variables()
+		if vars == "" {
+			sb.WriteString("query{")
+		} else {
+			sb.WriteString("query t(")
+			sb.WriteString(vars)
+			sb.WriteString("){")
+		}
+	}
 	//Write query header.
-	sb.WriteString("{q")
+	sb.WriteByte('q')
 	if q.index != 0 {
-		sb.WriteString(strconv.Itoa(q.index))
+		writeInt(int64(q.index), sb)
 	}
 	sb.WriteString(tokenLP + "func" + tokenColumn + tokenSpace)
-	err := q.Function.create(q, &sb)
+	err := q.function.create(q, sb)
 	if err != nil {
 		return "", err
 	}
-	sb.WriteString(tokenRP)
-	//optional filter
-	if q.Filter != nil {
-		err := q.Filter.create(q, &sb)
-		if err != nil {
-			return "", err
+	//Top level modifiers.
+	val, ok := q.modifiers[""]
+	if ok {
+		//Two passes. Before and after parenthesis. That's just how it be.
+		sort.Sort(val)
+		for _, v := range val {
+			if v.priority() > modifierFilter && v.canApply(modifierFunction) {
+				sb.WriteByte(',')
+				_, err := v.apply(q, 0, modifierFunction, sb)
+				if err != nil {
+					return "", err
+				}
+			}
 		}
+		//TODO: Check this through.
+		sb.WriteByte(')')
+		for _, v := range val {
+			if v.priority() == modifierFilter && v.canApply(modifierFunction) {
+				_, err := v.apply(q, 0, modifierFunction, sb)
+				if err != nil {
+					return "", err
+				}
+			}
+		}
+	} else {
+		sb.WriteByte(')')
 	}
-	for _, v := range q.Directives {
+	for _, v := range q.directives {
 		sb.WriteByte('@')
 		sb.WriteString(string(v))
 	}
-	sb.WriteString(tokenLB)
-	var parentBuf = make(unsafeSlice,0,64)
-	for i, field := range q.Fields.Get() {
-		if i != 0 {
-			sb.WriteString(tokenSpace)
+	sb.WriteByte('{')
+	var parentBuf = make(unsafeSlice, 0, 64)
+	for _, field := range q.fields.Get() {
+		if len(field.Name) > 64 {
+			//This code should pretty much never execute as a predicate is rarely this large.
+			parentBuf = make([]byte, 2*len(field.Name))
 		}
-		parentBuf = append(parentBuf, field.Name...)
-		err := field.create(q, parentBuf, &sb)
+		parentBuf = parentBuf[:len(field.Name)]
+		copy(parentBuf, field.Name)
+		//parentBuf = append(parentBuf, field.Name...)
+		err := field.create(q, parentBuf, sb)
 		if err != nil {
 			return "", err
 		}
-		parentBuf = parentBuf[:0]
+		sb.WriteByte(' ')
+	}
+	for _, v := range val {
+		if v.priority() <= modifierAggregate && v.canApply(modifierField) {
+			_, err := v.apply(q, 0, modifierFunction, sb)
+			if err != nil {
+				return "", err
+			}
+		} else {
+			break
+		}
 	}
 	//Add default uid to top level field and close query.
-	sb.WriteString(" uid" + tokenRB + tokenRB)
-	//TODO: Write variable header and create the var map.
-	//TODO: This is a way to see if it is single. This is not the best!
-	//TODO: Is there anyway to preallocate variables? I don't think so. That would imply
-	//traversing the tree once beforehand and that is unnecessary.
-	vars := q.Variables()
-	var result strings.Builder
+	sb.WriteString(" uid" + tokenRB)
 	if q.varFunc == nil {
-		result.Grow(len(vars)+sb.Len() + len("query t(") + 1)
-	} else {
-		result.Grow(sb.Len())
+		sb.WriteByte('}')
 	}
-	//Copy the query into result.
-	if q.varFunc == nil {
-		result.WriteString("query t(")
-		result.WriteString(vars)
-		result.WriteString(")")
-	}
-	result.WriteString(sb.String())
-	//fmt.Println(fmt.Sprintf("Creating query took %v", time.Now().Sub(t)))
-	buf := result.String()
-	return buf, nil
+	return sb.String(), nil
 }
 
 func (q *GeneratedQuery) Vars() map[string]string {
@@ -254,60 +309,76 @@ func (q *GeneratedQuery) Vars() map[string]string {
 }
 
 func (q *GeneratedQuery) AddDirective(dir Directive) *GeneratedQuery {
-	for _, v := range q.Directives {
+	for _, v := range q.directives {
 		if v == dir {
 			return q
 		}
 	}
-	q.Directives = append(q.Directives, dir)
+	q.directives = append(q.directives, dir)
 	return q
 }
 
 //Adds a count to a predicate.
-func (q *GeneratedQuery) AddSubCount(t PaginationType, path Predicate, value int) *GeneratedQuery {
+func (q *GeneratedQuery) Count(t CountType, path Predicate, value int) *GeneratedQuery {
 	q.modifiers[path] = append(q.modifiers[path], Pagination{Type: t, Value: value})
 	return q
 }
-//AddAggregation adds aggregation on a value variable.
+
+//Agg adds aggregation on a value variable.
 //Note that path here is the root level of the aggregation such that
 //empty path corresponds to top level aggregation.
-func (q *GeneratedQuery) AddAggregation(typ AggregateType, path Predicate, alias string) *GeneratedQuery {
-	q.modifiers[path] = append(q.modifiers[path], AggregateValues{Type:typ, Alias: alias})
+//The which represents which value to aggregate on.
+func (q *GeneratedQuery) Agg(typ AggregateType, path Predicate, variable string, alias string) *GeneratedQuery {
+	q.modifiers[path] = append(q.modifiers[path], AggregateValues{Type: typ, Alias: alias, Variable: variable})
+	return q
+}
+
+func (q *GeneratedQuery) GroupBy(path Predicate, value Predicate) *GeneratedQuery {
+	q.modifiers[path] = append(q.modifiers[path], groupBy(value))
 	return q
 }
 
 //Adds a subfilter to a predicate.
-func (q *GeneratedQuery) AddSubFilter(f *Function, path Predicate) *GeneratedQuery {
-	q.modifiers[path] = append(q.modifiers[path], MakeFilter(f))
+func (q *GeneratedQuery) Filter(f *Filter, path Predicate) *GeneratedQuery {
+	f.mapVariables(q)
+	q.modifiers[path] = append(q.modifiers[path], f)
 	return q
 }
 
-//SetLanguage sets the language for the query to apply to all fields.
+//Language sets the language for the query to apply to all fields.
 //If strict do not allow untagged language.
-func (q *GeneratedQuery) SetLanguage(l Language, strict bool) *GeneratedQuery {
-	q.Language = l
+func (q *GeneratedQuery) Language(l Language, strict bool) *GeneratedQuery {
+	q.language = l
+	q.strictLanguage = strict
 	return q
 }
 
 // Returns all the query variables for this query in create form.
 //single for single query
-func (q *GeneratedQuery) Variables() string {
-	if q.varBuilder.Len() == 0 {
-		return ""
-	}
+func (q *GeneratedQuery) variables() string {
 	return q.varBuilder.String()
 }
-
-//The alias is to avoid count(predicate) as name.
-func (q *GeneratedQuery) SetSubAggregate(path Predicate, alias string, aggregate AggregateType) *GeneratedQuery {
-	q.modifiers[path] = append(q.modifiers[path], AggregateValues{aggregate, alias})
+//Variable adds a value variable of the form name as value.
+//Value can be anything from a math expression to a count.
+//Example: if name is test and value is math(p+q) then
+//result is a variable 'test as math(p+q)' at the path given by path.
+//isAlias simply means that rather than a value variable it is
+//test : math(p+q)
+func (q *GeneratedQuery) Variable(name string, value string, isAlias bool, path Predicate) *GeneratedQuery {
+	q.modifiers[path] = append(q.modifiers[path], variable{
+		name:  name,
+		value: value,
+		alias: isAlias,
+	})
 	return q
 }
 
 //It does not build it concurrently so just increment a counter.
-func (q *GeneratedQuery) registerVariable(typ VarType, value string) string {
+func (q *GeneratedQuery) registerVariable(typ varType, value string) string {
 	if q.varBuilder.Len() != 0 {
 		q.varBuilder.WriteByte(',')
+	} else {
+		q.varBuilder.Grow(32)
 	}
 	var val int
 	if q.varFunc != nil {
@@ -316,7 +387,10 @@ func (q *GeneratedQuery) registerVariable(typ VarType, value string) string {
 		val = q.varCounter
 		q.varCounter++
 	}
-	var key = "$" + strconv.Itoa(val)
+	var buf [9]byte
+	buf[0] = '$'
+	b := strconv.AppendInt(buf[:1], int64(val), 10)
+	key := string(b)
 	q.varBuilder.WriteString(key)
 	q.varBuilder.WriteByte(':')
 	q.varBuilder.WriteString(string(typ))
@@ -324,13 +398,36 @@ func (q *GeneratedQuery) registerVariable(typ VarType, value string) string {
 	return key
 }
 
-func (q *GeneratedQuery) SetFunction(function *Function) *GeneratedQuery {
-	q.Function = function
+//Function related functions. These are wrappers over the function.
+
+func (q *GeneratedQuery) Function(ft FunctionType) *GeneratedQuery {
+	q.function = function{Type: ft, Variables: make([]graphVariable, 0, 4)}
 	return q
 }
 
-//TODO: Multiple filters.
-func (q *GeneratedQuery) SetFilter(filter *Filter) *GeneratedQuery {
-	q.Filter = filter
+//Pred sets a predicate variable, for a has function.
+func (q *GeneratedQuery) Pred(pred Predicate) *GeneratedQuery {
+	q.function.pred(pred)
+	return q
+}
+
+//PredValue sets a predicate alongside a value, useful for eq.
+func (q *GeneratedQuery) PredValue(pred Predicate, value interface{}) *GeneratedQuery {
+	q.function.predValue(pred, value)
+	return q
+}
+
+func (q *GeneratedQuery) PredValues(pred Predicate, value ...interface{}) *GeneratedQuery {
+	q.function.predMultiple(pred, value)
+	return q
+}
+
+func (q *GeneratedQuery) Value(v interface{}) *GeneratedQuery {
+	q.function.value(v)
+	return q
+}
+
+func (q *GeneratedQuery) Values(v ...interface{}) *GeneratedQuery {
+	q.function.values(v)
 	return q
 }

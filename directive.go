@@ -1,4 +1,4 @@
-package mulbase
+package humus
 
 //All dgraph query directives.
 type Directive string

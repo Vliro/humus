@@ -4,8 +4,8 @@ import (
 	"bytes"
 	"errors"
 	"fmt"
-	"github.com/Vliro/mulbase/gen/graphql-go/common"
-	"github.com/Vliro/mulbase/gen/graphql-go/schema"
+	"github.com/Vliro/humus/gen/graphql-go/common"
+	"github.com/Vliro/humus/gen/graphql-go/schema"
 	"io"
 	"strings"
 )
@@ -17,7 +17,7 @@ const lineDeclaration = " %v `json:\"%v\"` \n"
 
 const bottomLine = "}\n"
 
-const fieldDecl = "var %vFields mulbase.FieldList = []mulbase.Field{%s} "
+const fieldDecl = "var %vFields humus.FieldList = []humus.Field{%s} "
 
 const makeFieldName = "MakeField(%s, %v)"
 
@@ -57,7 +57,7 @@ func (mc ModelCreator) makeGoStruct(o *schema.Object, m map[string][]Field, g *G
 	var fields []Field
 	sb.WriteString(fmt.Sprintf(topLine, o.Name))
 	//Declare this as a node.
-	sb.WriteString("//This line declares basic properties for a database node. \nmulbase.Node \n")
+	sb.WriteString("//This line declares basic properties for a database node. \nhumus.Node \n")
 	if len(o.Interfaces) != 0 {
 		sb.WriteString("//List of interfaces implemented.\n")
 		for _, v := range o.Interfaces {
@@ -119,7 +119,7 @@ func (mc ModelCreator) makeGoInterface(o *schema.Interface, g *Generator) (*byte
 	sb.WriteString("//Created from a GraphQL interface. \n")
 	sb.WriteString(fmt.Sprintf(topLine, o.Name))
 	//Declare this as a node.
-	sb.WriteString("//This line declares basic properties for a database node. \nmulbase.Node \n")
+	sb.WriteString("//This line declares basic properties for a database node. \nhumus.Node \n")
 	for _, v := range o.Fields {
 		var fi = iterate(o.Name, v, v.Type, &sb, 0, g)
 		if fi.Name == "" { // || fi.IsPassword {
@@ -169,31 +169,30 @@ func makeFieldList(name string, fi []Field, sb *bytes.Buffer, allowUnderscore bo
 		flagBuilder.WriteString("0")
 		obj := v.flags & flagObject
 		if obj > 0 {
-			flagBuilder.WriteString("|mulbase.MetaObject")
+			flagBuilder.WriteString("|humus.MetaObject")
 		}
 		if v.flags&flagArray != 0 {
-			flagBuilder.WriteString("|mulbase.MetaList")
+			flagBuilder.WriteString("|humus.MetaList")
 		}
 		if v.flags&flagReverse != 0 {
-			flagBuilder.WriteString("|mulbase.MetaReverse")
+			flagBuilder.WriteString("|humus.MetaReverse")
 		}
 		if v.flags&flagFacet != 0 {
-			flagBuilder.WriteString("|mulbase.MetaFacet")
+			flagBuilder.WriteString("|humus.MetaFacet")
 		}
 		if v.flags&flagLang != 0 {
-			flagBuilder.WriteString("|mulbase.MetaLang")
+			flagBuilder.WriteString("|humus.MetaLang")
 		}
 		nofield := v.HasDirective("ignore") != nil
-
-		if nofield { //|| obj > 0 {
-			if allowUnderscore {
-				sb.WriteString(fmt.Sprintf(fieldDeclObj, fmt.Sprintf(makeFieldName, "\""+v.Tag+"\"", flagBuilder.String())))
-			}
-		} else {
-			isb.WriteString(fmt.Sprintf(makeFieldName, "\""+v.Tag+"\"", flagBuilder.String()))
-			if k != len(fi)-1 {
-				isb.WriteByte(',')
-			}
+		if nofield {
+			flagBuilder.WriteString("|humus.MetaIgnore")
+		}
+		//	if nofield { //|| obj > 0 {
+		//		if allowUnderscore {
+		//			sb.WriteString(fmt.Sprintf(fieldDeclObj, fmt.Sprintf(makeFieldName, "\""+v.Tag+"\"", flagBuilder.String())))
+		isb.WriteString(fmt.Sprintf(makeFieldName, "\""+v.Tag+"\"", flagBuilder.String()))
+		if k != len(fi)-1 {
+			isb.WriteByte(',')
 		}
 	}
 	sb.WriteString(fmt.Sprintf(fieldDecl, name, isb.String()) + "\n")
@@ -391,7 +390,7 @@ func modelTemplate(sch *schema.Schema, name string, allScalars []Field, sb *byte
 	for _, v := range sch.Interfaces() {
 		m.Interfaces = append(m.Interfaces, v.Name)
 	}
-	/*for _,v := range m.Fields {
+	/*for _,v := range m.fields {
 		if v.flags&flagFacet > 0 {
 			m.Facets = append(m.Facets, strings.ToLower(v.Name))
 		}

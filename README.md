@@ -1,3 +1,8 @@
+## Notes
+
+This library is a work in progress and is in no way advised for production. 
+Right now geometry is not available.
+
 ## The repository
 
 Mulbase/gen is a front-end library for DGraph. It includes static (mostly) code generation based on the same schema supplied to the database.
@@ -39,6 +44,16 @@ the difference being DB immediately commits all executions(or discards).
 This is derived from https://github.com/graph-gophers/graphql-go. A lot of code has been removed that
 was not necessary since the parsing was needed and not the actual GraphQL elements. (It does not represent a GraphQL server)
 The foremost change was making the schema and its objects public for code generation.
+
+## Slices
+
+References to other classes in the database is currently modeled as []Type rather than []*Type. This simplifies allocations but 
+causes reference issues. For instance, pointer to &array at index k keeps the entire array alive. Therefore, it might be better
+to use a slice of pointers. 
+
+## Variables
+
+All inputs into functions are transformed into GraphQL variables to deny possible injection of data.
 
 ## Mutations
 

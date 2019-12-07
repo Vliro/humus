@@ -4,38 +4,38 @@ package gen
 
 import (
 	"context"
-	"github.com/Vliro/mulbase"
+	"github.com/Vliro/humus"
 	"time"
 )
 
 var _ context.Context
 var _ time.Time
-var _ mulbase.Fields
+var _ humus.Fields
 
 //Created from a GraphQL interface.
 type Post struct {
 	//This line declares basic properties for a database node.
-	mulbase.Node
+	humus.Node
 	Text          string     `json:"Post.text,omitempty"`
 	DatePublished *time.Time `json:"Post.datePublished,omitempty"`
 	From          *User      `json:"Post.from,omitempty"`
 	Comments      []Comment  `json:"~Comment.commentsOn,omitempty"`
 }
 
-var PostFields mulbase.FieldList = []mulbase.Field{MakeField("Post.text", 0|mulbase.MetaLang), MakeField("Post.datePublished", 0), MakeField("Post.from", 0|mulbase.MetaObject), MakeField("~Comment.commentsOn", 0|mulbase.MetaObject|mulbase.MetaList|mulbase.MetaReverse)}
+var PostFields humus.FieldList = []humus.Field{MakeField("Post.text", 0|humus.MetaLang), MakeField("Post.datePublished", 0), MakeField("Post.from", 0|humus.MetaObject), MakeField("~Comment.commentsOn", 0|humus.MetaObject|humus.MetaList|humus.MetaReverse)}
 
 //Generating constant field values.
 const (
-	PostTextField          mulbase.Predicate = "Post.text"
-	PostDatePublishedField mulbase.Predicate = "Post.datePublished"
-	PostFromField          mulbase.Predicate = "Post.from"
-	PostCommentsField      mulbase.Predicate = "~Comment.commentsOn"
+	PostTextField          humus.Predicate = "Post.text"
+	PostDatePublishedField humus.Predicate = "Post.datePublished"
+	PostFromField          humus.Predicate = "Post.from"
+	PostCommentsField      humus.Predicate = "~Comment.commentsOn"
 )
 
 //SaveValues saves the node values that
 //do not contain any references to other objects.
-func (r *Post) SaveValues(ctx context.Context, txn *mulbase.Txn) error {
-	mut := mulbase.CreateMutation(r.Values(), mulbase.MutateSet)
+func (r *Post) SaveValues(ctx context.Context, txn *humus.Txn) error {
+	mut := humus.CreateMutation(r.Values(), humus.MutateSet)
 	_, err := txn.Mutate(ctx, mut)
 	return err
 }
@@ -46,12 +46,22 @@ func (r *Post) GetType() []string {
 	return r.Type
 }
 
+//Reset resets the node to only its UID
+//component. Useful for saving to the database.
+//Calling this function ensures that, at most,
+//the uid and type is serialized.
+func (r *Post) Reset() {
+	if r != nil {
+		*r = Post{Node: r.Node}
+	}
+}
+
 func (r *Post) Facets() []string {
 	return nil
 }
 
 //Fields returns all Scalar fields for this value.
-func (r *Post) Fields() mulbase.FieldList {
+func (r *Post) Fields() humus.FieldList {
 	return PostFields
 }
 
@@ -63,8 +73,8 @@ func (r *Post) SetType() {
 	}
 }
 
-//Values returns all the scalar values for this node.
-func (r *Post) Values() mulbase.DNode {
+//values returns all the scalar values for this node.
+func (r *Post) Values() humus.DNode {
 	var m PostScalars
 	m.Text = r.Text
 	m.DatePublished = r.DatePublished
@@ -73,9 +83,9 @@ func (r *Post) Values() mulbase.DNode {
 	return &m
 }
 
-//Values returns all the scalar values for this node.
+//values returns all the scalar values for this node.
 //Note that this completely ignores any omitempty tags so use with care.
-func (r *Post) MapValues() mulbase.Mapper {
+func (r *Post) MapValues() humus.Mapper {
 	var m = make(map[string]interface{})
 	m["Post.text"] = r.Text
 	m["Post.datePublished"] = r.DatePublished
@@ -90,46 +100,46 @@ func (r *Post) MapValues() mulbase.Mapper {
 //PostScalars is simply to avoid a map[string]interface{}
 //It is a mirror of the previous struct with all scalar values.
 type PostScalars struct {
-	mulbase.Node
+	humus.Node
 	Text          string     `json:"Post.text,omitempty"`
 	DatePublished *time.Time `json:"Post.datePublished,omitempty"`
 }
 
-func (s *PostScalars) Values() mulbase.DNode {
+func (s *PostScalars) Values() humus.DNode {
 	return s
 }
 
-func (s *PostScalars) MapValues() mulbase.Mapper {
+func (s *PostScalars) MapValues() humus.Mapper {
 	panic("PostScalars called, use the original one instead")
 }
 
-func (s *PostScalars) Fields() mulbase.FieldList {
+func (s *PostScalars) Fields() humus.FieldList {
 	return PostFields
 }
 
 //End of model.template
 type Question struct {
 	//This line declares basic properties for a database node.
-	mulbase.Node
+	humus.Node
 	//List of interfaces implemented.
 	Post
 	//Regular fields
 }
 
-var QuestionFields mulbase.FieldList = []mulbase.Field{MakeField("Post.text", 0|mulbase.MetaLang), MakeField("Post.datePublished", 0), MakeField("Post.from", 0|mulbase.MetaObject), MakeField("~Comment.commentsOn", 0|mulbase.MetaObject|mulbase.MetaList|mulbase.MetaReverse)}
+var QuestionFields humus.FieldList = []humus.Field{MakeField("Post.text", 0|humus.MetaLang), MakeField("Post.datePublished", 0), MakeField("Post.from", 0|humus.MetaObject), MakeField("~Comment.commentsOn", 0|humus.MetaObject|humus.MetaList|humus.MetaReverse)}
 
 //Generating constant field values.
 const (
-	QuestionTextField          mulbase.Predicate = "Post.text"
-	QuestionDatePublishedField mulbase.Predicate = "Post.datePublished"
-	QuestionFromField          mulbase.Predicate = "Post.from"
-	QuestionCommentsField      mulbase.Predicate = "~Comment.commentsOn"
+	QuestionTextField          humus.Predicate = "Post.text"
+	QuestionDatePublishedField humus.Predicate = "Post.datePublished"
+	QuestionFromField          humus.Predicate = "Post.from"
+	QuestionCommentsField      humus.Predicate = "~Comment.commentsOn"
 )
 
 //SaveValues saves the node values that
 //do not contain any references to other objects.
-func (r *Question) SaveValues(ctx context.Context, txn *mulbase.Txn) error {
-	mut := mulbase.CreateMutation(r.Values(), mulbase.MutateSet)
+func (r *Question) SaveValues(ctx context.Context, txn *humus.Txn) error {
+	mut := humus.CreateMutation(r.Values(), humus.MutateSet)
 	_, err := txn.Mutate(ctx, mut)
 	return err
 }
@@ -140,12 +150,22 @@ func (r *Question) GetType() []string {
 	return r.Type
 }
 
+//Reset resets the node to only its UID
+//component. Useful for saving to the database.
+//Calling this function ensures that, at most,
+//the uid and type is serialized.
+func (r *Question) Reset() {
+	if r != nil {
+		*r = Question{Node: r.Node}
+	}
+}
+
 func (r *Question) Facets() []string {
 	return nil
 }
 
 //Fields returns all Scalar fields for this value.
-func (r *Question) Fields() mulbase.FieldList {
+func (r *Question) Fields() humus.FieldList {
 	return QuestionFields
 }
 
@@ -157,8 +177,8 @@ func (r *Question) SetType() {
 	}
 }
 
-//Values returns all the scalar values for this node.
-func (r *Question) Values() mulbase.DNode {
+//values returns all the scalar values for this node.
+func (r *Question) Values() humus.DNode {
 	var m QuestionScalars
 	m.Text = r.Text
 	m.DatePublished = r.DatePublished
@@ -167,9 +187,9 @@ func (r *Question) Values() mulbase.DNode {
 	return &m
 }
 
-//Values returns all the scalar values for this node.
+//values returns all the scalar values for this node.
 //Note that this completely ignores any omitempty tags so use with care.
-func (r *Question) MapValues() mulbase.Mapper {
+func (r *Question) MapValues() humus.Mapper {
 	var m = make(map[string]interface{})
 	m["Post.text"] = r.Text
 	m["Post.datePublished"] = r.DatePublished
@@ -184,48 +204,48 @@ func (r *Question) MapValues() mulbase.Mapper {
 //QuestionScalars is simply to avoid a map[string]interface{}
 //It is a mirror of the previous struct with all scalar values.
 type QuestionScalars struct {
-	mulbase.Node
+	humus.Node
 	Text          string     `json:"Post.text,omitempty"`
 	DatePublished *time.Time `json:"Post.datePublished,omitempty"`
 }
 
-func (s *QuestionScalars) Values() mulbase.DNode {
+func (s *QuestionScalars) Values() humus.DNode {
 	return s
 }
 
-func (s *QuestionScalars) MapValues() mulbase.Mapper {
+func (s *QuestionScalars) MapValues() humus.Mapper {
 	panic("QuestionScalars called, use the original one instead")
 }
 
-func (s *QuestionScalars) Fields() mulbase.FieldList {
+func (s *QuestionScalars) Fields() humus.FieldList {
 	return QuestionFields
 }
 
 //End of model.template
 type Comment struct {
 	//This line declares basic properties for a database node.
-	mulbase.Node
+	humus.Node
 	//List of interfaces implemented.
 	Post
 	//Regular fields
 	CommentsOn *Post `json:"Comment.commentsOn,omitempty"`
 }
 
-var CommentFields mulbase.FieldList = []mulbase.Field{MakeField("Comment.commentsOn", 0|mulbase.MetaObject|mulbase.MetaReverse), MakeField("Post.text", 0|mulbase.MetaLang), MakeField("Post.datePublished", 0), MakeField("Post.from", 0|mulbase.MetaObject), MakeField("~Comment.commentsOn", 0|mulbase.MetaObject|mulbase.MetaList|mulbase.MetaReverse)}
+var CommentFields humus.FieldList = []humus.Field{MakeField("Comment.commentsOn", 0|humus.MetaObject|humus.MetaReverse), MakeField("Post.text", 0|humus.MetaLang), MakeField("Post.datePublished", 0), MakeField("Post.from", 0|humus.MetaObject), MakeField("~Comment.commentsOn", 0|humus.MetaObject|humus.MetaList|humus.MetaReverse)}
 
 //Generating constant field values.
 const (
-	CommentCommentsOnField    mulbase.Predicate = "Comment.commentsOn"
-	CommentTextField          mulbase.Predicate = "Post.text"
-	CommentDatePublishedField mulbase.Predicate = "Post.datePublished"
-	CommentFromField          mulbase.Predicate = "Post.from"
-	CommentCommentsField      mulbase.Predicate = "~Comment.commentsOn"
+	CommentCommentsOnField    humus.Predicate = "Comment.commentsOn"
+	CommentTextField          humus.Predicate = "Post.text"
+	CommentDatePublishedField humus.Predicate = "Post.datePublished"
+	CommentFromField          humus.Predicate = "Post.from"
+	CommentCommentsField      humus.Predicate = "~Comment.commentsOn"
 )
 
 //SaveValues saves the node values that
 //do not contain any references to other objects.
-func (r *Comment) SaveValues(ctx context.Context, txn *mulbase.Txn) error {
-	mut := mulbase.CreateMutation(r.Values(), mulbase.MutateSet)
+func (r *Comment) SaveValues(ctx context.Context, txn *humus.Txn) error {
+	mut := humus.CreateMutation(r.Values(), humus.MutateSet)
 	_, err := txn.Mutate(ctx, mut)
 	return err
 }
@@ -236,12 +256,22 @@ func (r *Comment) GetType() []string {
 	return r.Type
 }
 
+//Reset resets the node to only its UID
+//component. Useful for saving to the database.
+//Calling this function ensures that, at most,
+//the uid and type is serialized.
+func (r *Comment) Reset() {
+	if r != nil {
+		*r = Comment{Node: r.Node}
+	}
+}
+
 func (r *Comment) Facets() []string {
 	return nil
 }
 
 //Fields returns all Scalar fields for this value.
-func (r *Comment) Fields() mulbase.FieldList {
+func (r *Comment) Fields() humus.FieldList {
 	return CommentFields
 }
 
@@ -253,8 +283,8 @@ func (r *Comment) SetType() {
 	}
 }
 
-//Values returns all the scalar values for this node.
-func (r *Comment) Values() mulbase.DNode {
+//values returns all the scalar values for this node.
+func (r *Comment) Values() humus.DNode {
 	var m CommentScalars
 	m.Text = r.Text
 	m.DatePublished = r.DatePublished
@@ -263,9 +293,9 @@ func (r *Comment) Values() mulbase.DNode {
 	return &m
 }
 
-//Values returns all the scalar values for this node.
+//values returns all the scalar values for this node.
 //Note that this completely ignores any omitempty tags so use with care.
-func (r *Comment) MapValues() mulbase.Mapper {
+func (r *Comment) MapValues() humus.Mapper {
 	var m = make(map[string]interface{})
 	m["Post.text"] = r.Text
 	m["Post.datePublished"] = r.DatePublished
@@ -280,45 +310,50 @@ func (r *Comment) MapValues() mulbase.Mapper {
 //CommentScalars is simply to avoid a map[string]interface{}
 //It is a mirror of the previous struct with all scalar values.
 type CommentScalars struct {
-	mulbase.Node
+	humus.Node
 	Text          string     `json:"Post.text,omitempty"`
 	DatePublished *time.Time `json:"Post.datePublished,omitempty"`
 }
 
-func (s *CommentScalars) Values() mulbase.DNode {
+func (s *CommentScalars) Values() humus.DNode {
 	return s
 }
 
-func (s *CommentScalars) MapValues() mulbase.Mapper {
+func (s *CommentScalars) MapValues() humus.Mapper {
 	panic("CommentScalars called, use the original one instead")
 }
 
-func (s *CommentScalars) Fields() mulbase.FieldList {
+func (s *CommentScalars) Fields() humus.FieldList {
 	return CommentFields
 }
 
 //End of model.template
 type User struct {
 	//This line declares basic properties for a database node.
-	mulbase.Node
+	humus.Node
 	//Regular fields
-	Name string `json:"User.name,omitempty"`
-	Pass string `json:"User.pass,omitempty"`
+	Name        string     `json:"User.name,omitempty"`
+	Pass        string     `json:"User.pass,omitempty"`
+	Role        UserRole   `json:"User.role,omitempty"`
+	Friends     []User     `json:"User.friends,omitempty"`
+	FriendSince *time.Time `json:"User.friends|friendSince,omitempty"`
 }
 
-var _ = MakeField("User.pass", 0)
-var UserFields mulbase.FieldList = []mulbase.Field{MakeField("User.name", 0)}
+var UserFields humus.FieldList = []humus.Field{MakeField("User.name", 0), MakeField("User.pass", 0|humus.MetaIgnore), MakeField("User.role", 0), MakeField("User.friends", 0|humus.MetaObject|humus.MetaList), MakeField("User.friends|friendSince", 0|humus.MetaFacet)}
 
 //Generating constant field values.
 const (
-	UserNameField mulbase.Predicate = "User.name"
-	UserPassField mulbase.Predicate = "User.pass"
+	UserNameField        humus.Predicate = "User.name"
+	UserPassField        humus.Predicate = "User.pass"
+	UserRoleField        humus.Predicate = "User.role"
+	UserFriendsField     humus.Predicate = "User.friends"
+	UserFriendSinceField humus.Predicate = "User.friends|friendSince"
 )
 
 //SaveValues saves the node values that
 //do not contain any references to other objects.
-func (r *User) SaveValues(ctx context.Context, txn *mulbase.Txn) error {
-	mut := mulbase.CreateMutation(r.Values(), mulbase.MutateSet)
+func (r *User) SaveValues(ctx context.Context, txn *humus.Txn) error {
+	mut := humus.CreateMutation(r.Values(), humus.MutateSet)
 	_, err := txn.Mutate(ctx, mut)
 	return err
 }
@@ -329,12 +364,22 @@ func (r *User) GetType() []string {
 	return r.Type
 }
 
+//Reset resets the node to only its UID
+//component. Useful for saving to the database.
+//Calling this function ensures that, at most,
+//the uid and type is serialized.
+func (r *User) Reset() {
+	if r != nil {
+		*r = User{Node: r.Node}
+	}
+}
+
 func (r *User) Facets() []string {
 	return nil
 }
 
 //Fields returns all Scalar fields for this value.
-func (r *User) Fields() mulbase.FieldList {
+func (r *User) Fields() humus.FieldList {
 	return UserFields
 }
 
@@ -346,20 +391,22 @@ func (r *User) SetType() {
 	}
 }
 
-//Values returns all the scalar values for this node.
-func (r *User) Values() mulbase.DNode {
+//values returns all the scalar values for this node.
+func (r *User) Values() humus.DNode {
 	var m UserScalars
 	m.Name = r.Name
+	m.Role = r.Role
 	r.SetType()
 	m.Node = r.Node
 	return &m
 }
 
-//Values returns all the scalar values for this node.
+//values returns all the scalar values for this node.
 //Note that this completely ignores any omitempty tags so use with care.
-func (r *User) MapValues() mulbase.Mapper {
+func (r *User) MapValues() humus.Mapper {
 	var m = make(map[string]interface{})
 	m["User.name"] = r.Name
+	m["User.role"] = r.Role
 	if r.Uid != "" {
 		m["uid"] = r.Uid
 	}
@@ -371,46 +418,47 @@ func (r *User) MapValues() mulbase.Mapper {
 //UserScalars is simply to avoid a map[string]interface{}
 //It is a mirror of the previous struct with all scalar values.
 type UserScalars struct {
-	mulbase.Node
-	Name string `json:"User.name,omitempty"`
-	Pass string `json:"User.pass,omitempty"`
+	humus.Node
+	Name string   `json:"User.name,omitempty"`
+	Pass string   `json:"User.pass,omitempty"`
+	Role UserRole `json:"User.role,omitempty"`
 }
 
-func (s *UserScalars) Values() mulbase.DNode {
+func (s *UserScalars) Values() humus.DNode {
 	return s
 }
 
-func (s *UserScalars) MapValues() mulbase.Mapper {
+func (s *UserScalars) MapValues() humus.Mapper {
 	panic("UserScalars called, use the original one instead")
 }
 
-func (s *UserScalars) Fields() mulbase.FieldList {
+func (s *UserScalars) Fields() humus.FieldList {
 	return UserFields
 }
 
 //End of model.template
 type Error struct {
 	//This line declares basic properties for a database node.
-	mulbase.Node
+	humus.Node
 	//Regular fields
 	Message   string     `json:"Error.message,omitempty"`
 	ErrorType string     `json:"Error.errorType,omitempty"`
 	Time      *time.Time `json:"Error.time,omitempty"`
 }
 
-var ErrorFields mulbase.FieldList = []mulbase.Field{MakeField("Error.message", 0), MakeField("Error.errorType", 0), MakeField("Error.time", 0)}
+var ErrorFields humus.FieldList = []humus.Field{MakeField("Error.message", 0), MakeField("Error.errorType", 0), MakeField("Error.time", 0)}
 
 //Generating constant field values.
 const (
-	ErrorMessageField   mulbase.Predicate = "Error.message"
-	ErrorErrorTypeField mulbase.Predicate = "Error.errorType"
-	ErrorTimeField      mulbase.Predicate = "Error.time"
+	ErrorMessageField   humus.Predicate = "Error.message"
+	ErrorErrorTypeField humus.Predicate = "Error.errorType"
+	ErrorTimeField      humus.Predicate = "Error.time"
 )
 
 //SaveValues saves the node values that
 //do not contain any references to other objects.
-func (r *Error) SaveValues(ctx context.Context, txn *mulbase.Txn) error {
-	mut := mulbase.CreateMutation(r.Values(), mulbase.MutateSet)
+func (r *Error) SaveValues(ctx context.Context, txn *humus.Txn) error {
+	mut := humus.CreateMutation(r.Values(), humus.MutateSet)
 	_, err := txn.Mutate(ctx, mut)
 	return err
 }
@@ -421,12 +469,22 @@ func (r *Error) GetType() []string {
 	return r.Type
 }
 
+//Reset resets the node to only its UID
+//component. Useful for saving to the database.
+//Calling this function ensures that, at most,
+//the uid and type is serialized.
+func (r *Error) Reset() {
+	if r != nil {
+		*r = Error{Node: r.Node}
+	}
+}
+
 func (r *Error) Facets() []string {
 	return nil
 }
 
 //Fields returns all Scalar fields for this value.
-func (r *Error) Fields() mulbase.FieldList {
+func (r *Error) Fields() humus.FieldList {
 	return ErrorFields
 }
 
@@ -438,8 +496,8 @@ func (r *Error) SetType() {
 	}
 }
 
-//Values returns all the scalar values for this node.
-func (r *Error) Values() mulbase.DNode {
+//values returns all the scalar values for this node.
+func (r *Error) Values() humus.DNode {
 	var m ErrorScalars
 	m.Message = r.Message
 	m.ErrorType = r.ErrorType
@@ -449,9 +507,9 @@ func (r *Error) Values() mulbase.DNode {
 	return &m
 }
 
-//Values returns all the scalar values for this node.
+//values returns all the scalar values for this node.
 //Note that this completely ignores any omitempty tags so use with care.
-func (r *Error) MapValues() mulbase.Mapper {
+func (r *Error) MapValues() humus.Mapper {
 	var m = make(map[string]interface{})
 	m["Error.message"] = r.Message
 	m["Error.errorType"] = r.ErrorType
@@ -467,21 +525,21 @@ func (r *Error) MapValues() mulbase.Mapper {
 //ErrorScalars is simply to avoid a map[string]interface{}
 //It is a mirror of the previous struct with all scalar values.
 type ErrorScalars struct {
-	mulbase.Node
+	humus.Node
 	Message   string     `json:"Error.message,omitempty"`
 	ErrorType string     `json:"Error.errorType,omitempty"`
 	Time      *time.Time `json:"Error.time,omitempty"`
 }
 
-func (s *ErrorScalars) Values() mulbase.DNode {
+func (s *ErrorScalars) Values() humus.DNode {
 	return s
 }
 
-func (s *ErrorScalars) MapValues() mulbase.Mapper {
+func (s *ErrorScalars) MapValues() humus.Mapper {
 	panic("ErrorScalars called, use the original one instead")
 }
 
-func (s *ErrorScalars) Fields() mulbase.FieldList {
+func (s *ErrorScalars) Fields() humus.FieldList {
 	return ErrorFields
 }
 

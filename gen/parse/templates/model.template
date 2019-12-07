@@ -2,12 +2,12 @@
 //Generating constant field values.
 const (
 {{range .Fields}}
-    {{$.Name}}{{.Name}}Field mulbase.Predicate = "{{.Tag}}"{{end}}
+    {{$.Name}}{{.Name}}Field humus.Predicate = "{{.Tag}}"{{end}}
 )
 //SaveValues saves the node values that
 //do not contain any references to other objects.
-func (r *{{.Name}}) SaveValues(ctx context.Context, txn *mulbase.Txn) error {
-    mut := mulbase.CreateMutation(r.Values(), mulbase.MutateSet)
+func (r *{{.Name}}) SaveValues(ctx context.Context, txn *humus.Txn) error {
+    mut := humus.CreateMutation(r.Values(), humus.MutateSet)
     _,err := txn.Mutate(ctx, mut)
     return err
 }
@@ -16,6 +16,16 @@ func (r *{{.Name}}) GetType() []string {
         r.SetType()
     }
     return r.Type
+}
+
+//Reset resets the node to only its UID
+//component. Useful for saving to the database.
+//Calling this function ensures that, at most,
+//the uid and type is serialized.
+func (r *{{.Name}}) Reset() {
+    if r != nil {
+        *r = {{.Name}}{Node: r.Node}
+    }
 }
 
 func (r *{{.Name}}) Facets() []string {
@@ -30,7 +40,7 @@ func (r *{{.Name}}) Facets() []string {
 }
 
 //Fields returns all Scalar fields for this value.
-func (r *{{.Name}}) Fields() mulbase.FieldList {
+func (r *{{.Name}}) Fields() humus.FieldList {
     return {{.Name}}Fields
 }
 //Sets the types. This DOES NOT include interfaces!
@@ -41,7 +51,7 @@ func (r *{{.Name}}) SetType() {
     }
 }
 //Values returns all the scalar values for this node.
-func (r *{{.Name}}) Values() mulbase.DNode{
+func (r *{{.Name}}) Values() humus.DNode{
    var m {{.Name}}Scalars
    {{range .ScalarFields -}}
        {{if not .Nosave -}}
@@ -54,7 +64,7 @@ func (r *{{.Name}}) Values() mulbase.DNode{
 }
 //Values returns all the scalar values for this node.
 //Note that this completely ignores any omitempty tags so use with care.
-func (r *{{.Name}}) MapValues() mulbase.Mapper {
+func (r *{{.Name}}) MapValues() humus.Mapper {
    var m = make(map[string]interface{})
    {{range .ScalarFields -}}
       {{if not .Nosave -}}
@@ -73,21 +83,21 @@ m["{{.Tag}}"]= r.{{.Name}}
 //{{.Name}}Scalars is simply to avoid a map[string]interface{}
 //It is a mirror of the previous struct with all scalar values.
 type {{.Name}}Scalars struct {
-    mulbase.Node
+    humus.Node
     {{range .ScalarFields -}}
         {{.Name}} {{.TypeLabel}} `json:"{{.WrittenTag}}"`
     {{end}}
 }
 
-func (s *{{.Name}}Scalars) Values() mulbase.DNode {
+func (s *{{.Name}}Scalars) Values() humus.DNode {
     return s
 }
 
-func (s *{{.Name}}Scalars) MapValues() mulbase.Mapper {
+func (s *{{.Name}}Scalars) MapValues() humus.Mapper {
     panic("{{.Name}}Scalars called, use the original one instead")
 }
 
-func (s *{{.Name}}Scalars) Fields() mulbase.FieldList {
+func (s *{{.Name}}Scalars) Fields() humus.FieldList {
     return {{.Name}}Fields
 }
 

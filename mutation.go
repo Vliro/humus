@@ -1,4 +1,4 @@
-package mulbase
+package humus
 
 import (
 	"encoding/json"

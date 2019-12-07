@@ -16,4 +16,14 @@ type Comment implements Post {
 type User {
     name: String! @search (by:[hash])
     pass: String! @ignore
+    role: UserRole!
+    friends: [User!]
+    friendSince: DateTime @facet(edge: friends)
+}
+
+enum UserRole {
+    UserGuest
+    UserRegular
+    UserModerator
+    UserAdmin
 }

@@ -4,13 +4,13 @@ package gen
 
 import (
 	"context"
-	"github.com/Vliro/mulbase"
+	"github.com/Vliro/humus"
 	"time"
 )
 
 var _ context.Context
 var _ time.Time
-var _ mulbase.Fields
+var _ humus.Fields
 
 //Start new enum.
 type Type int

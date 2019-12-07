@@ -1,6 +1,7 @@
-package mulbase
+package humus
 
 import (
+	"errors"
 	"strings"
 )
 
@@ -14,18 +15,20 @@ const (
 type modifierType uint8
 
 const (
-	modifierAggregate modifierType = 1 << iota
+	modifierVariable modifierType = 1 << iota
+	modifierAggregate
+	modifierFilter
 	modifierPagination
 	modifierOrder
-	modifierFilter
 	modifierFacet
+	modifierGroupBy
 )
 
 type modifier interface {
 	canApply(mt modifierSource) bool
 	//While io.Writer is more generic, the utility of
 	//multiple different write methods is unbeatable here.
-	apply(root *GeneratedQuery, meta FieldMeta, name string, sb *strings.Builder) (modifierType, error)
+	apply(root *GeneratedQuery, meta FieldMeta, mt modifierSource, sb *strings.Builder) (modifierType, error)
 	priority() modifierType
 	parenthesis() bool
 }
@@ -46,24 +49,34 @@ func (m modifierList) Swap(i, j int) {
 
 //An aggregate value i.e. sum as well as what alias to name it as.
 type AggregateValues struct {
-	Type  AggregateType
-	Alias string
+	Type     AggregateType
+	Alias    string
+	Variable string
 }
 
 func (a AggregateValues) canApply(mt modifierSource) bool {
 	return true
 }
 
-func (a AggregateValues) apply(root *GeneratedQuery, meta FieldMeta, name string, sb *strings.Builder) (modifierType, error) {
-	sb.WriteString(a.Alias)
-	sb.WriteString(" : ")
+func (a AggregateValues) apply(root *GeneratedQuery, meta FieldMeta, mt modifierSource, sb *strings.Builder) (modifierType, error) {
+	sb.WriteByte(' ')
+	if a.Variable == "" {
+		return 0, errors.New("missing predicate in aggregateValues")
+	}
+	if a.Alias != "" {
+		sb.WriteString(a.Alias)
+		sb.WriteString(" : ")
+	}
 	sb.WriteString(string(a.Type))
-	sb.WriteString(tokenLP)
-	sb.WriteString(name)
+	sb.WriteByte('(')
+	sb.WriteString("val(")
+	sb.WriteString(string(a.Variable))
 	//if f.SchemaField.Lang {
-	//	f.writeLanguageTag(sb, q.Language)
+	//	f.writeLanguageTag(sb, q.language)
 	//}
-	sb.WriteString(tokenRP)
+	sb.WriteByte(')')
+	sb.WriteByte(')')
+	sb.WriteByte(' ')
 	return 0,nil
 }
 
@@ -73,4 +86,22 @@ func (a AggregateValues) priority() modifierType {
 
 func (a AggregateValues) parenthesis() bool {
 	return true
+}
+
+type groupBy Predicate
+
+func (g groupBy) canApply(mt modifierSource) bool {
+	return mt == modifierField
+}
+
+func (g groupBy) apply(root *GeneratedQuery, meta FieldMeta,mt modifierSource, sb *strings.Builder) (modifierType, error) {
+	panic("implement me")
+}
+
+func (g groupBy) priority() modifierType {
+	return modifierGroupBy
+}
+
+func (g groupBy) parenthesis() bool {
+	return false
 }

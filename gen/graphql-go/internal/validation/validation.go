@@ -8,10 +8,10 @@ import (
 	"strings"
 	"text/scanner"
 
-	"github.com/Vliro/mulbase/gen/graphql-go/common"
-	"github.com/Vliro/mulbase/gen/graphql-go/errors"
-	"github.com/Vliro/mulbase/gen/graphql-go/internal/query"
-	"github.com/Vliro/mulbase/gen/graphql-go/schema"
+	"github.com/Vliro/humus/gen/graphql-go/common"
+	"github.com/Vliro/humus/gen/graphql-go/errors"
+	"github.com/Vliro/humus/gen/graphql-go/internal/query"
+	"github.com/Vliro/humus/gen/graphql-go/schema"
 )
 
 type varSet map[*common.InputValue]struct{}
@@ -506,7 +506,7 @@ func (c *context) validateOverlap(a, b query.Selection, reasons *[]string, locs 
 			if reasons2, locs2 := c.validateFieldOverlap(a, b); len(reasons2) != 0 {
 				locs2 = append(locs2, a.Alias.Loc, b.Alias.Loc)
 				if reasons == nil {
-					c.addErrMultiLoc(locs2, "OverlappingFieldsCanBeMerged", "Fields %q conflict because %s. Use different aliases on the fields to fetch both if this was intentional.", a.Alias.Name, strings.Join(reasons2, " and "))
+					c.addErrMultiLoc(locs2, "OverlappingFieldsCanBeMerged", "fields %q conflict because %s. Use different aliases on the fields to fetch both if this was intentional.", a.Alias.Name, strings.Join(reasons2, " and "))
 					return
 				}
 				for _, r := range reasons2 {

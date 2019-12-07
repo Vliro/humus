@@ -6,9 +6,9 @@ import (
 	"reflect"
 	"strings"
 
-	"github.com/Vliro/mulbase/gen/graphql-go/common"
-	"github.com/Vliro/mulbase/gen/graphql-go/internal/exec/packer"
-	"github.com/Vliro/mulbase/gen/graphql-go/schema"
+	"github.com/Vliro/humus/gen/graphql-go/common"
+	"github.com/Vliro/humus/gen/graphql-go/internal/exec/packer"
+	"github.com/Vliro/humus/gen/graphql-go/schema"
 )
 
 type Schema struct {

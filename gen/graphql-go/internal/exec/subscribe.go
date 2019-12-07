@@ -8,11 +8,11 @@ import (
 	"reflect"
 	"time"
 
-	"github.com/Vliro/mulbase/gen/graphql-go/common"
-	"github.com/Vliro/mulbase/gen/graphql-go/errors"
-	"github.com/Vliro/mulbase/gen/graphql-go/internal/exec/resolvable"
-	"github.com/Vliro/mulbase/gen/graphql-go/internal/exec/selected"
-	"github.com/Vliro/mulbase/gen/graphql-go/internal/query"
+	"github.com/Vliro/humus/gen/graphql-go/common"
+	"github.com/Vliro/humus/gen/graphql-go/errors"
+	"github.com/Vliro/humus/gen/graphql-go/internal/exec/resolvable"
+	"github.com/Vliro/humus/gen/graphql-go/internal/exec/selected"
+	"github.com/Vliro/humus/gen/graphql-go/internal/query"
 )
 
 type Response struct {

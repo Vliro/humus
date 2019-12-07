@@ -4,8 +4,8 @@ import (
 	"context"
 	"fmt"
 
-	"github.com/Vliro/mulbase/gen/graphql-go/errors"
-	"github.com/Vliro/mulbase/gen/graphql-go/introspection"
+	"github.com/Vliro/humus/gen/graphql-go/errors"
+	"github.com/Vliro/humus/gen/graphql-go/introspection"
 	"github.com/opentracing/opentracing-go"
 	"github.com/opentracing/opentracing-go/ext"
 	"github.com/opentracing/opentracing-go/log"

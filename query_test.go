@@ -1,10 +1,11 @@
-package mulbase
+package humus
 
 import (
 	"context"
 	"errors"
 	"fmt"
 	"github.com/dgraph-io/dgo/protos/api"
+	"github.com/pkg/profile"
 	"testing"
 )
 
@@ -13,7 +14,7 @@ type testQuerier struct {
 }
 
 func (t testQuerier) Query(c context.Context, q Query, vals ...interface{}) error {
-	qu, err := q.Process(SchemaList{})
+	qu, err := q.Process()
 	if qu != t.expected {
 		fmt.Println(qu)
 		return errors.New("query failed")
@@ -37,22 +38,48 @@ func newTest(expected string) testQuerier {
 	return testQuerier{expected:expected}
 }
 
-var fields = ErrorFields.Sub(ErrorMessageField, ErrorFields.Sub(ErrorMessageField, ErrorFields))
+func TestBigQuery(t *testing.T) {
+	defer profile.Start(profile.MemProfile).Stop()
+	q := NewQuery(fields)
+	q.Function(Equals).PredValue(ErrorMessageField, "Test")
+	q.Count(CountFirst, ErrorMessageField, 1)
+	q.Count(CountFirst, ErrorTimeField, 1)
+	q.Count(CountFirst, ErrorErrorTypeField, 1)
+	q.Count(CountAfter, ErrorMessageField, 1)
+	q.Order(Ascending, ErrorMessageField, ErrorTimeField)
+	q.Count(CountFirst, ErrorMessageField + ErrorMessageField, 1)
+	//q.Agg(TypeSum, ErrorMessageField, "test")
+	q.AddDirective(Cascade)
+	q.AddDirective(Normalize)
+	q.Filter(MakeFilter(Equals).PredValue(ErrorMessageField, "Test"), ErrorMessageField)
+	q.Filter(MakeFilter(Equals).PredValue(ErrorMessageField, "Test"), ErrorErrorTypeField)
+	q.Facets(ErrorMessageField)
+	_, _ = q.Process()
+}
+
+var fields = ErrorFields.Sub(ErrorMessageField, ErrorFields)
 
 func TestQuery(t *testing.T) {
 	const expected = "query t($0:string,$1:string){q(func: eq(<Error.message>,$0)){Error.message (first:1,after:1)(orderasc: Error.time))@filter(eq(<Error.message>,$1))@facets{Error.message (first:1){Error.message  Error.errorType  Error.time uid} Error.errorType  Error.time uid} Error.errorType (first:1) Error.time (first:1) uid}}"
-	q := NewQuery().SetFields(fields)
-	q.SetFunction(MakeFunction(FunctionEquals).AddPredValue(ErrorMessageField, "Test"))
-	q.AddSubCount(CountFirst, ErrorMessageField, 1)
-	q.AddSubCount(CountFirst, ErrorTimeField, 1)
-	q.AddSubCount(CountFirst, ErrorErrorTypeField, 1)
-	q.AddSubCount(CountAfter, ErrorMessageField, 1)
-	q.AddOrdering(OrderAsc, ErrorMessageField, ErrorTimeField)
-	q.AddSubCount(CountFirst, ErrorMessageField + ErrorMessageField, 1)
-	q.AddAggregation(TypeSum, ErrorMessageField, "test")
-	q.AddSubFilter(MakeFunction(FunctionEquals).AddPredValue(ErrorMessageField, "Test"), ErrorMessageField)
-	q.Facets(ErrorMessageField)
-	//q.SetLanguage(LanguageDefault, true)
+	q := NewQuery(fields)
+	q.Function(Equals).PredValue(ErrorMessageField, "Test")
+
+
+	q.Order(Ascending, ErrorMessageField, ErrorTimeField)
+	/*q.Count(CountFirst, ErrorMessageField, 1)
+	q.Count(CountFirst, ErrorTimeField, 1)
+	q.Count(CountFirst, ErrorErrorTypeField, 1)
+	q.Count(CountAfter, ErrorMessageField, 1)
+	q.Order(Ascending, ErrorMessageField, ErrorTimeField)
+	q.Count(CountFirst, ErrorMessageField + ErrorMessageField, 1)*/
+	q.Agg(TypeSum, ErrorMessageField, "varr","test")
+	q.Order(Ascending, "", ErrorTimeField)
+	/*q.AddDirective(Cascade)
+	q.AddDirective(Normalize)
+	q.Filter(newFunction(Equals).PredValue(ErrorMessageField, "Test"), ErrorMessageField)
+	q.Filter(newFunction(Equals).PredValue(ErrorMessageField, "Test"), ErrorErrorTypeField)
+	q.Facets(ErrorMessageField)*/
+	//q.Language(LanguageDefault, true)
 
 	err := newTest(expected).Query(context.Background(), q)
 	if err != nil {
@@ -61,23 +88,133 @@ func TestQuery(t *testing.T) {
 }
 
 func BenchmarkQuery(b *testing.B) {
-	//f, err := os.Create("pprof")
-	//if err != nil {
-	//	panic(err)
-	//}
-	//pprof.StartCPUProfile(f)
 	for i := 0; i < b.N; i++ {
-		q := NewQuery().SetFields(fields)
-		q.SetFunction(MakeFunction(FunctionEquals).AddPredValue(ErrorMessageField, "Test"))
-		q.AddSubCount(CountFirst, ErrorMessageField, 1)
-		q.AddSubCount(CountFirst, ErrorTimeField, 1)
-		q.AddSubCount(CountFirst, ErrorErrorTypeField, 1)
-		q.AddSubCount(CountAfter, ErrorMessageField, 1)
-		q.AddSubCount(CountFirst, ErrorMessageField + ErrorMessageField, 1)
-		q.AddAggregation(TypeSum, ErrorMessageField, "test")
+		q := NewQuery(fields)
+		q.Function(Equals).PredValue(ErrorMessageField, "Test")
+		q.Count(CountFirst, ErrorMessageField, 1)
+		q.Count(CountFirst, ErrorTimeField, 1)
+		q.Count(CountFirst, ErrorErrorTypeField, 1)
+		q.Count(CountAfter, ErrorMessageField, 1)
+		q.Order(Ascending, ErrorMessageField, ErrorTimeField)
+		q.Count(CountFirst, ErrorMessageField + ErrorMessageField, 1)
+		q.Agg(TypeSum, ErrorMessageField, "varr", "swag")
+		q.AddDirective(Cascade)
+		q.AddDirective(Normalize)
+		q.Filter(MakeFilter(Equals).PredValue(ErrorMessageField, "Test"), ErrorMessageField)
+		q.Filter(MakeFilter(Equals).PredValue(ErrorMessageField, "Test"), ErrorErrorTypeField)
 		q.Facets(ErrorMessageField)
-		_, _ = q.Process(SchemaList{})
+		str, _ := q.Process()
+		fmt.Println(str)
 	}
 	b.ReportAllocs()
-	//pprof.StopCPUProfile()
+}
+
+const staticString = `query {
+	a as var(func: uid(%s))
+`
+
+func BenchmarkStaticQuery(b *testing.B) {
+	for i := 0; i < b.N; i++ {
+		var stat = NewStaticQuery(fmt.Sprintf(staticString, "0x2"))
+		_,_ = stat.Process()
+	}
+	b.ReportAllocs()
+}
+
+func TestQueryFilter(t *testing.T) {
+	//expected := "query t($0:string,$1:string){q(func: eq(<Error.time>,$0))@filter(eq(<Error.time>,$1)){Error.message Error.errorType Error.time uid}}"
+	q := NewQuery(ErrorFields)
+	q.Function(Equals).PredValue(ErrorTimeField, "testFunction")
+	q.Filter(MakeFilter(Equals).PredValue(ErrorTimeField, "testFilter"), "")
+	q.Order(Ascending, "", ErrorTimeField)
+	q.Count(CountFirst, "", 5)
+	str, err := q.Process()
+	if err != nil {
+		t.Fatal()
+	}
+	fmt.Println(str)
+}
+
+func TestQueries(t *testing.T) {
+	const expected = "query t($0:int,$2:string,$1:string,$3:string){q1(func: eq(<Error.time>,$2),first:5,orderasc: Error.time){Error.message@filter(eq(<Error.time>,$0)) Error.errorType Error.timeuid}}{q2(func: eq(<Error.time>,$3),first:5,orderasc: Error.time){Error.message Error.errorType Error.time@filter(eq(<Error.time>,$1))uid}}"
+	list := NewQueries()
+	q := list.NewQuery(ErrorFields)
+	q.Function(Equals).PredValue(ErrorTimeField, "testFunctionOne")
+	q.Filter(MakeFilter(Equals).PredValue(ErrorTimeField, 5), ErrorMessageField)
+	q.Order(Ascending, "", ErrorTimeField)
+	q.Count(CountFirst, "", 5)
+	qu := list.NewQuery(ErrorFields)
+	qu.Function(Equals).PredValue(ErrorTimeField, "testFunctionTwo")
+	qu.Filter(MakeFilter(Equals).PredValue(ErrorTimeField, "filterOne"), ErrorTimeField)
+	qu.Order(Ascending, "", ErrorTimeField)
+	qu.Count(CountFirst, "", 5)
+	str,err := list.Process()
+	if err != nil {
+		t.Fail()
+		return
+	}
+	if str != expected {
+		t.Fail()
+		return
+	}
+	//Check variables.
+	one := q.function.Variables[1]
+	if list.vars[one.Value] != "testFunctionOne" {
+		t.Fail()
+		return
+	}
+	two := qu.function.Variables[1]
+	if list.vars[two.Value] != "testFunctionTwo" {
+		t.Fail()
+		return
+	}
+	three := qu.modifiers[ErrorTimeField][0]
+	if list.vars[three.(*Filter).Variables[1].Value] != "filterOne" {
+		t.Fail()
+		return
+	}
+	four := q.modifiers[ErrorMessageField][0]
+	if list.vars[four.(*Filter).Variables[1].Value] != "5" {
+		t.Fail()
+		return
+	}
+}
+
+func BenchmarkQueries(b *testing.B) {
+	//defer profile.Start(profile.MemProfile).Stop()
+	for i := 0; i < b.N; i++ {
+		list := NewQueries()
+		q := list.NewQuery(ErrorFields)
+		q.Function(Equals).PredValue(ErrorTimeField, "testFunctionOne")
+		q.Filter(MakeFilter(Equals).PredValue(ErrorTimeField, "testFilterOne"), "")
+		q.Order(Ascending, "", ErrorTimeField)
+		q.Count(CountFirst, "", 5)
+		qu := list.NewQuery(ErrorFields)
+		qu.Function(Equals).PredValue(ErrorTimeField, "testFunctionTwo")
+		qu.Filter(MakeFilter(Equals).PredValue(ErrorTimeField, "testFilterOne"), "")
+		qu.Order(Ascending, "", ErrorTimeField)
+		qu.Count(CountFirst, "", 5)
+		_,_ = list.Process()
+	}
+	b.ReportAllocs()
+}
+
+func TestVariable(t *testing.T) {
+	const expected = "query{q(func: has(<Error.message>),first:5,orderasc: Error.time){Error.message Error.errorType Error.time test : math(p) p as ErrorTimeField  uid}}"
+	q := NewQuery(ErrorFields)
+	q.Variable("test", "math(p)",true, "")
+	q.Variable("p", "ErrorTimeField", false,"")
+	q.Function(Has).Pred(ErrorMessageField)
+	//q.Filter(MakeFilter(Equals).PredValue(ErrorTimeField, "testFilter"), "")
+	q.Order(Ascending, "", ErrorTimeField)
+	q.Count(CountFirst, "", 5)
+	str, err := q.Process()
+	if err != nil {
+		t.Fail()
+		return
+	}
+	if str != expected {
+		t.Fail()
+		return
+	}
 }

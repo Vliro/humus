@@ -1,4 +1,4 @@
-package mulbase
+package humus
 
 import "fmt"
 
@@ -8,23 +8,22 @@ import "fmt"
 //Pagination represents how many (sorted by first) to get as well as an interface
 //to deserialize to.
 //Do not return interfaces.
-func GetChild(node DNode, child Predicate, fields []Field, count int, filter *Filter) *GeneratedQuery {
+func GetChild(node DNode, child Predicate, fields Fields, count int, filter *Filter) *GeneratedQuery {
 	uid := node.UID()
 	if uid == "" {
 		return nil
 	}
-	var qu = NewQuery()
-	qu.SetFunction(MakeFunction(FunctionUid).AddValue(uid))
-	qu.Filter = filter
+	var qu = NewQuery(fields)
+	qu.Function(FunctionUid).Value(uid)
 	//1-1 relations have no count.
 	if count != -1 {
-		qu.AddSubCount(CountFirst, child, count)
+		qu.Count(CountFirst, child, count)
 	}
 	//Proper child structure.
-	qu.Fields = NewList{
+	qu.fields = NewList{
 		{
 			Name: child,
-			Fields: NewList(fields),
+			Fields: fields,
 		},
 	}
 	return qu
@@ -41,7 +40,7 @@ func AttachToListObject(node DNode, field Field, value DNode) SingleMutation {
 	//TODO: Handle this part inside gen? Avoid map[string]interface{}
 	var mapVal = make(Mapper)
 	mapVal["uid"] = node.UID()
-	mapVal[string(field.Name)] = MapUid{Uid:value.UID()}
+	mapVal[string(field.Name)] = &Node{Uid:value.UID()}
 	//Create mutation.
 	return SingleMutation{MutationType:MutateSet, Object:mapVal}
 }
@@ -99,18 +98,16 @@ func SaveNode(node DNode) SingleMutation{
 	}
 	return m
 }
-
+//SaveNodes returns a mutation that saves all the nodes as specified.
+//Note that everything is serialized so make sure that Saver is satisfied
+//if there are edges to be considered.
 func SaveNodes(vals ...DNode) *MutationQuery {
 	for _,v := range vals {
-		v.SetType()
+		if v.UID() != "" {
+			v.SetType()
+		}
 	}
 	var m MutationQuery
-	/*for _,v := range vals {
-		if _, ok := v.(Saver); ok {
-			fmt.Println("SaveManyNodes called with custom save function. Is this intended?")
-		}
-		m.Values = append(m.Values, v)
-	}*/
 	m.Values = vals
 	m.MutationType = MutateSet
 	return &m
@@ -119,12 +116,17 @@ func SaveNodes(vals ...DNode) *MutationQuery {
 //deleter only the top-level uid is deleted.
 func DeleteNode(node DNode) SingleMutation {
 	return SingleMutation{
-		Object:    NewMapper(node.UID(), node.GetType()),
+		Object:    &Node{Uid: node.UID()},
 		MutationType: MutateDelete,
 	}
 }
 
 func DeleteNodes(nodes ...DNode) *MutationQuery {
+	var newNodes = make([]DNode, len(nodes))
+	for k,v := range nodes {
+		newNodes[k] = &Node{Uid: v.UID()}
+	}
+
 	return &MutationQuery{
 		Values:    nodes,
 		MutationType: MutateDelete,

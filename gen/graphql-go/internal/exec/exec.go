@@ -8,14 +8,14 @@ import (
 	"reflect"
 	"sync"
 
-	"github.com/Vliro/mulbase/gen/graphql-go/common"
-	"github.com/Vliro/mulbase/gen/graphql-go/errors"
-	"github.com/Vliro/mulbase/gen/graphql-go/internal/exec/resolvable"
-	"github.com/Vliro/mulbase/gen/graphql-go/internal/exec/selected"
-	"github.com/Vliro/mulbase/gen/graphql-go/internal/query"
-	"github.com/Vliro/mulbase/gen/graphql-go/log"
-	"github.com/Vliro/mulbase/gen/graphql-go/schema"
-	"github.com/Vliro/mulbase/gen/graphql-go/trace"
+	"github.com/Vliro/humus/gen/graphql-go/common"
+	"github.com/Vliro/humus/gen/graphql-go/errors"
+	"github.com/Vliro/humus/gen/graphql-go/internal/exec/resolvable"
+	"github.com/Vliro/humus/gen/graphql-go/internal/exec/selected"
+	"github.com/Vliro/humus/gen/graphql-go/internal/query"
+	"github.com/Vliro/humus/gen/graphql-go/log"
+	"github.com/Vliro/humus/gen/graphql-go/schema"
+	"github.com/Vliro/humus/gen/graphql-go/trace"
 )
 
 type Request struct {
@@ -241,7 +241,7 @@ func (r *Request) execSelectionSet(ctx context.Context, sels []selected.Selectio
 	t, nonNull := unwrapNonNull(typ)
 	switch t := t.(type) {
 	case *schema.Object, *schema.Interface, *schema.Union:
-		// a reflect.Value of a nil interface will show up as an Invalid value
+		// a reflect.value of a nil interface will show up as an Invalid value
 		if resolver.Kind() == reflect.Invalid || ((resolver.Kind() == reflect.Ptr || resolver.Kind() == reflect.Interface) && resolver.IsNil()) {
 			// If a field of a non-null type resolves to null (either because the
 			// function to resolve the field returned null or because an error occurred),

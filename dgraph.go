@@ -1,23 +1,23 @@
-package mulbase
+package humus
 
 import (
 	"context"
 	"crypto/tls"
 	"crypto/x509"
 	"fmt"
+	"github.com/dgraph-io/dgo"
+	"github.com/dgraph-io/dgo/protos/api"
 	"github.com/gammazero/workerpool"
+	"google.golang.org/grpc"
+	"google.golang.org/grpc/credentials"
 	"google.golang.org/grpc/encoding/gzip"
 	"io/ioutil"
 	"log"
 	"reflect"
 	"strconv"
+	"strings"
 	"sync"
 	"time"
-
-	"github.com/dgraph-io/dgo"
-	"github.com/dgraph-io/dgo/protos/api"
-	"google.golang.org/grpc"
-	"google.golang.org/grpc/credentials"
 )
 
 //Deprecated information but useful.
@@ -51,7 +51,7 @@ type DNode interface {
 	SetType()
 	//Returns the type.
 	GetType() []string
-	//Returns all scalar fields for this node. This is not of Fields interface
+	//Returns all scalar fields for this node. This is not of fields interface
 	//as they default nods always return a FieldList and not a NewList for instance.
 	Fields() FieldList
 	//Serializes all the scalar values that are not hidden. It usually returns
@@ -87,17 +87,12 @@ func NewMapper(uid UID, typ []string) Mapper {
 	return Mapper{"uid": uid}
 }
 
-//UidObject is embedded in maps to ensure proper serialization.
-//Since it needs to be of form "predicate": {object} and not "predicate": "uid".
-type MapUid struct {
-	Uid UID `json:"uid"`
-}
 
 //Uid simply returns a struct that
 //can be used in 1-1 relations, i.e.
 //map[key] = mulbase.Uid(uiD)
-func Uid(u UID) MapUid {
-	return MapUid{Uid: u}
+func Uid(u UID) Node {
+	return Node{Uid: u}
 }
 
 //A mapper that allows you to set subrelations.
@@ -110,13 +105,22 @@ func (m Mapper) UID() UID {
 	return ""
 }
 
+type onlyUid struct {
+	Uid UID `json:"uid"`
+}
+
 //SetFunctionValue is used in relation to upsert.
 //For instance, storing uid in "result" variable. This will set the value
 //on the edge predicate to the value. This is a simple case and for more complicated
 //queries manually edit the Mapper to look correct.
+//If predicate is "uid" do not set it as a child relation.
 func (m Mapper) SetFunctionValue(variableName string, predicate Predicate) {
 	uid := UID("uid(" + variableName + ")")
-	m[string(predicate)] = Uid(uid)
+	if predicate == "uid" {
+		m["uid"] = uid
+	} else {
+		m[string(predicate)] = onlyUid{uid}
+	}
 }
 
 func (m Mapper) GetType() []string {
@@ -145,11 +149,10 @@ func (m Mapper) MapValues() Mapper {
 }
 
 //Sets a singular regulation, i.e. 1-1.
-//TODO: Should default be = obj or = obj.Values()?
+//TODO: Should default be = obj or = obj.values()?
 func (m Mapper) Set(child Predicate, all bool, obj DNode) Mapper {
 	if checkNil(obj) {
 		//TODO: what should actually happen here?
-		//panic for now.
 		return m
 	}
 	obj.SetType()
@@ -160,6 +163,7 @@ func (m Mapper) Set(child Predicate, all bool, obj DNode) Mapper {
 			m[string(child)] = obj
 		}
 	} else {
+		//Default is only a uid edge. -> {"uid": "uid"}
 		m[string(child)] = Uid(obj.UID())
 	}
 	return m
@@ -233,13 +237,15 @@ type DB struct {
 	//The pool of asynchronous workers.
 	pool *workerpool.WorkerPool
 	//The endpoint for possible GraphQL.
-	gplPoint string
+	gplPoint      string
 	interruptFunc func(i interface{})
 }
+
 //Schema returns the active schema for this database.
 func (d *DB) Schema() SchemaList {
 	return d.schema
 }
+
 //OnAborted sets the function for which to call
 //when returned error is errAborted.
 func (d *DB) OnAborted(f func(query interface{})) {
@@ -260,7 +266,7 @@ func (d *DB) NewTxn(readonly bool) *Txn {
 	txn.db = d
 	return txn
 }
-
+//Select allows you to create a field list of only certain predicates.
 func (d *DB) Select(vals ...Predicate) Fields {
 	return Select(d.schema, vals...)
 }
@@ -272,7 +278,24 @@ func (d *DB) Query(ctx context.Context, q Query, objs ...interface{}) error {
 	defer txn.Discard(context.Background())
 	err := txn.Query(ctx, q, objs...)
 	//TODO: Can we do this for readonly?
+	if err != nil {
+		fmt.Println(err)
+	}
 	return err
+}
+
+func (d *DB) QueryAsync(ctx context.Context, q Query, objs ...interface{}) chan Result  {
+	t := d.NewTxn(true)
+	ch := make(chan Result, 1)
+	f := func() {
+		defer t.Discard(context.Background())
+		err := t.Query(ctx, q, objs...)
+		ch <- Result{
+			Err: err,
+		}
+	}
+	t.db.pool.Submit(f)
+	return ch
 }
 
 //SetValue is a simple wrapper to set a single value in the database
@@ -341,6 +364,10 @@ func (d *DB) Alter(ctx context.Context, op *api.Operation) error {
 func (d *DB) logError(ctx context.Context, err error) {
 	f := func() {
 		//Get the type name.
+		if strings.Contains(err.Error(), "connection refused") {
+			fmt.Println(err)
+			return
+		}
 		errorName := fmt.Sprintf("%T", err)
 		value := err.Error()
 		var result dbError
@@ -360,7 +387,7 @@ func (d *DB) logError(ctx context.Context, err error) {
 //Allows it to be used in Query.
 type Query interface {
 	//Process the query type in order to send to the database.
-	Process(SchemaList) (string, error)
+	Process() (string, error)
 	//What type of query is this? Mutation(set/delete), regular query?
 	Vars() map[string]string
 }
@@ -472,12 +499,12 @@ func (t *Txn) mutate(ctx context.Context, q Mutate) (*api.Response, error) {
 }
 
 //Upsert follows the new 1.1 api and performs an upsert.
-//TODO: I really don't know what this does so work on it later.
+//q is a nameless query. Cond is a condition of the form if (eq(len(a), 0) and so on. mutations is a list of mutations to perform.
 func (t *Txn) Upsert(ctx context.Context, q Query, cond string, mutations ...Mutate) (*api.Response, error) {
 	if t.txn == nil {
 		return nil, Error(errTransaction)
 	}
-	b, err := q.Process(t.db.schema)
+	b, err := q.Process()
 	if err != nil {
 		return nil, Error(err)
 	}
@@ -489,7 +516,11 @@ func (t *Txn) Upsert(ctx context.Context, q Query, cond string, mutations ...Mut
 		if err != nil {
 			return nil, err
 		}
-		v.SetJson = b
+		if mutations[k].Type() == MutateDelete {
+			v.DeleteJson = b
+		} else {
+			v.SetJson = b
+		}
 		v.Cond = cond
 	}
 	var req = api.Request{
@@ -507,7 +538,7 @@ func (t *Txn) Upsert(ctx context.Context, q Query, cond string, mutations ...Mut
 }
 
 func (t *Txn) query(ctx context.Context, q Query, objs []interface{}) error {
-	str, err := q.Process(t.db.schema)
+	str, err := q.Process()
 	if err != nil {
 		return err
 	}

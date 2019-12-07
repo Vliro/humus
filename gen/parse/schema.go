@@ -104,6 +104,9 @@ func (f *Field) getDgraphSchema(forType bool) string {
 	switch {
 	case f.flags&flagArray > 0:
 		typ = "[" + toDgraphType(f.Type, f.flags, forType) + "]"
+	//Enums are int type in the database. This is a special case for now.
+	case f.flags&flagEnum > 0:
+		typ = "int"
 	default:
 		typ = toDgraphType(f.Type, f.flags, forType)
 	}
@@ -114,9 +117,10 @@ func toDgraphType(str string, flag flags, forType bool) string {
 	if flag&flagObject != 0 && !forType {
 		return "uid"
 	}
-	if flag&flagEnum != 0 && !forType {
+	//Artifact from GraphQL. Not sure yet.
+	/*if flag&flagEnum != 0 && !forType {
 		return "int"
-	}
+	}*/
 	switch str {
 	case "int", "string":
 		return str

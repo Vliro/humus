@@ -3,11 +3,11 @@ package {{.}}
 
 import (
     "time"
-    "github.com/Vliro/mulbase"
+    "github.com/Vliro/humus"
     "context"
 )
 
 var _ context.Context
 var _ time.Time
-var _ mulbase.Fields
+var _ humus.Fields
 

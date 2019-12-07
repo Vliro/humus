@@ -1,7 +1,7 @@
 package parse
 
 import (
-	"github.com/Vliro/mulbase/gen/graphql-go/schema"
+	"github.com/Vliro/humus/gen/graphql-go/schema"
 	"io"
 )
 

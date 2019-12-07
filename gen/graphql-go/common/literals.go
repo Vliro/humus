@@ -5,7 +5,7 @@ import (
 	"strings"
 	"text/scanner"
 
-	"github.com/Vliro/mulbase/gen/graphql-go/errors"
+	"github.com/Vliro/humus/gen/graphql-go/errors"
 )
 
 type Literal interface {

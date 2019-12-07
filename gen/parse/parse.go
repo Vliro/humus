@@ -69,66 +69,6 @@ func goFmt(byt []byte) []byte {
 func Parse(config *Config) {
 	gen := newGenerator(config)
 	gen.Run()
-	/*models, err := os.Create(config.Output + ModelFileName)
-	if err != nil {
-		panic(err)
-	}
-	defer models.Close()
-	fns, err := os.Create(config.Output + FunctionFileName)
-	if err != nil {
-		panic(err)
-	}
-	defer fns.Close()
-	enum, err := os.Create(config.Output + EnumFileName)
-	if err != nil {
-		panic(err)
-	}
-	defer enum.Close()*/
-	/*
-		Generate string builders. Do not use bufIO as we use gofmt on the result.
-	 */
-	/*var modelBuffer bytes.Buffer
-	var fnBuffer bytes.Buffer
-	var enumBuffer bytes.Buffer*/
-	/*
-		Write the package name.
-	*/
-	/*writeHeader(&modelBuffer)
-	writeHeader(&fnBuffer)
-	writeHeader(&enumBuffer)*/
-	/*
-		Walk the directory.
-	 */
-	/*
-	if parseState == "graphql" {
-		sch, err := os.Create(config.Output + SchemaName)
-		if err != nil {
-			panic(err)
-		}
-		defer sch.Close()
-	}
-	if parseState == "dgraph" {
-		dgraphSch, err := os.Create(config.Output + "/dgraph.txt")
-		if err != nil {
-			panic(err)
-		}
-		defer dgraphSch.Close()
-		makeSchema(dgraphSch)
-	}
-	if len(customFields) > 0 {
-		file, err := os.Create(config.Output + CustomsFileName)
-
-		var sb bytes.Buffer
-		writeHeader(&sb)
-		_,_ = io.Copy(file, &sb)
-		var imports = []string{"github.com/Vliro/mulbase"}
-		writeImports(imports, file)
-		if err != nil {
-			panic(err)
-		}
-		defer file.Close()
-		writeCustoms(customFields, file)
-	}*/
 }
 
 //Below lies code for getting files and templates.

@@ -1,7 +1,7 @@
 package gen
 
-import "github.com/Vliro/mulbase"
+import "github.com/Vliro/humus"
 
 //Dummy database.
 
-var db *mulbase.DB
+var db *humus.DB

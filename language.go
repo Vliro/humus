@@ -1,4 +1,4 @@
-package mulbase
+package humus
 
 type Language string
 

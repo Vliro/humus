@@ -1,35 +1,14 @@
-package mulbase
+package humus
 
 import (
 	"fmt"
-	"strconv"
 	"strings"
 )
 
-type functionType string
+type FunctionType string
 type OrderType string
 
 type Predicate string
-
-func (s Predicate) Sub(name Predicate, fields Fields) Fields {
-	panic("implement me")
-}
-
-func (s Predicate) Add(fi Field) Fields {
-	panic("implement me")
-}
-
-func (s Predicate) Facet(facetName string, alias string) Fields {
-	panic("implement me")
-}
-
-func (s Predicate) Get() []Field {
-	return nil
-}
-
-func (s Predicate) Len() int {
-	return 1
-}
 
 //Stringify this predicate.
 func (s Predicate) String() string {
@@ -40,23 +19,23 @@ func (s Predicate) String() string {
 }
 
 const (
-	FunctionEquals     functionType = "eq"
-	FunctionAllOfText  functionType = "alloftext"
-	FunctionAllOfTerms functionType = "allofterms"
-	FunctionAnyOfTerms functionType = "anyofterms"
-	FunctionUid        functionType = "uid"
-	FunctionHas        functionType = "has"
-	FunctionLessEq     functionType = "le"
-	FunctionMatch      functionType = "match"
-	FunctionLess       functionType = "lt"
-	FunctionGreaterEq  functionType = "ge"
-	FunctionGreater    functionType = "gt"
-	FunctionType       functionType = "type"
+	Equals      FunctionType = "eq"
+	AllOfText   FunctionType = "alloftext"
+	AllOfTerms  FunctionType = "allofterms"
+	AnyOfTerms  FunctionType = "anyofterms"
+	FunctionUid FunctionType = "uid"
+	Has         FunctionType = "has"
+	LessEq      FunctionType = "le"
+	Match       FunctionType = "match"
+	Less        FunctionType = "lt"
+	GreaterEq   FunctionType = "ge"
+	Greater     FunctionType = "gt"
+	Type        FunctionType = "type"
 )
 
 const (
-	OrderAsc  OrderType = "orderasc"
-	OrderDesc OrderType = "orderdesc"
+	Ascending  OrderType = "orderasc"
+	Descending OrderType = "orderdesc"
 )
 
 type Ordering struct {
@@ -72,7 +51,7 @@ func (o Ordering) canApply(mt modifierSource) bool {
 	return true
 }
 
-func (o Ordering) apply(root *GeneratedQuery, meta FieldMeta, name string, s *strings.Builder) (modifierType, error) {
+func (o Ordering) apply(root *GeneratedQuery, meta FieldMeta, mt modifierSource, s *strings.Builder) (modifierType, error) {
 	s.WriteString(string(o.Type))
 	s.WriteString(": ")
 	s.WriteString(o.Predicate.String())
@@ -83,116 +62,118 @@ func (o Ordering) priority() modifierType {
 	return modifierOrder
 }
 
-/*func (o Ordering) String() string {
-	var s strings.Builder
-	s.WriteString(string(o.Type))
-	s.WriteString(": ")
-	s.WriteString(o.Predicate.String())
-	s.WriteByte(' ')
-	return s.String()
-}*/
-
 //If you change the names here make sure to follow the type Type + name as dictated in gen.
-type VarType string
+type varType string
 
 const (
-	TypeStr     VarType = "string"
-	TypeInt     VarType = "int"
-	TypePred    VarType = "ignore"
-	TypeUid     VarType = "uid"
-	TypeDefault VarType = ""
+	typeString  varType = "string"
+	typeInt     varType = "int"
+	typePred    varType = "ignore"
+	typeUid     varType = "uid"
+	typeFloat   varType = "float"
+	typeGeo     varType = "geo"
+	typeDefault varType = ""
 )
 
-//GraphVariable represents a variable before it is parsed and written into a query.
-type GraphVariable struct {
+//graphVariable represents a variable before it is parsed and written into a query.
+type graphVariable struct {
 	Value string
-	Type  VarType
+	Type  varType
 }
 
-//Function represents a GraphQL+- function. It writes into the query
+//function represents a GraphQL+- function. It writes into the query
 //the function type, checks the type as well as the list of arguments.
 //It uses GraphQL variables to minimize risk of any type of injection.
-type Function struct {
-	Type functionType
-	//Is it lazy to use []interface? yes!
-	//but then you dont have to specify variable types :)
-	Variables []GraphVariable
+type function struct {
+	Type      FunctionType
+	Variables []graphVariable
 }
 
-func (f *Function) canApply(mt modifierSource) bool {
-	return true
+
+//OR, NOT, AND implements basic logicals.
+//This is not a fully featured function, made for simple examples such as single and or single OR
+//Not working right now. For complex filters just use fix queries for now.
+
+/*
+func (f *function) OR(fi *Filter) *Filter {
+	return &Filter{
+		op:            logicalOr,
+		function: *f,
+		node:          fi,
+	}
 }
 
-func (f *Function) Apply(root *GeneratedQuery, meta FieldMeta, w *strings.Builder) error {
-	err := f.create(root, w)
-	return err
+func (f *function) NOT(fi *Filter) *Filter {
+	return &Filter{
+		op:            logicalNot,
+		function: *f,
+		node:          fi,
+	}
 }
 
-func MakeFunction(ft functionType) *Function {
-	return &Function{Type: ft, Variables: make([]GraphVariable, 0, 2)}
+func (f *function) AND(fi *Filter) *Filter {
+	return &Filter{
+		op:            logicalAnd,
+		function: *f,
+		node:          fi,
+	}
+}
+*/
+//Functions returns a new function. It preallocates a list of size four, a common case most likely.
+func newFunction(ft FunctionType) function {
+	return function{Type: ft, Variables: make([]graphVariable, 0, 4)}
 }
 
-func (f *Function) AddOrdering(t OrderType, pred string) *Function {
-	//f.Order = append(f.Order, Ordering{Type: t, Predicate: Predicate(pred)})
-	return f
-}
-
-func (f *Function) AddValue(v interface{}) *Function {
+//value adds a variable to the function depending on its type.
+//Possible values are int, float, string, predicate, uid.
+//Other values are possible but will be formatted as fmt.Sprintf.
+func (f *function) value(v interface{}) *function {
 	val, typ := processInterface(v)
-	vv := GraphVariable{val, typ}
+	vv := graphVariable{val, typ}
 	f.Variables = append(f.Variables, vv)
 	return f
 }
 
-func (f *Function) AddValues(v ...interface{}) *Function {
+func (f *function) values(v []interface{}) *function {
 	for k := range v {
 		val, typ := processInterface(v[k])
-		v2 := GraphVariable{val, typ}
-		f.Variables = append(f.Variables, v2)
+		f.Variables = append(f.Variables, graphVariable{val, typ})
 	}
 	return f
 }
 
-func (f *Function) AddPred(name Predicate) *Function {
-	vv := GraphVariable{string(name), TypePred}
-	f.Variables = append(f.Variables, vv)
+func (f *function) pred(name Predicate) *function {
+	f.Variables = append(f.Variables, graphVariable{string(name), typePred})
 	return f
 }
 
-func (f *Function) AddPredValue(name Predicate, v interface{}) *Function {
+//PredValue is simply a shorthand for function such as equals.
+func (f *function) predValue(name Predicate, v interface{}) *function {
 	val, typ := processInterface(v)
-	v1 := GraphVariable{string(name), TypePred}
-	v2 := GraphVariable{val, typ}
+	v1 := graphVariable{string(name), typePred}
+	v2 := graphVariable{val, typ}
 	f.Variables = append(f.Variables, v1, v2)
 	return f
 }
 
-func (f *Function) AddMatchValues(name Predicate, v string, count int) *Function {
-	v1 := GraphVariable{string(name), TypePred}
-	v2 := GraphVariable{v, TypeStr}
-	v3 := GraphVariable{strconv.Itoa(count), TypeInt}
-	f.Variables = append(f.Variables, v1, v2, v3)
-	return f
-}
-
-func (f *Function) AddPredMultiple(name Predicate, v ...interface{}) *Function {
-	v1 := GraphVariable{string(name), TypePred}
+func (f *function) predMultiple(name Predicate, v []interface{}) *function {
+	v1 := graphVariable{string(name), typePred}
 	f.Variables = append(f.Variables, v1)
 	for _, vv := range v {
 		val, typ := processInterface(vv)
-		v2 := GraphVariable{val, typ}
+		v2 := graphVariable{val, typ}
 		f.Variables = append(f.Variables, v2)
 	}
 	return f
 }
 
-func (f *Function) mapVariables(q *GeneratedQuery) {
+func (f *function) mapVariables(q *GeneratedQuery) {
 	for k, v := range f.Variables {
 		//Handle the two special cases that do not need variable mapping.
-		if v.Type == TypePred {
+		if v.Type == typePred {
 			continue
 		}
-		if v.Type == TypeUid {
+		if v.Type == typeUid {
 			if len(v.Value) > 16 {
 				panic("invalid UID, this could be an SQL injection.")
 			}
@@ -204,32 +185,26 @@ func (f *Function) mapVariables(q *GeneratedQuery) {
 	}
 }
 
-func (f *Function) create(q *GeneratedQuery, sb *strings.Builder) error {
+func (f *function) create(q *GeneratedQuery, sb *strings.Builder) error {
 	if err := f.check(q); err != nil {
 		return err
 	}
-	//Map the variables to their proper value.
-	f.mapVariables(q)
+	//f.mapVariables(q)
 	//Write the default values.
 	sb.WriteString(string(f.Type))
-	sb.WriteString(tokenLP)
+	sb.WriteByte('(')
 	f.buildVarString(sb)
-	sb.WriteString(tokenRP)
-	/*for k := range f.Order {
-		sb.WriteString(tokenComma)
-		s := f.Order[k].String()
-		sb.WriteString(s)
-	}*/
+	sb.WriteByte(')')
 	return nil
 }
 
-func (f *Function) buildVarString(sb *strings.Builder) {
+func (f *function) buildVarString(sb *strings.Builder) {
 	for k, v := range f.Variables {
-		if v.Type == TypePred {
+		if v.Type == typePred {
 			sb.WriteByte('<')
 			sb.WriteString(Predicate(v.Value).String())
 			sb.WriteByte('>')
-		}else if v.Type == TypeUid {
+		} else if v.Type == typeUid {
 			sb.WriteByte('"')
 			sb.WriteString(v.Value)
 			sb.WriteByte('"')
@@ -243,20 +218,17 @@ func (f *Function) buildVarString(sb *strings.Builder) {
 }
 
 type FunctionError struct {
-	Type functionType
+	Type FunctionType
 }
 
 func (f FunctionError) Error() string {
 	return fmt.Sprintf("invalid arguments of function type %s", string(f.Type))
 }
-func NewFunctionError(t functionType) FunctionError {
+func NewFunctionError(t FunctionType) FunctionError {
 	return FunctionError{t}
 }
 
-func (f *Function) check(q *GeneratedQuery) error {
-	if f == nil {
-		return errMissingFunction
-	}
+func (f *function) check(q *GeneratedQuery) error {
 	if f.Type == "" {
 		return errMissingFunction
 	}
@@ -264,8 +236,8 @@ func (f *Function) check(q *GeneratedQuery) error {
 		return errMissingVariables
 	}
 	switch f.Type {
-	case FunctionHas:
-		if len(f.Variables) != 1 && f.Variables[0].Type != TypePred {
+	case Has:
+		if len(f.Variables) != 1 && f.Variables[0].Type != typePred {
 			return fmt.Errorf("%s function too many variables or invalid types, have %v need %v", f.Type, len(f.Variables), 1)
 		}
 		break

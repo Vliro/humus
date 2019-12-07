@@ -1,8 +1,8 @@
-package mulbase
+package humus
 
 import (
 	"encoding/json"
-	"errors"
+	"fmt"
 	"reflect"
 	"strconv"
 
@@ -16,6 +16,7 @@ func (e EmptyResponseErr) Error() string {
 }
 
 //singleResponse parses one response from dgraph into the pointer at inp.
+//TODO: Make this faster. Do not perform a bunch of unnecessary allocations when unmarshalling the object.
 func singleResponse(temp *fastjson.Value, inp interface{}) error {
 	r, err := temp.Array()
 	if err != nil {
@@ -27,7 +28,7 @@ func singleResponse(temp *fastjson.Value, inp interface{}) error {
 	var b []byte
 	val := reflect.ValueOf(inp)
 	if !(val.Kind() == reflect.Ptr || val.Kind() == reflect.Interface) {
-		return errors.New("parse: invalid input to singleResponse")
+		return fmt.Errorf("parse: invalid input to singleResponse, got type %s", val.Type().String())
 	}
 	if val.Kind() == reflect.Ptr {
 		val = val.Elem()

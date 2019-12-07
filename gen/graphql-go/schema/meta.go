@@ -76,7 +76,7 @@ var metaSrc = `
 	#
 	# In some cases, you need to provide options to alter GraphQL's execution behavior
 	# in ways field arguments will not suffice, such as conditionally including or
-	# skipping a field. Directives provide this by describing additional information
+	# skipping a field. directives provide this by describing additional information
 	# to the executor.
 	type __Directive {
 		name: String!
@@ -136,7 +136,7 @@ var metaSrc = `
 		deprecationReason: String
 	}
 
-	# Object and Interface types are described by a list of Fields, each of which has
+	# Object and Interface types are described by a list of fields, each of which has
 	# a name, potentially a list of arguments, and a return type.
 	type __Field {
 		name: String!
@@ -147,8 +147,8 @@ var metaSrc = `
 		deprecationReason: String
 	}
 
-	# Arguments provided to Fields or Directives and the input fields of an
-	# InputObject are represented as Input Values which describe their type and
+	# Arguments provided to fields or directives and the input fields of an
+	# InputObject are represented as Input values which describe their type and
 	# optionally a default value.
 	type __InputValue {
 		name: String!

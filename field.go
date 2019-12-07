@@ -1,4 +1,4 @@
-package mulbase
+package humus
 
 import (
 	"bytes"
@@ -9,7 +9,7 @@ import (
 )
 
 /*
-	FieldList is a list of Fields associated with a generated object.
+	FieldList is a list of fields associated with a generated object.
 	These are of global type and should never be modifierType lest
 	the state of the entire application should be changed.
 	Whenever fields are added to this list they are copied.
@@ -47,6 +47,25 @@ type FieldList []Field
 
 func (f FieldList) Get() []Field {
 	return f
+}
+
+
+//Select allows you to perform selection of fields early.
+//This removes the Ignore meta from any field selected.
+func (f FieldList) Select(names ...Predicate) Fields {
+	var newList NewList = make(NewList, len(names))
+	index := 0
+	loop: for _,v := range names {
+		for _,iv := range f {
+			if iv.Name == v {
+				newList[index] = iv
+				newList[index].Meta &^= MetaIgnore
+				index++
+				continue loop
+			}
+		}
+	}
+	return newList
 }
 
 func (f FieldList) Len() int {
@@ -112,14 +131,14 @@ func (f FieldList) AddName(nam Predicate, sch SchemaList) Fields {
 }
 /*
 //Facet adds a field of type facet.
-func (f FieldList) Facet(facetName string, alias string) Fields {
+func (f FieldList) Facet(facetName string, alias string) fields {
 	var newArr NewList = make([]Field, len(f)+1)
 	//Copy!
 	n := copy(newArr, f)
 	if n != len(f) {
 		panic("fieldList sub: invalid length! something went wrong")
 	}
-	newArr[len(f)] = MakeField(Predicate(facetName), 0|MetaFacet)
+	newArr[len(f)] = MakeField(Variable(facetName), 0|MetaFacet)
 	return newArr
 }*/
 
@@ -143,8 +162,8 @@ func (f NewList) Sub(name Predicate, fl Fields) Fields {
 	return f
 }
 /*
-func (f NewList) Facet(facetName string, alias string) Fields {
-	return append(f, MakeField(Predicate(facetName), 0|MetaFacet))
+func (f NewList) Facet(facetName string, alias string) fields {
+	return append(f, MakeField(Variable(facetName), 0|MetaFacet))
 }
 */
 func Sub(name Predicate, fl []Field, sch SchemaList) NewList {
@@ -154,7 +173,7 @@ func Sub(name Predicate, fl []Field, sch SchemaList) NewList {
 	return newFields
 }
 
-/*func Fields(sch SchemaList, names ...string) NewList{
+/*func fields(sch SchemaList, names ...string) NewList{
 	var ret = make([]Field, len(names))
 	for k,v := range names {
 		val := sch[v]
@@ -185,12 +204,12 @@ func CreatePath(paths ...Predicate) Predicate {
 }
 
 //TODO: offset
-type PaginationType string
+type CountType string
 
 const (
-	CountFirst  PaginationType = "first"
-	CountOffset PaginationType = "offset"
-	CountAfter  PaginationType = "after"
+	CountFirst  CountType = "first"
+	CountOffset CountType = "offset"
+	CountAfter  CountType = "after"
 )
 
 type AggregateType string
@@ -203,7 +222,7 @@ const (
 )
 
 type Pagination struct {
-	Type  PaginationType
+	Type  CountType
 	Value int
 }
 
@@ -215,7 +234,7 @@ func (c Pagination) parenthesis() bool {
 	return true
 }
 
-func (c Pagination) apply(root *GeneratedQuery, meta FieldMeta, name string, sb *strings.Builder) (modifierType, error) {
+func (c Pagination) apply(root *GeneratedQuery, meta FieldMeta, mt modifierSource, sb *strings.Builder) (modifierType, error) {
 	sb.WriteString(string(c.Type))
 	sb.WriteString(tokenColumn)
 	sb.WriteString(strconv.Itoa(c.Value))
@@ -263,6 +282,7 @@ const (
 	MetaReverse
 	MetaFacet
 	MetaEmpty
+	MetaIgnore
 )
 
 // Field is a recursive data struct which represents a GraphQL query field.
@@ -291,8 +311,8 @@ func (f Field) Add(fi Field) Fields {
 	return fields
 }
 /*
-func (f Field) Facet(facetName string, alias string) Fields {
-	return append(NewList{}, f, MakeField(Predicate(facetName), 0|MetaFacet))
+func (f Field) Facet(facetName string, alias string) fields {
+	return append(NewList{}, f, MakeField(Variable(facetName), 0|MetaFacet))
 }*/
 
 func (f Field) Get() []Field {
@@ -308,6 +328,9 @@ func MakeField(name Predicate, meta FieldMeta) Field {
 
 func (f Field) writeLanguageTag(sb *bytes.Buffer, l Language) {
 	if l != LanguageDefault && l != LanguageNone {
+		sb.WriteByte('@')
+		sb.WriteString(string(l))
+		sb.WriteString(":.")
 		sb.WriteString("@" + string(l) + ":.")
 	}
 }
@@ -326,23 +349,25 @@ func (f Field) getName() Predicate {
 // Parent is in-fact the current field name from the previous level.
 func (f *Field) create(q *GeneratedQuery, parent unsafeSlice, sb *strings.Builder) error {
 	//If a field is an object and has no fields do not use it.
-	if f.Meta.Object() && (f.Fields != nil && f.Fields.Len() == 0) {
+	if f.Meta.Object() && ((f.Fields != nil && f.Fields.Len() == 0) || f.Fields == nil) {
 		return nil
 	}
 	if f.Meta.Facet() {
 		return nil
 	}
-	var name string
+	if f.Meta&MetaIgnore > 0 {
+		return nil
+	}
 	if f.Meta.Lang() {
-		if q.strictLanguage {
-			name = string(f.Name) + "@" + string(q.Language)
-		} else {
-			name = string(f.Name) + "@" + string(q.Language) + ":."
+		sb.WriteString(string(f.Name))
+		sb.WriteByte('@')
+		sb.WriteString(string(q.language))
+		if !q.strictLanguage {
+			sb.WriteString(":.")
 		}
 	} else {
-		name = string(f.Name)
+		sb.WriteString(string(f.Name))
 	}
-	sb.WriteString(name)
 	val, ok := q.modifiers[parent.pred()]
 	if ok {
 		//var direction bool
@@ -350,7 +375,17 @@ func (f *Field) create(q *GeneratedQuery, parent unsafeSlice, sb *strings.Builde
 		//The state to keep track of non-colliding values
 		//TODO: Use this between values to ensure query is correct.
 		//var uniqueState uint8
-		sort.Sort(val)
+
+		//Dont call sort for size 1,2 (common sizes)
+		if len(val) > 1 {
+			if len(val) == 2 {
+				if val[0].priority() > val[1].priority() {
+					val.Swap(0,1)
+				}
+			} else {
+				sort.Sort(val)
+			}
+		}
 		for k, v := range val {
 			newType := v.priority()
 			if newType <= modifierAggregate {
@@ -360,7 +395,7 @@ func (f *Field) create(q *GeneratedQuery, parent unsafeSlice, sb *strings.Builde
 				if newType > curType && v.parenthesis() {
 					sb.WriteByte('(')
 				}
-				_, err := v.apply(q, f.Meta, string(f.Name), sb)
+				_, err := v.apply(q, f.Meta, modifierField, sb)
 				if k != len(val)-1 && v.parenthesis() {
 					if p := val[k+1].priority(); p == newType {
 						sb.WriteByte(',')
@@ -378,29 +413,40 @@ func (f *Field) create(q *GeneratedQuery, parent unsafeSlice, sb *strings.Builde
 			curType = newType
 		}
 	}
-	if f.Fields != nil && f.Fields.Len() > 0 {
+	if f.Fields != nil && f.Fields.Len() > 0{
 		if f.Meta.Lang() {
-			return errors.New("cannot have language and children")
+			return errors.New("cannot have language meta and children fields")
 		}
-		sb.WriteString(tokenLB)
-		if !f.Meta.Empty() {
+		sb.WriteByte('{')
+		if !f.Meta.Empty() && f.Fields != nil {
 			for i, field := range f.Fields.Get() {
 				if len(field.Name) > 0 {
-					if i != 0 && i != f.Fields.Len() {
-						sb.WriteString(tokenSpace)
+					if i != 0 {
+						sb.WriteByte(' ')
 					}
 					parent = append(parent, field.Name...)
 					err := field.create(q, parent, sb)
 					if err != nil {
 						return err
 					}
-					parent = parent[:len(parent)-1-len(field.Name)]
+					parent = parent[:len(parent)-len(field.Name)]
 				}
 			}
 		}
+		if val, ok := q.modifiers[parent.pred()]; ok {
+			for _,v := range val {
+				if v.priority() > modifierAggregate {
+					break
+				}
+				_,err := v.apply(q, 0,modifierField, sb)
+				if err != nil {
+					return err
+				}
+			}
+		}
+		sb.WriteString("uid" + tokenRB)
+		sb.WriteByte('}')
 		//Always add the uid field. I don't think this will be very expensive in terms of dgraph performance.
-		sb.WriteString("uid")
-		sb.WriteString(tokenRB)
 	}
 	return nil
 }

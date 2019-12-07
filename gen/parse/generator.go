@@ -2,8 +2,8 @@ package parse
 
 import (
 	"bytes"
-	"github.com/Vliro/mulbase/gen/graphql-go"
-	"github.com/Vliro/mulbase/gen/graphql-go/schema"
+	"github.com/Vliro/humus/gen/graphql-go"
+	"github.com/Vliro/humus/gen/graphql-go/schema"
 	"github.com/pkg/errors"
 	"io"
 	"io/ioutil"
@@ -11,7 +11,6 @@ import (
 	"path/filepath"
 )
 
-var defaultImport = []string{"github.com/Vliro/mulbase"}
 
 type Creator interface {
 	Create(i *Generator, w io.Writer)

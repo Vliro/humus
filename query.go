@@ -75,7 +75,11 @@ func (q *Queries) Process() (string, error) {
 }
 
 func (q *Queries) NewQuery(f Fields) *GeneratedQuery {
-	newq := NewQuery(f)
+	newq := &GeneratedQuery{
+		modifiers: make(map[Predicate]modifierList),
+		fields:    f,
+		varMap: q.vars,
+	}
 	newq.varFunc = q.varCounter
 	q.q = append(q.q, newq)
 	return newq
@@ -102,7 +106,6 @@ func (q *Queries) create() (string, error) {
 		final.WriteString(str)
 	}
 	final.WriteByte(')')
-	var output = make(map[string]string)
 	for k, qu := range q.q {
 		final.WriteByte('{')
 		qu.index = k + 1
@@ -111,11 +114,7 @@ func (q *Queries) create() (string, error) {
 			return "", err
 		}
 		final.WriteByte('}')
-		for k, v := range qu.varMap {
-			output[k] = v
-		}
 	}
-	q.vars = output
 	return final.String(), nil
 }
 
@@ -126,7 +125,6 @@ func (q *Queries) Vars() map[string]string {
 //The Field maps include a path for the predicate.
 //Root is "", all sub are /Predicate1/Predicate2...
 //It is quite a big allocation.
-//TODO: All maps kept separate? They might not be used that often.
 type GeneratedQuery struct {
 	//The root function.
 	//Since all queries have a graph function this is an embedded struct.
@@ -164,11 +162,13 @@ func (q *GeneratedQuery) Var(v bool) *GeneratedQuery {
 	return q
 }
 */
+//Facets sets @facets for the edge specified by path.
 func (q *GeneratedQuery) Facets(path Predicate) *GeneratedQuery {
 	q.modifiers[path] = append(q.modifiers[path], facet{})
 	return q
 }
-
+//NewQuery returns a new singular generation query for use
+//in building a single query.
 func NewQuery(f Fields) *GeneratedQuery {
 	return &GeneratedQuery{
 		varMap:    make(map[string]string),
@@ -176,7 +176,8 @@ func NewQuery(f Fields) *GeneratedQuery {
 		fields:    f,
 	}
 }
-
+//NewQueries returns a QueryList used for building
+//multiple queries at once.
 func NewQueries() *Queries {
 	qu := new(Queries)
 	qu.q = make([]*GeneratedQuery, 0, 2)
@@ -185,6 +186,7 @@ func NewQueries() *Queries {
 		qu.currentVar++
 		return qu.currentVar
 	}
+	qu.vars = make(map[string]string)
 	return qu
 }
 
@@ -247,7 +249,7 @@ func (q *GeneratedQuery) create(sb *strings.Builder) (string, error) {
 		for _, v := range val {
 			if v.priority() > modifierFilter && v.canApply(modifierFunction) {
 				sb.WriteByte(',')
-				_, err := v.apply(q, 0, modifierFunction, sb)
+				err := v.apply(q, 0, modifierFunction, sb)
 				if err != nil {
 					return "", err
 				}
@@ -257,7 +259,7 @@ func (q *GeneratedQuery) create(sb *strings.Builder) (string, error) {
 		sb.WriteByte(')')
 		for _, v := range val {
 			if v.priority() == modifierFilter && v.canApply(modifierFunction) {
-				_, err := v.apply(q, 0, modifierFunction, sb)
+				err := v.apply(q, 0, modifierFunction, sb)
 				if err != nil {
 					return "", err
 				}
@@ -288,7 +290,7 @@ func (q *GeneratedQuery) create(sb *strings.Builder) (string, error) {
 	}
 	for _, v := range val {
 		if v.priority() <= modifierAggregate && v.canApply(modifierField) {
-			_, err := v.apply(q, 0, modifierFunction, sb)
+			err := v.apply(q, 0, modifierFunction, sb)
 			if err != nil {
 				return "", err
 			}
@@ -307,8 +309,8 @@ func (q *GeneratedQuery) create(sb *strings.Builder) (string, error) {
 func (q *GeneratedQuery) Vars() map[string]string {
 	return q.varMap
 }
-
-func (q *GeneratedQuery) AddDirective(dir Directive) *GeneratedQuery {
+//Directive adds a top level directive.
+func (q *GeneratedQuery) Directive(dir Directive) *GeneratedQuery {
 	for _, v := range q.directives {
 		if v == dir {
 			return q
@@ -318,7 +320,7 @@ func (q *GeneratedQuery) AddDirective(dir Directive) *GeneratedQuery {
 	return q
 }
 
-//Adds a count to a predicate.
+//Count adds a count to a predicate specified by the path.
 func (q *GeneratedQuery) Count(t CountType, path Predicate, value int) *GeneratedQuery {
 	q.modifiers[path] = append(q.modifiers[path], Pagination{Type: t, Value: value})
 	return q
@@ -327,18 +329,22 @@ func (q *GeneratedQuery) Count(t CountType, path Predicate, value int) *Generate
 //Agg adds aggregation on a value variable.
 //Note that path here is the root level of the aggregation such that
 //empty path corresponds to top level aggregation.
-//The which represents which value to aggregate on.
+//The variable represents which value to aggregate on and alias
+//is the alias for this aggregation.
 func (q *GeneratedQuery) Agg(typ AggregateType, path Predicate, variable string, alias string) *GeneratedQuery {
 	q.modifiers[path] = append(q.modifiers[path], AggregateValues{Type: typ, Alias: alias, Variable: variable})
 	return q
 }
-
+//GroupBy sets groupby on the path.
+//TODO: Make this work properly.
 func (q *GeneratedQuery) GroupBy(path Predicate, value Predicate) *GeneratedQuery {
 	q.modifiers[path] = append(q.modifiers[path], groupBy(value))
 	return q
 }
 
-//Adds a subfilter to a predicate.
+//Filter adds a subfilter to the edge specified by path.
+//If path is "Node.edge" then the first edge from Node will have a filter
+//applied alongside the "Node.edge" predicate.
 func (q *GeneratedQuery) Filter(f *Filter, path Predicate) *GeneratedQuery {
 	f.mapVariables(q)
 	q.modifiers[path] = append(q.modifiers[path], f)
@@ -374,7 +380,6 @@ func (q *GeneratedQuery) Variable(name string, path Predicate, value string, isA
 	return q
 }
 
-//It does not build it concurrently so just increment a counter.
 func (q *GeneratedQuery) registerVariable(typ varType, value string) string {
 	if q.varBuilder.Len() != 0 {
 		q.varBuilder.WriteByte(',')
@@ -413,8 +418,9 @@ func (q *GeneratedQuery) Static() StaticQuery {
 	}
 }
 
-//Function related functions. These are wrappers over the function.
-
+//Function sets the function type for this function. It is used alongside
+//variables. Variables are automatically mapped to GraphQL variables as a way
+//of avoiding SQL injections.
 func (q *GeneratedQuery) Function(ft FunctionType) *GeneratedQuery {
 	q.function = function{Type: ft, Variables: make([]graphVariable, 0, 4)}
 	return q
@@ -431,17 +437,18 @@ func (q *GeneratedQuery) PredValue(pred Predicate, value interface{}) *Generated
 	q.function.predValue(pred, value)
 	return q
 }
-
+//PredValues sets a predicate value alongside an array of values.
+//E.g. the equals function with multiple values.
 func (q *GeneratedQuery) PredValues(pred Predicate, value ...interface{}) *GeneratedQuery {
 	q.function.predMultiple(pred, value)
 	return q
 }
-
+//Value sets a single value, i.e. for has.
 func (q *GeneratedQuery) Value(v interface{}) *GeneratedQuery {
 	q.function.value(v)
 	return q
 }
-
+//Values sets a multiple values of any type.
 func (q *GeneratedQuery) Values(v ...interface{}) *GeneratedQuery {
 	q.function.values(v)
 	return q

@@ -10,10 +10,10 @@ func (f facet) canApply(mt modifierSource) bool {
 	return true
 }
 
-func (f facet) apply(root *GeneratedQuery, meta FieldMeta, mt modifierSource, sb *strings.Builder) (modifierType, error) {
+func (f facet) apply(root *GeneratedQuery, meta FieldMeta, mt modifierSource, sb *strings.Builder) error {
 	sb.WriteString("@facets")
 	//TODO: Use a schema to get applicable facets.
-	return 0, nil
+	return nil
 }
 
 func (f facet) priority() modifierType {

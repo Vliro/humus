@@ -51,11 +51,11 @@ func (o Ordering) canApply(mt modifierSource) bool {
 	return true
 }
 
-func (o Ordering) apply(root *GeneratedQuery, meta FieldMeta, mt modifierSource, s *strings.Builder) (modifierType, error) {
+func (o Ordering) apply(root *GeneratedQuery, meta FieldMeta, mt modifierSource, s *strings.Builder) error {
 	s.WriteString(string(o.Type))
 	s.WriteString(": ")
 	s.WriteString(o.Predicate.String())
-	return 0, nil
+	return nil
 }
 
 func (o Ordering) priority() modifierType {

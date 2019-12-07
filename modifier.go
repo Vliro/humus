@@ -28,7 +28,7 @@ type modifier interface {
 	canApply(mt modifierSource) bool
 	//While io.Writer is more generic, the utility of
 	//multiple different write methods is unbeatable here.
-	apply(root *GeneratedQuery, meta FieldMeta, mt modifierSource, sb *strings.Builder) (modifierType, error)
+	apply(root *GeneratedQuery, meta FieldMeta, mt modifierSource, sb *strings.Builder) error
 	priority() modifierType
 	parenthesis() bool
 }
@@ -58,10 +58,10 @@ func (a AggregateValues) canApply(mt modifierSource) bool {
 	return true
 }
 
-func (a AggregateValues) apply(root *GeneratedQuery, meta FieldMeta, mt modifierSource, sb *strings.Builder) (modifierType, error) {
+func (a AggregateValues) apply(root *GeneratedQuery, meta FieldMeta, mt modifierSource, sb *strings.Builder) error {
 	sb.WriteByte(' ')
 	if a.Variable == "" {
-		return 0, errors.New("missing predicate in aggregateValues")
+		return errors.New("missing predicate in aggregateValues")
 	}
 	if a.Alias != "" {
 		sb.WriteString(a.Alias)
@@ -77,7 +77,7 @@ func (a AggregateValues) apply(root *GeneratedQuery, meta FieldMeta, mt modifier
 	sb.WriteByte(')')
 	sb.WriteByte(')')
 	sb.WriteByte(' ')
-	return 0,nil
+	return nil
 }
 
 func (a AggregateValues) priority() modifierType {
@@ -94,7 +94,7 @@ func (g groupBy) canApply(mt modifierSource) bool {
 	return mt == modifierField
 }
 
-func (g groupBy) apply(root *GeneratedQuery, meta FieldMeta,mt modifierSource, sb *strings.Builder) (modifierType, error) {
+func (g groupBy) apply(root *GeneratedQuery, meta FieldMeta,mt modifierSource, sb *strings.Builder) error {
 	panic("implement me")
 }
 

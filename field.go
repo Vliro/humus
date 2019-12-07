@@ -234,11 +234,11 @@ func (c Pagination) parenthesis() bool {
 	return true
 }
 
-func (c Pagination) apply(root *GeneratedQuery, meta FieldMeta, mt modifierSource, sb *strings.Builder) (modifierType, error) {
+func (c Pagination) apply(root *GeneratedQuery, meta FieldMeta, mt modifierSource, sb *strings.Builder) error {
 	sb.WriteString(string(c.Type))
 	sb.WriteString(tokenColumn)
 	sb.WriteString(strconv.Itoa(c.Value))
-	return 0, nil
+	return nil
 }
 
 func (c Pagination) priority() modifierType {
@@ -395,7 +395,7 @@ func (f *Field) create(q *GeneratedQuery, parent unsafeSlice, sb *strings.Builde
 				if newType > curType && v.parenthesis() {
 					sb.WriteByte('(')
 				}
-				_, err := v.apply(q, f.Meta, modifierField, sb)
+				err := v.apply(q, f.Meta, modifierField, sb)
 				if k != len(val)-1 && v.parenthesis() {
 					if p := val[k+1].priority(); p == newType {
 						sb.WriteByte(',')
@@ -438,7 +438,7 @@ func (f *Field) create(q *GeneratedQuery, parent unsafeSlice, sb *strings.Builde
 				if v.priority() > modifierAggregate {
 					break
 				}
-				_,err := v.apply(q, 0,modifierField, sb)
+				err := v.apply(q, 0,modifierField, sb)
 				if err != nil {
 					return err
 				}

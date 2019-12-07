@@ -9,6 +9,12 @@ import (
 	"testing"
 )
 
+/*
+As of right now the tests are performed against static strings.
+Eventually the tests shall run against a dgraph instance with data provided.
+This will be done before it is released.
+ */
+
 type testQuerier struct {
 	expected string
 }
@@ -49,8 +55,8 @@ func TestBigQuery(t *testing.T) {
 	q.Order(Ascending, ErrorMessageField, ErrorTimeField)
 	q.Count(CountFirst, ErrorMessageField + ErrorMessageField, 1)
 	//q.Agg(TypeSum, ErrorMessageField, "test")
-	q.AddDirective(Cascade)
-	q.AddDirective(Normalize)
+	q.Directive(Cascade)
+	q.Directive(Normalize)
 	q.Filter(MakeFilter(Equals).PredValue(ErrorMessageField, "Test"), ErrorMessageField)
 	q.Filter(MakeFilter(Equals).PredValue(ErrorMessageField, "Test"), ErrorErrorTypeField)
 	q.Facets(ErrorMessageField)
@@ -72,8 +78,8 @@ func TestQuery(t *testing.T) {
 	q.Agg(TypeSum, ErrorMessageField, "varr","test")
 	q.Variable("varr", ErrorMessageField, "ErrorTimeField", false)
 	q.Order(Ascending, "", ErrorTimeField)
-	q.AddDirective(Cascade)
-	q.AddDirective(Normalize)
+	q.Directive(Cascade)
+	q.Directive(Normalize)
 	q.Filter(MakeFilter(Equals).PredValue(ErrorMessageField, "Test"), ErrorMessageField)
 	q.Filter(MakeFilter(Equals).PredValue(ErrorMessageField, "Test"), ErrorErrorTypeField)
 	q.Facets(ErrorMessageField)
@@ -95,8 +101,8 @@ func BenchmarkQuery(b *testing.B) {
 		q.Order(Ascending, ErrorMessageField, ErrorTimeField)
 		q.Count(CountFirst, ErrorMessageField + ErrorMessageField, 1)
 		q.Agg(TypeSum, ErrorMessageField, "varr", "swag")
-		q.AddDirective(Cascade)
-		q.AddDirective(Normalize)
+		q.Directive(Cascade)
+		q.Directive(Normalize)
 		q.Filter(MakeFilter(Equals).PredValue(ErrorMessageField, "Test"), ErrorMessageField)
 		q.Filter(MakeFilter(Equals).PredValue(ErrorMessageField, "Test"), ErrorErrorTypeField)
 		q.Facets(ErrorMessageField)
@@ -215,4 +221,12 @@ func TestVariable(t *testing.T) {
 		t.Fail()
 		return
 	}
+}
+
+func TestMultipleUid(t *testing.T) {
+	q := NewQuery(ErrorFields)
+	q.Function(FunctionUid).Values("0x1", "0x2")
+
+	str,_ := q.Process()
+	fmt.Println(str)
 }

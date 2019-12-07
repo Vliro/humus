@@ -25,9 +25,9 @@ func (f *Filter) canApply(mt modifierSource) bool {
 	return true
 }
 
-func (f *Filter) apply(root *GeneratedQuery, meta FieldMeta, mt modifierSource, sb *strings.Builder) (modifierType, error) {
+func (f *Filter) apply(root *GeneratedQuery, meta FieldMeta, mt modifierSource, sb *strings.Builder) error {
 	err := f.create(root, sb)
-	return 0, err
+	return err
 }
 
 func (f *Filter) priority() modifierType {

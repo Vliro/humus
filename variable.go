@@ -8,7 +8,8 @@ import (
 )
 
 //processInterface takes the type and returns what variable it is as well as a string representation of it.
-//this function is the reason why using the default generated values is important!
+//this function is the reason why using the default generated values is important since it includes the static type
+//of predicate/uid.,
 //note that UID and Variable types are handled separately.
 func processInterface(value interface{}) (string, varType) {
 	switch a := value.(type) {
@@ -32,7 +33,7 @@ func processInterface(value interface{}) (string, varType) {
 }
 
 type variable struct {
-	name string
+	name  string
 	value string
 	alias bool
 }
@@ -41,9 +42,9 @@ func (v variable) canApply(mt modifierSource) bool {
 	return true
 }
 
-func (v variable) apply(root *GeneratedQuery, meta FieldMeta, mt modifierSource, sb *strings.Builder) (modifierType, error) {
+func (v variable) apply(root *GeneratedQuery, meta FieldMeta, mt modifierSource, sb *strings.Builder) error {
 	if v.name == "" || v.value == "" {
-		return 0, errors.New("missing values in graphVariable")
+		return errors.New("missing values in graphVariable")
 	}
 	sb.WriteByte(' ')
 	sb.WriteString(v.name)
@@ -54,7 +55,7 @@ func (v variable) apply(root *GeneratedQuery, meta FieldMeta, mt modifierSource,
 	}
 	sb.WriteString(v.value)
 	sb.WriteByte(' ')
-	return 0, nil
+	return nil
 }
 
 func (v variable) priority() modifierType {

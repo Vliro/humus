@@ -3,15 +3,16 @@ package gen
 import (
 	"fmt"
 	"github.com/Vliro/humus"
+	gen "github.com/Vliro/humus/example"
 	"testing"
 )
 
 func TestReset (t *testing.T) {
-	var a User
-	a.Name = "Username"
+	var a Post
+	a.Text = "Value"
 	a.Uid = "0x1"
 	a.Reset()
-	if a.Name != "" || a.Uid != "0x1" {
+	if a.Text != "" || a.Uid != "0x1" {
 		t.Fail()
 		return
 	}
@@ -19,9 +20,9 @@ func TestReset (t *testing.T) {
 
 func TestLang(t *testing.T) {
 	const expected = "query t($0:string){q(func: eq(<Post.text>,$0)){Post.text@se:. Post.datePublished   uid}}"
-	q := humus.NewQuery(PostFields)
+	q := humus.NewQuery(gen.PostFields)
 	q.Language(humus.LanguageSwedish, false)
-	q.Function(humus.Equals).PredValue(PostTextField, "Test")
+	q.Function(humus.Equals).PredValue(gen.PostTextField, "Test")
 
 	str, err := q.Process()
 	if err != nil {

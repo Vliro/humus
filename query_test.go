@@ -15,12 +15,14 @@ Eventually the tests shall run against a dgraph instance with data provided.
 This will be done before it is released.
  */
 
+
+
 type testQuerier struct {
 	expected string
 }
 
 func (t testQuerier) Query(c context.Context, q Query, vals ...interface{}) error {
-	qu, err := q.Process()
+	qu, err := q.process()
 	if qu != t.expected {
 		fmt.Println(qu)
 		return errors.New("query failed")
@@ -60,7 +62,7 @@ func TestBigQuery(t *testing.T) {
 	q.Filter(MakeFilter(Equals).PredValue(ErrorMessageField, "Test"), ErrorMessageField)
 	q.Filter(MakeFilter(Equals).PredValue(ErrorMessageField, "Test"), ErrorErrorTypeField)
 	q.Facets(ErrorMessageField)
-	_, _ = q.Process()
+	_, _ = q.process()
 }
 
 var fields = ErrorFields.Sub(ErrorMessageField, ErrorFields)
@@ -83,7 +85,7 @@ func TestQuery(t *testing.T) {
 	q.Filter(MakeFilter(Equals).PredValue(ErrorMessageField, "Test"), ErrorMessageField)
 	q.Filter(MakeFilter(Equals).PredValue(ErrorMessageField, "Test"), ErrorErrorTypeField)
 	q.Facets(ErrorMessageField)
-	q.Language(LanguageDefault, true)
+	q.Language(LanguageEnglish, true)
 	err := newTest(expected).Query(context.Background(), q)
 	if err != nil {
 		t.Fail()
@@ -106,7 +108,7 @@ func BenchmarkQuery(b *testing.B) {
 		q.Filter(MakeFilter(Equals).PredValue(ErrorMessageField, "Test"), ErrorMessageField)
 		q.Filter(MakeFilter(Equals).PredValue(ErrorMessageField, "Test"), ErrorErrorTypeField)
 		q.Facets(ErrorMessageField)
-		str, _ := q.Process()
+		str, _ := q.process()
 		fmt.Println(str)
 	}
 	b.ReportAllocs()
@@ -119,7 +121,7 @@ const staticString = `query {
 func BenchmarkStaticQuery(b *testing.B) {
 	for i := 0; i < b.N; i++ {
 		var stat = NewStaticQuery(fmt.Sprintf(staticString, "0x2"))
-		_,_ = stat.Process()
+		_,_ = stat.process()
 	}
 	b.ReportAllocs()
 }
@@ -131,7 +133,7 @@ func TestQueryFilter(t *testing.T) {
 	q.Filter(MakeFilter(Equals).PredValue(ErrorTimeField, "testFilter"), "")
 	q.Order(Ascending, "", ErrorTimeField)
 	q.Count(CountFirst, "", 5)
-	str, err := q.Process()
+	str, err := q.process()
 	if err != nil {
 		t.Fatal()
 	}
@@ -151,7 +153,7 @@ func TestQueries(t *testing.T) {
 	qu.Filter(MakeFilter(Equals).PredValue(ErrorTimeField, "filterOne"), ErrorTimeField)
 	qu.Order(Ascending, "", ErrorTimeField)
 	qu.Count(CountFirst, "", 5)
-	str,err := list.Process()
+	str,err := list.process()
 	if err != nil {
 		t.Fail()
 		return
@@ -198,7 +200,7 @@ func BenchmarkQueries(b *testing.B) {
 		qu.Filter(MakeFilter(Equals).PredValue(ErrorTimeField, "testFilterOne"), "")
 		qu.Order(Ascending, "", ErrorTimeField)
 		qu.Count(CountFirst, "", 5)
-		_,_ = list.Process()
+		_,_ = list.process()
 	}
 	b.ReportAllocs()
 }
@@ -212,7 +214,7 @@ func TestVariable(t *testing.T) {
 	//q.Filter(MakeFilter(Equals).PredValue(ErrorTimeField, "testFilter"), "")
 	q.Order(Ascending, "", ErrorTimeField)
 	q.Count(CountFirst, "", 5)
-	str, err := q.Process()
+	str, err := q.process()
 	if err != nil {
 		t.Fail()
 		return
@@ -227,6 +229,15 @@ func TestMultipleUid(t *testing.T) {
 	q := NewQuery(ErrorFields)
 	q.Function(FunctionUid).Values("0x1", "0x2")
 
-	str,_ := q.Process()
+	str,_ := q.process()
 	fmt.Println(str)
+}
+
+var a DNode = &dbError{}
+
+func BenchmarkDNode(b *testing.B) {
+	for i := 0; i < b.N; i++ {
+		x := a.(DNode)
+		_ = x
+	}
 }

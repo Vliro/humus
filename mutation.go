@@ -11,20 +11,24 @@ import (
 type SingleMutation struct {
 	Object DNode
 	MutationType MutationType
+	//Used for upsert.
+	Condition string
 }
 
 func (m SingleMutation) Type() MutationType {
 	return m.MutationType
 }
 
-func (m SingleMutation) Mutate() ([]byte, error) {
+func (m SingleMutation) Cond(int) string {
+	return m.Condition
+}
+
+func (m SingleMutation) mutate() ([]byte, error) {
 	//panic("do not process a single mutation")
 	if m.Object == nil {
 		return nil, errors.New("nil value supplied to process")
 	}
-	if m.Object.UID() == "" {
-		m.Object.SetType()
-	}
+	m.Object.Recurse()
 	var b []byte
 	switch m.MutationType {
 	case MutateSet:
@@ -51,14 +55,29 @@ func (m SingleMutation) Mutate() ([]byte, error) {
 
 type MutationQuery struct {
 	Values []DNode
+	Conds []string
 	MutationType MutationType
 }
 
-func (m *MutationQuery) Mutate() ([]byte, error) {
+func CreateMutations(typ MutationType, muts ...DNode) *MutationQuery {
+	return &MutationQuery{
+		Values:       muts,
+		Conds:        nil,
+		MutationType: typ,
+	}
+}
+
+func (m *MutationQuery) Cond(i int) string {
+	return m.Conds[i]
+}
+
+func (m *MutationQuery) AddConditions(conds ...string) {
+	m.Conds = conds
+}
+
+func (m *MutationQuery) mutate() ([]byte, error) {
 	for k,v := range m.Values {
-		if v.UID() == "" {
-			v.SetType()
-		}
+		v.Recurse()
 		switch m.MutationType {
 		case MutateSet:
 			if val, ok := v.(Saver); ok {
@@ -82,4 +101,33 @@ func (m *MutationQuery) Mutate() ([]byte, error) {
 
 func (m *MutationQuery) Type() MutationType {
 	return m.MutationType
+}
+
+
+type customMutation struct {
+	Value interface{}
+	QueryType MutationType
+	Condition string
+}
+
+func (c customMutation) Cond(int) string {
+	return c.Condition
+}
+
+func (c customMutation) mutate() ([]byte, error) {
+	b, _ := json.Marshal(c.Value)
+	return b, nil
+}
+
+func (c customMutation) Type() MutationType {
+	return c.QueryType
+}
+//CreateCustomMutation allows you to create a mutation from an interface
+//and not a DNode. This is useful alongside custom queries to set values, especially
+//working with facets.
+func CreateCustomMutation(obj interface{}, typ MutationType) Mutate {
+	return customMutation{
+		Value: obj,
+		QueryType:  typ,
+	}
 }

@@ -59,6 +59,7 @@ func (f FieldList) Select(names ...Predicate) Fields {
 		for _,iv := range f {
 			if iv.Name == v {
 				newList[index] = iv
+				//Strip the MetaIgnore since we select the field. Useful for password fields.
 				newList[index].Meta &^= MetaIgnore
 				index++
 				continue loop
@@ -327,7 +328,7 @@ func MakeField(name Predicate, meta FieldMeta) Field {
 }
 
 func (f Field) writeLanguageTag(sb *bytes.Buffer, l Language) {
-	if l != LanguageDefault && l != LanguageNone {
+	if l != LanguageNone {
 		sb.WriteByte('@')
 		sb.WriteString(string(l))
 		sb.WriteString(":.")
@@ -444,7 +445,7 @@ func (f *Field) create(q *GeneratedQuery, parent unsafeSlice, sb *strings.Builde
 				}
 			}
 		}
-		sb.WriteString("uid" + tokenRB)
+		sb.WriteString(" uid" + tokenRB)
 		//Always add the uid field. I don't think this will be very expensive in terms of dgraph performance.
 	}
 	return nil

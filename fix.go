@@ -17,12 +17,12 @@ func (s *StaticQuery) SetVar(key string, val interface{}) *StaticQuery {
 	return s
 }
 
-//Process the query in order to send to DGraph.
-func (s StaticQuery) Process() (string, error) {
+//process the query in order to send to DGraph.
+func (s StaticQuery) process() (string, error) {
 	return s.Query, nil
 }
 
-func (s StaticQuery) Vars() map[string]string {
+func (s StaticQuery) queryVars() map[string]string {
 	return s.vars
 }
 

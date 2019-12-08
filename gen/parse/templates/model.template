@@ -12,10 +12,7 @@ func (r *{{.Name}}) SaveValues(ctx context.Context, txn *humus.Txn) error {
     return err
 }
 func (r *{{.Name}}) GetType() []string {
-    if r.Type == nil {
-        r.SetType()
-    }
-    return r.Type
+    return _{{.Name}}Types
 }
 
 //Reset resets the node to only its UID
@@ -43,14 +40,22 @@ func (r *{{.Name}}) Facets() []string {
 func (r *{{.Name}}) Fields() humus.FieldList {
     return {{.Name}}Fields
 }
+var _{{.Name}}Types = []string {
+     "{{.Name}}",{{range .Interfaces}}
+     "{{.}}",
+     {{end}}
+ }
+
+ {{range .Interfaces}}
+ func (r *{{$.Name}}) As{{.}}() *{{.}} {
+    r.{{.}}.Node = r.Node
+    return &r.{{.}}
+ }
+{{end}}
 //Sets the types. This DOES NOT include interfaces!
 //as they are set in dgraph already.
 func (r *{{.Name}}) SetType() {
-    r.Type = []string {
-        "{{.Name}}",{{range .Interfaces}}
-        "{{.}}",
-        {{end}}
-    }
+    r.Node.Type = _{{.Name}}Types
 }
 //Values returns all the scalar values for this node.
 func (r *{{.Name}}) Values() humus.DNode{
@@ -64,6 +69,7 @@ func (r *{{.Name}}) Values() humus.DNode{
    m.Node = r.Node
    return &m
 }
+/*
 //Values returns all the scalar values for this node.
 //Note that this completely ignores any omitempty tags so use with care.
 func (r *{{.Name}}) MapValues() humus.Mapper {
@@ -80,7 +86,7 @@ m["{{.Tag}}"]= r.{{.Name}}
     m["dgraph.type"] = r.Type
     return m
 }
-
+*/
 
 //{{.Name}}Scalars is simply to avoid a map[string]interface{}
 //It is a mirror of the previous struct with all scalar values.

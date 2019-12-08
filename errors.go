@@ -8,7 +8,7 @@ import (
 )
 
 var errInvalidType = errors.New("invalid query supplied")
-var errInvalidLength = errors.New("invalid number of inputs")
+var errInvalidLength = errors.New("invalid number of inputs specified to deserialize")
 var errParsing = errors.New("error parsing input")
 var errTransaction = errors.New("invalid transaction")
 var ErrUID = errors.New("missing UID")
@@ -83,18 +83,8 @@ func (r *dbError) Values() DNode {
 	return &m
 }
 
-//values returns all the scalar values for this node.
-func (r *dbError) MapValues() Mapper {
-	var m = make(map[string]interface{}, 3)
-	m["Error.message"] = r.Message
-	m["Error.errorType"] = r.ErrorType
-	m["Error.time"] = r.Time
-	if r.Uid != "" {
-		m["uid"] = r.Uid
-	}
-	r.SetType()
-	m["dgraph.type"] = r.Type
-	return m
+func (d *dbError) Recurse() {
+
 }
 
 //ErrorScalars is simply to avoid a map[string]interface{}
@@ -110,10 +100,11 @@ func (s *ErrorScalars) Values() DNode {
 	return s
 }
 
-func (s *ErrorScalars) MapValues() Mapper {
-	panic("ErrorScalars called, use the original one instead")
-}
 
 func (s *ErrorScalars) Fields() FieldList {
 	return ErrorFields
+}
+
+func (s *ErrorScalars) Recurse() {
+
 }

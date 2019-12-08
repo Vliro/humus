@@ -57,8 +57,8 @@ type DNode interface {
 	//Serializes all the scalar values that are not hidden. It usually returns
 	//a type of *{{.Type}}Scalars.
 	Values() DNode
-	//MapValues instead creates a map of values to allow you to build custom save methods, such as immediately attaching edges.
-	MapValues() Mapper
+	//Recurse allows you to set types and UIDS for all sub nodes.
+	Recurse()
 }
 
 //Querier is an abstraction over DB/TXN. Also allows for testing.
@@ -66,7 +66,7 @@ type Querier interface {
 	//Query queries the database with a variable amount of interfaces to deserialize into.
 	//That is, if you are performing two queries q and q1 you are expected to supply two values.
 	Query(context.Context, Query, ...interface{}) error
-	//Mutate mutates the query and returns the response.
+	//mutate mutates the query and returns the response.
 	Mutate(context.Context, Query) (*api.Response, error)
 	//Discard the transaction. This is done automatically in DB but not in Txn.
 	Discard(context.Context) error
@@ -140,6 +140,10 @@ func (m Mapper) Fields() FieldList {
 	return nil
 }
 
+func (m Mapper) Recurse() {
+
+}
+
 func (m Mapper) Values() DNode {
 	return m
 }
@@ -155,7 +159,7 @@ func (m Mapper) Set(child Predicate, all bool, obj DNode) Mapper {
 		//TODO: what should actually happen here?
 		return m
 	}
-	obj.SetType()
+	obj.Recurse()
 	if all {
 		if val, ok := obj.(Saver); ok {
 			m[string(child)] = val.Save()
@@ -175,7 +179,7 @@ func (m Mapper) MustSet(child Predicate, all bool, obj DNode) Mapper {
 		//panic for now.
 		panic("mapper MustSet nil value")
 	}
-	obj.SetType()
+	obj.Recurse()
 	if all {
 		if val, ok := obj.(Saver); ok {
 			m[string(child)] = val.Save()
@@ -371,7 +375,7 @@ func (d *DB) logError(ctx context.Context, err error) {
 		errorName := fmt.Sprintf("%T", err)
 		value := err.Error()
 		var result dbError
-		result.SetType()
+		result.Recurse()
 		result.Message = value
 		result.Time = time.Now()
 		result.ErrorType = errorName
@@ -386,15 +390,16 @@ func (d *DB) logError(ctx context.Context, err error) {
 
 //Allows it to be used in Query.
 type Query interface {
-	//Process the query type in order to send to the database.
-	Process() (string, error)
+	//process the query type in order to send to the database.
+	process() (string, error)
 	//What type of query is this? Mutation(set/delete), regular query?
-	Vars() map[string]string
+	queryVars() map[string]string
 }
 
 type Mutate interface {
-	Mutate() ([]byte, error)
+	mutate() ([]byte, error)
 	Type() MutationType
+	Cond(int) string
 }
 
 //Init creates a new database connection using the given config
@@ -413,7 +418,7 @@ func connect(conf *Config, sch SchemaList) *DB {
 	var conn *grpc.ClientConn
 	var err error
 	if conf.Tls {
-		//TODO: Review this code as it might change how TLS works with dgraph.
+		//TODO: Review this code as it has not been tried in some time.
 		rootCAs := x509.NewCertPool()
 		cCerts, err := tls.LoadX509KeyPair(conf.NodeCRT, conf.NodeKey)
 		certs, err := ioutil.ReadFile(conf.RootCA)
@@ -471,7 +476,7 @@ func (t *Txn) Discard(ctx context.Context) error {
 //Perform a single mutation.
 func (t *Txn) mutate(ctx context.Context, q Mutate) (*api.Response, error) {
 	//Add a single mutation to the query list.
-	byt, err := q.Mutate()
+	byt, err := q.mutate()
 	if err != nil {
 		return nil, err
 	}
@@ -500,11 +505,11 @@ func (t *Txn) mutate(ctx context.Context, q Mutate) (*api.Response, error) {
 
 //Upsert follows the new 1.1 api and performs an upsert.
 //q is a nameless query. Cond is a condition of the form if (eq(len(a), 0) and so on. mutations is a list of mutations to perform.
-func (t *Txn) Upsert(ctx context.Context, q Query, cond string, mutations ...Mutate) (*api.Response, error) {
+func (t *Txn) Upsert(ctx context.Context, q Query, mutations ...Mutate) (*api.Response, error) {
 	if t.txn == nil {
 		return nil, Error(errTransaction)
 	}
-	b, err := q.Process()
+	b, err := q.process()
 	if err != nil {
 		return nil, Error(err)
 	}
@@ -512,7 +517,7 @@ func (t *Txn) Upsert(ctx context.Context, q Query, cond string, mutations ...Mut
 	for k := range muts {
 		muts[k] = new(api.Mutation)
 		v := muts[k]
-		b, err := mutations[k].Mutate()
+		b, err := mutations[k].mutate()
 		if err != nil {
 			return nil, err
 		}
@@ -521,12 +526,12 @@ func (t *Txn) Upsert(ctx context.Context, q Query, cond string, mutations ...Mut
 		} else {
 			v.SetJson = b
 		}
-		v.Cond = cond
+		v.Cond = mutations[k].Cond(k)
 	}
 	var req = api.Request{
 		//TODO: Dont use create(b) as that performs unnecessary allocations. We do not perform any changes to b which should not cause any issues.
 		Query:     b,
-		Vars:      q.Vars(),
+		Vars:      q.queryVars(),
 		Mutations: muts,
 	}
 	resp, err := t.txn.Do(ctx, &req)
@@ -538,14 +543,14 @@ func (t *Txn) Upsert(ctx context.Context, q Query, cond string, mutations ...Mut
 }
 
 func (t *Txn) query(ctx context.Context, q Query, objs []interface{}) error {
-	str, err := q.Process()
+	str, err := q.process()
 	if err != nil {
 		return err
 	}
 	if t.db.c.LogQueries {
 		log.Printf("Query input: %s \n", str)
 	}
-	resp, err := t.txn.QueryWithVars(ctx, str, q.Vars())
+	resp, err := t.txn.QueryWithVars(ctx, str, q.queryVars())
 	if err != nil {
 		t.db.logError(context.Background(), err)
 		return Error(err)

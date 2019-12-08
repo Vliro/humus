@@ -13,9 +13,11 @@ func (f FnCreator) Create(i *Generator, w io.Writer) {
 	f.processFunctions(i.schema, i.outputs[FunctionFileName], f.Fields)
 }
 
-type GetTemplate struct {
+type recurseTemplate struct {
 	Fields []Field
+	ArrayFields []Field
 	Name   string
+	Interfaces []string
 }
 
 /*
@@ -23,11 +25,14 @@ type GetTemplate struct {
 */
 
 func (f FnCreator) processFunctions(sch *schema.Schema, writer io.Writer, m map[string][]Field) {
-	//obj := sch.Objects()
-	//writeImports(fnImports, writer)
-	//for _, v := range obj {
-	//	processFieldTemplates(v, writer, m)
-	//}
+	obj := sch.Objects()
+	for _, v := range obj {
+		processFieldTemplates(v.Name, writer,m, v.InterfaceNames)
+	}
+	interf := sch.Interfaces()
+	for _, v := range interf {
+		processFieldTemplates(v.Name, writer, m, nil)
+	}
 	makeGlobals(writer)
 }
 //creates global field functions.
@@ -41,14 +46,14 @@ func makeGlobals(writer io.Writer) {
 
 //generates using the get.template.
 //these functions are for individual fields that are also database objects.
-func processFieldTemplates(obj *schema.Object, w io.Writer, m map[string][]Field) {
-	var output GetTemplate
-	templ := getTemplate("Get")
+func processFieldTemplates(name string, w io.Writer, m map[string][]Field, intf []string) {
+	var output recurseTemplate
+	templ := getTemplate("Recurse")
 	//asyncTempl := getTemplate("Async")
 	if templ == nil {
-		panic("missing get template")
+		panic("missing recurse template")
 	}
-	for _, v := range m[obj.Name] {
+	for _, v := range m[name] {
 		//Fill the data with appropriate data values.
 		//Only non-scalar values.
 		if v.flags & flagScalar != 0 || v.flags & flagEnum != 0{
@@ -57,13 +62,18 @@ func processFieldTemplates(obj *schema.Object, w io.Writer, m map[string][]Field
 		var data Field
 		data.Type = v.Type
 		data.Name = v.Name
-		data.Parent = obj.GetName()
+		data.Parent = name
 		data.IsArray = v.flags & flagArray > 0
 		data.Tag = v.Tag
 		data.TypeLabel = v.TypeLabel
-		output.Fields = append(output.Fields, data)
+		if data.IsArray {
+			output.ArrayFields = append(output.ArrayFields, data)
+		} else {
+			output.Fields = append(output.Fields, data)
+		}
 	}
-	output.Name = obj.Name
+	output.Interfaces = intf
+	output.Name = name
 	//write to the writer!
 	_ = templ.Execute(w, output)
 	//_ = asyncTempl.Execute(w, output)

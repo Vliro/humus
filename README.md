@@ -63,7 +63,7 @@ it is now a pointer.
 ## Getting started
 
 Running mulbase/gen/parse/main.go with input/output flags generates the model files, gen.go and enum.go. 
-An example instance can be seen under the examples folder. 
+Check out the testing folder to see how data is added using this ORM.
 
 ## TODO
 

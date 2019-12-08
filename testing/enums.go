@@ -5,12 +5,14 @@ package gen
 import (
 	"context"
 	"github.com/Vliro/humus"
+	"strconv"
 	"time"
 )
 
 var _ context.Context
 var _ time.Time
 var _ humus.Fields
+var _ = strconv.IntSize
 
 //Start new enum.
 type Type int

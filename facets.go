@@ -7,12 +7,12 @@ type facet struct {
 }
 
 func (f facet) canApply(mt modifierSource) bool {
-	return true
+	return mt == modifierField
 }
 
 func (f facet) apply(root *GeneratedQuery, meta FieldMeta, mt modifierSource, sb *strings.Builder) error {
 	sb.WriteString("@facets")
-	//TODO: Use a schema to get applicable facets.
+	//TODO: Use a schema to get applicable facets. This is for the gen code.
 	return nil
 }
 

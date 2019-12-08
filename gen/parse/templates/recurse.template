@@ -1,0 +1,32 @@
+func (r *{{.Name}}) recurse(counter int) int {
+    if r != nil {
+        if r.Uid == "" {
+            r.SetType()
+            uid := humus.UID("_:" + strconv.Itoa(counter))
+            r.Uid = uid
+            {{range .Interfaces -}}
+            r.{{.}}.Uid = uid
+            r.{{.}}.SetType()
+            {{end -}}
+            counter++
+        }
+    } else {
+        return counter
+    }
+    {{range .Fields -}}
+    //no need to nil check as it is done in the function.
+    counter = r.{{.Name}}.recurse(counter)
+    {{end -}}
+    {{range .ArrayFields -}}
+    for _,v := range r.{{.Name}} {
+        //no need to nil check as it is done in the function.
+        counter = v.recurse(counter)
+    }
+    {{end -}}
+    return counter
+}
+//Recurse iterates through the node and allocates type and UID
+//to pointer nodes.
+func (r *{{.Name}}) Recurse() {
+    r.recurse(0)
+}

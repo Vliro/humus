@@ -89,15 +89,13 @@ func (mc ModelCreator) makeGoStruct(o *schema.Object, m map[string][]Field, g *G
 	*/
 	var fieldsInterface = make([]Field, len(fields))
 	copy(fieldsInterface, fields)
-	var impl = make([]string, 0, len(o.Interfaces))
 	for _, v := range o.Interfaces {
 		//It should always exist
 		val := m[v.Name]
 		fieldsInterface = append(fieldsInterface, val...)
-		impl = append(impl, v.Name)
 	}
 	makeFieldList(o.Name, fieldsInterface, &sb, true, g)
-	modelTemplate(g.schema, o.Name, fieldsInterface, &sb, impl)
+	modelTemplate(g.schema, o.Name, fieldsInterface, &sb, o.InterfaceNames)
 
 	if _, ok := globalFields[o.Name]; !ok {
 		globalFields[o.Name] = Object{
@@ -211,7 +209,7 @@ func createField(objectName string, name string, typ string, sb *bytes.Buffer, f
 	}
 	//time.Time is a special case as it is a struct and therefore has to be a pointer.
 	//TODO: Should array be poointer?
-	if (flag&flagPointer != 0 && (flag&flagArray == 0)) || typ == "time.Time" {
+	if (flag&flagPointer != 0 /*&& (flag&flagArray == 0)*/) || typ == "time.Time" {
 		fi.TypeLabel += "*"
 	}
 	fi.TypeLabel += typ

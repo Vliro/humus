@@ -61,7 +61,6 @@ func SetScalarValue(node DNode, field Field, txn *Txn, value interface{}) (*Sing
 //It also ensures types are set.
 //Never errors.
 func SaveScalars(node DNode) SingleMutation {
-	node.SetType()
 	return SingleMutation{
 		Object:    node.Values(),
 		MutationType: MutateSet,
@@ -69,9 +68,6 @@ func SaveScalars(node DNode) SingleMutation {
 }
 
 func SaveManyScalars(vals ...DNode) *MutationQuery {
-	for _,v := range vals {
-		v.SetType()
-	}
 	var m MutationQuery
 	for _,v := range vals {
 		if _, ok := v.(Saver); ok {
@@ -86,9 +82,6 @@ func SaveManyScalars(vals ...DNode) *MutationQuery {
 //Call this with caution! It does not properly set types
 //of sub-nodes. Ensure you implement saver before this.
 func SaveNode(node DNode) SingleMutation{
-	if node.UID() == "" {
-		node.SetType()
-	}
 	var m = SingleMutation{
 		Object:    node,
 		MutationType: MutateSet,
@@ -103,9 +96,7 @@ func SaveNode(node DNode) SingleMutation{
 //if there are edges to be considered.
 func SaveNodes(vals ...DNode) *MutationQuery {
 	for _,v := range vals {
-		if v.UID() != "" {
-			v.SetType()
-		}
+		v.Recurse()
 	}
 	var m MutationQuery
 	m.Values = vals

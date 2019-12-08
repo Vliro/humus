@@ -4,7 +4,7 @@ package parse
 
 //list of template files.
 var templates = map[string]string {
-	"Get": "get.template",
+	"Recurse": "recurse.template",
 	"Field": "global.template",
 	"Async": "async.template",
 	"Model": "model.template",

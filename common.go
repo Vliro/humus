@@ -1,7 +1,6 @@
 package humus
 
 import (
-	"encoding/json"
 	"strconv"
 	"strings"
 )
@@ -19,6 +18,10 @@ func (n *Node) Fields() FieldList {
 
 func (n *Node) Values() DNode {
 	return n
+}
+
+func (n *Node) Recurse() {
+
 }
 
 func (n *Node) MapValues() Mapper {
@@ -50,28 +53,10 @@ func CreateMutation(obj DNode, typ MutationType) SingleMutation {
 		MutationType: typ,
 	}
 }
-
-type customMutation struct {
-	Value interface{}
-	QueryType MutationType
-}
-
-func (c customMutation) Mutate() ([]byte, error) {
-	b, _ := json.Marshal(c.Value)
-	return b, nil
-}
-
-func (c customMutation) Type() MutationType {
-	return c.QueryType
-}
-//CreateCustomMutation allows you to create a mutation from an interface
-//and not a DNode. This is useful alongside custom queries to set values, especially
-//working with facets.
-func CreateCustomMutation(obj interface{}, typ MutationType) Mutate {
-	return customMutation{
-		Value: obj,
-		QueryType:  typ,
-	}
+//UidFromVariable returns the proper uid mapping for
+//upserts, of the form uid(variable).
+func UIDVariable(variable string) UID {
+	return UID("uid("+variable+")")
 }
 
 //Here begins common queries.

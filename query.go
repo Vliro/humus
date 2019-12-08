@@ -70,7 +70,7 @@ type Queries struct {
 }
 
 //Satisfy the Query interface.
-func (q *Queries) Process() (string, error) {
+func (q *Queries) process() (string, error) {
 	return q.create()
 }
 
@@ -89,7 +89,8 @@ func (q *Queries) NewQuery(f Fields) *GeneratedQuery {
 func (q *Queries) create() (string, error) {
 	var final strings.Builder
 	final.Grow(512)
-	//The query variable information.
+	//The query variable information. Named per default.
+	//TODO: Right now it breaks if no queries have vars.
 	final.WriteString("query t")
 	//The global variable counter. It exists in a closure, it's just easy.
 	final.WriteString("(")
@@ -118,7 +119,7 @@ func (q *Queries) create() (string, error) {
 	return final.String(), nil
 }
 
-func (q *Queries) Vars() map[string]string {
+func (q *Queries) queryVars() map[string]string {
 	return q.vars
 }
 
@@ -190,7 +191,7 @@ func NewQueries() *Queries {
 	return qu
 }
 
-func (q *GeneratedQuery) Process() (string, error) {
+func (q *GeneratedQuery) process() (string, error) {
 	return q.create(nil)
 }
 
@@ -306,7 +307,7 @@ func (q *GeneratedQuery) create(sb *strings.Builder) (string, error) {
 	return sb.String(), nil
 }
 
-func (q *GeneratedQuery) Vars() map[string]string {
+func (q *GeneratedQuery) queryVars() map[string]string {
 	return q.varMap
 }
 //Directive adds a top level directive.

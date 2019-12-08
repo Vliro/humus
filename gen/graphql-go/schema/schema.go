@@ -123,8 +123,9 @@ type Object struct {
 	Desc       string
 	// TODO: Add a list of directives?
 
-	interfaceNames []string
+	InterfaceNames []string
 }
+
 
 func (o *Object) GetField(name string) *Field {
 	for _,v := range o.Fields {
@@ -376,8 +377,8 @@ func (s *Schema) Parse(schemaString string, useStringDescriptions bool) error {
 		}
 	}
 	for _, obj := range s.objects {
-		obj.Interfaces = make([]*Interface, len(obj.interfaceNames))
-		for i, intfName := range obj.interfaceNames {
+		obj.Interfaces = make([]*Interface, len(obj.InterfaceNames))
+		for i, intfName := range obj.InterfaceNames {
 			t, ok := s.Types[intfName]
 			if !ok {
 				return errors.Errorf("interface %q not found", intfName)
@@ -450,14 +451,14 @@ func mergeExtensions(s *Schema) error {
 			}
 			og.Fields = append(og.Fields, e.Fields...)
 
-			for _, en := range e.interfaceNames {
-				for _, on := range og.interfaceNames {
+			for _, en := range e.InterfaceNames {
+				for _, on := range og.InterfaceNames {
 					if on == en {
 						return fmt.Errorf("interface %q implemented in the extension is already implemented in %q", on, og.Name)
 					}
 				}
 			}
-			og.interfaceNames = append(og.interfaceNames, e.interfaceNames...)
+			og.InterfaceNames = append(og.InterfaceNames, e.InterfaceNames...)
 
 		case *InputObject:
 			e := ext.Type.(*InputObject)
@@ -651,7 +652,7 @@ func parseObjectDef(l *common.Lexer) *Object {
 				l.ConsumeToken('&')
 			}
 
-			object.interfaceNames = append(object.interfaceNames, l.ConsumeIdent())
+			object.InterfaceNames = append(object.InterfaceNames, l.ConsumeIdent())
 		}
 	}
 

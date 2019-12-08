@@ -4,21 +4,29 @@ Post.datePublished : datetime
 }
 type Question {
 Question.title : string  
-Question.id : int  
+Question.from : User  
+Question.comments : [Comment]  
 }
 type Comment {
-Comment.episode : int  
+Comment.from : User  
+}
+type User {
+User.name : string  
+User.email : string  
 }
 type Error {
 Error.message : string  
 Error.errorType : string  
 Error.time : datetime  
 }
+<Question.title>: string @index(hash)  . 
+<Question.from>: uid  . 
+<Question.comments>: [uid]  . 
 <Post.text>: string @index(hash)  . 
 <Post.datePublished>: datetime  . 
-<Question.title>: string  . 
-<Question.id>: int  . 
-<Comment.episode>: int  . 
+<Comment.from>: uid  . 
+<User.name>: string @index(hash)  . 
+<User.email>: string  . 
 <Error.message>: string  . 
 <Error.errorType>: string  . 
 <Error.time>: datetime  . 

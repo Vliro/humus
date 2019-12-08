@@ -5,12 +5,14 @@ package gen
 import (
 	"context"
 	"github.com/Vliro/humus"
+	"strconv"
 	"time"
 )
 
 var _ context.Context
 var _ time.Time
 var _ humus.Fields
+var _ = strconv.IntSize
 
 //Created from a GraphQL interface.
 type Post struct {
@@ -36,10 +38,7 @@ func (r *Post) SaveValues(ctx context.Context, txn *humus.Txn) error {
 	return err
 }
 func (r *Post) GetType() []string {
-	if r.Type == nil {
-		r.SetType()
-	}
-	return r.Type
+	return _PostTypes
 }
 
 //Reset resets the node to only its UID
@@ -61,12 +60,14 @@ func (r *Post) Fields() humus.FieldList {
 	return PostFields
 }
 
+var _PostTypes = []string{
+	"Post",
+}
+
 //Sets the types. This DOES NOT include interfaces!
 //as they are set in dgraph already.
 func (r *Post) SetType() {
-	r.Type = []string{
-		"Post",
-	}
+	r.Node.Type = _PostTypes
 }
 
 //Values returns all the scalar values for this node.
@@ -79,19 +80,21 @@ func (r *Post) Values() humus.DNode {
 	return &m
 }
 
+/*
 //Values returns all the scalar values for this node.
 //Note that this completely ignores any omitempty tags so use with care.
 func (r *Post) MapValues() humus.Mapper {
-	var m = make(map[string]interface{})
-	m["Post.text"] = r.Text
-	m["Post.datePublished"] = r.DatePublished
-	if r.Uid != "" {
-		m["uid"] = r.Uid
-	}
-	r.SetType()
-	m["dgraph.type"] = r.Type
-	return m
+   var m = make(map[string]interface{})
+   m["Post.text"]= r.Text
+      m["Post.datePublished"]= r.DatePublished
+      if r.Uid != "" {
+      m["uid"] = r.Uid
+   }
+    r.SetType()
+    m["dgraph.type"] = r.Type
+    return m
 }
+*/
 
 //PostScalars is simply to avoid a map[string]interface{}
 //It is a mirror of the previous struct with all scalar values.
@@ -120,16 +123,18 @@ type Question struct {
 	//List of interfaces implemented.
 	Post
 	//Regular fields
-	Title string `json:"Question.title,omitempty"`
-	Id    int    `json:"Question.id,omitempty"`
+	Title    string     `json:"Question.title,omitempty"`
+	From     *User      `json:"Question.from,omitempty"`
+	Comments []*Comment `json:"Question.comments,omitempty"`
 }
 
-var QuestionFields humus.FieldList = []humus.Field{MakeField("Question.title", 0), MakeField("Question.id", 0), MakeField("Post.text", 0), MakeField("Post.datePublished", 0)}
+var QuestionFields humus.FieldList = []humus.Field{MakeField("Question.title", 0), MakeField("Question.from", 0|humus.MetaObject), MakeField("Question.comments", 0|humus.MetaObject|humus.MetaList), MakeField("Post.text", 0), MakeField("Post.datePublished", 0)}
 
 //Generating constant field values.
 const (
 	QuestionTitleField         humus.Predicate = "Question.title"
-	QuestionIdField            humus.Predicate = "Question.id"
+	QuestionFromField          humus.Predicate = "Question.from"
+	QuestionCommentsField      humus.Predicate = "Question.comments"
 	QuestionTextField          humus.Predicate = "Post.text"
 	QuestionDatePublishedField humus.Predicate = "Post.datePublished"
 )
@@ -142,10 +147,7 @@ func (r *Question) SaveValues(ctx context.Context, txn *humus.Txn) error {
 	return err
 }
 func (r *Question) GetType() []string {
-	if r.Type == nil {
-		r.SetType()
-	}
-	return r.Type
+	return _QuestionTypes
 }
 
 //Reset resets the node to only its UID
@@ -167,20 +169,26 @@ func (r *Question) Fields() humus.FieldList {
 	return QuestionFields
 }
 
+var _QuestionTypes = []string{
+	"Question",
+	"Post",
+}
+
+func (r *Question) AsPost() *Post {
+	r.Post.Node = r.Node
+	return &r.Post
+}
+
 //Sets the types. This DOES NOT include interfaces!
 //as they are set in dgraph already.
 func (r *Question) SetType() {
-	r.Type = []string{
-		"Question",
-		"Post",
-	}
+	r.Node.Type = _QuestionTypes
 }
 
 //Values returns all the scalar values for this node.
 func (r *Question) Values() humus.DNode {
 	var m QuestionScalars
 	m.Title = r.Title
-	m.Id = r.Id
 	m.Text = r.Text
 	m.DatePublished = r.DatePublished
 	r.SetType()
@@ -188,28 +196,28 @@ func (r *Question) Values() humus.DNode {
 	return &m
 }
 
+/*
 //Values returns all the scalar values for this node.
 //Note that this completely ignores any omitempty tags so use with care.
 func (r *Question) MapValues() humus.Mapper {
-	var m = make(map[string]interface{})
-	m["Question.title"] = r.Title
-	m["Question.id"] = r.Id
-	m["Post.text"] = r.Text
-	m["Post.datePublished"] = r.DatePublished
-	if r.Uid != "" {
-		m["uid"] = r.Uid
-	}
-	r.SetType()
-	m["dgraph.type"] = r.Type
-	return m
+   var m = make(map[string]interface{})
+   m["Question.title"]= r.Title
+      m["Post.text"]= r.Text
+      m["Post.datePublished"]= r.DatePublished
+      if r.Uid != "" {
+      m["uid"] = r.Uid
+   }
+    r.SetType()
+    m["dgraph.type"] = r.Type
+    return m
 }
+*/
 
 //QuestionScalars is simply to avoid a map[string]interface{}
 //It is a mirror of the previous struct with all scalar values.
 type QuestionScalars struct {
 	humus.Node
 	Title         string     `json:"Question.title,omitempty"`
-	Id            int        `json:"Question.id,omitempty"`
 	Text          string     `json:"Post.text,omitempty"`
 	DatePublished *time.Time `json:"Post.datePublished,omitempty"`
 }
@@ -233,14 +241,14 @@ type Comment struct {
 	//List of interfaces implemented.
 	Post
 	//Regular fields
-	Episode Type `json:"Comment.episode,omitempty"`
+	From *User `json:"Comment.from,omitempty"`
 }
 
-var CommentFields humus.FieldList = []humus.Field{MakeField("Comment.episode", 0), MakeField("Post.text", 0), MakeField("Post.datePublished", 0)}
+var CommentFields humus.FieldList = []humus.Field{MakeField("Comment.from", 0|humus.MetaObject), MakeField("Post.text", 0), MakeField("Post.datePublished", 0)}
 
 //Generating constant field values.
 const (
-	CommentEpisodeField       humus.Predicate = "Comment.episode"
+	CommentFromField          humus.Predicate = "Comment.from"
 	CommentTextField          humus.Predicate = "Post.text"
 	CommentDatePublishedField humus.Predicate = "Post.datePublished"
 )
@@ -253,10 +261,7 @@ func (r *Comment) SaveValues(ctx context.Context, txn *humus.Txn) error {
 	return err
 }
 func (r *Comment) GetType() []string {
-	if r.Type == nil {
-		r.SetType()
-	}
-	return r.Type
+	return _CommentTypes
 }
 
 //Reset resets the node to only its UID
@@ -278,19 +283,25 @@ func (r *Comment) Fields() humus.FieldList {
 	return CommentFields
 }
 
+var _CommentTypes = []string{
+	"Comment",
+	"Post",
+}
+
+func (r *Comment) AsPost() *Post {
+	r.Post.Node = r.Node
+	return &r.Post
+}
+
 //Sets the types. This DOES NOT include interfaces!
 //as they are set in dgraph already.
 func (r *Comment) SetType() {
-	r.Type = []string{
-		"Comment",
-		"Post",
-	}
+	r.Node.Type = _CommentTypes
 }
 
 //Values returns all the scalar values for this node.
 func (r *Comment) Values() humus.DNode {
 	var m CommentScalars
-	m.Episode = r.Episode
 	m.Text = r.Text
 	m.DatePublished = r.DatePublished
 	r.SetType()
@@ -298,26 +309,26 @@ func (r *Comment) Values() humus.DNode {
 	return &m
 }
 
+/*
 //Values returns all the scalar values for this node.
 //Note that this completely ignores any omitempty tags so use with care.
 func (r *Comment) MapValues() humus.Mapper {
-	var m = make(map[string]interface{})
-	m["Comment.episode"] = r.Episode
-	m["Post.text"] = r.Text
-	m["Post.datePublished"] = r.DatePublished
-	if r.Uid != "" {
-		m["uid"] = r.Uid
-	}
-	r.SetType()
-	m["dgraph.type"] = r.Type
-	return m
+   var m = make(map[string]interface{})
+   m["Post.text"]= r.Text
+      m["Post.datePublished"]= r.DatePublished
+      if r.Uid != "" {
+      m["uid"] = r.Uid
+   }
+    r.SetType()
+    m["dgraph.type"] = r.Type
+    return m
 }
+*/
 
 //CommentScalars is simply to avoid a map[string]interface{}
 //It is a mirror of the previous struct with all scalar values.
 type CommentScalars struct {
 	humus.Node
-	Episode       Type       `json:"Comment.episode,omitempty"`
 	Text          string     `json:"Post.text,omitempty"`
 	DatePublished *time.Time `json:"Post.datePublished,omitempty"`
 }
@@ -332,6 +343,109 @@ func (s *CommentScalars) MapValues() humus.Mapper {
 
 func (s *CommentScalars) Fields() humus.FieldList {
 	return CommentFields
+}
+
+//End of model.template
+type User struct {
+	//This line declares basic properties for a database node.
+	humus.Node
+	//Regular fields
+	Name  string `json:"User.name,omitempty"`
+	Email string `json:"User.email,omitempty"`
+}
+
+var UserFields humus.FieldList = []humus.Field{MakeField("User.name", 0), MakeField("User.email", 0)}
+
+//Generating constant field values.
+const (
+	UserNameField  humus.Predicate = "User.name"
+	UserEmailField humus.Predicate = "User.email"
+)
+
+//SaveValues saves the node values that
+//do not contain any references to other objects.
+func (r *User) SaveValues(ctx context.Context, txn *humus.Txn) error {
+	mut := humus.CreateMutation(r.Values(), humus.MutateSet)
+	_, err := txn.Mutate(ctx, mut)
+	return err
+}
+func (r *User) GetType() []string {
+	return _UserTypes
+}
+
+//Reset resets the node to only its UID
+//component. Useful for saving to the database.
+//Calling this function ensures that, at most,
+//the uid and type is serialized.
+func (r *User) Reset() {
+	if r != nil {
+		*r = User{Node: r.Node}
+	}
+}
+
+func (r *User) Facets() []string {
+	return nil
+}
+
+//Fields returns all Scalar fields for this value.
+func (r *User) Fields() humus.FieldList {
+	return UserFields
+}
+
+var _UserTypes = []string{
+	"User",
+}
+
+//Sets the types. This DOES NOT include interfaces!
+//as they are set in dgraph already.
+func (r *User) SetType() {
+	r.Node.Type = _UserTypes
+}
+
+//Values returns all the scalar values for this node.
+func (r *User) Values() humus.DNode {
+	var m UserScalars
+	m.Name = r.Name
+	m.Email = r.Email
+	r.SetType()
+	m.Node = r.Node
+	return &m
+}
+
+/*
+//Values returns all the scalar values for this node.
+//Note that this completely ignores any omitempty tags so use with care.
+func (r *User) MapValues() humus.Mapper {
+   var m = make(map[string]interface{})
+   m["User.name"]= r.Name
+      m["User.email"]= r.Email
+      if r.Uid != "" {
+      m["uid"] = r.Uid
+   }
+    r.SetType()
+    m["dgraph.type"] = r.Type
+    return m
+}
+*/
+
+//UserScalars is simply to avoid a map[string]interface{}
+//It is a mirror of the previous struct with all scalar values.
+type UserScalars struct {
+	humus.Node
+	Name  string `json:"User.name,omitempty"`
+	Email string `json:"User.email,omitempty"`
+}
+
+func (s *UserScalars) Values() humus.DNode {
+	return s
+}
+
+func (s *UserScalars) MapValues() humus.Mapper {
+	panic("UserScalars called, use the original one instead")
+}
+
+func (s *UserScalars) Fields() humus.FieldList {
+	return UserFields
 }
 
 //End of model.template
@@ -361,10 +475,7 @@ func (r *Error) SaveValues(ctx context.Context, txn *humus.Txn) error {
 	return err
 }
 func (r *Error) GetType() []string {
-	if r.Type == nil {
-		r.SetType()
-	}
-	return r.Type
+	return _ErrorTypes
 }
 
 //Reset resets the node to only its UID
@@ -386,12 +497,14 @@ func (r *Error) Fields() humus.FieldList {
 	return ErrorFields
 }
 
+var _ErrorTypes = []string{
+	"Error",
+}
+
 //Sets the types. This DOES NOT include interfaces!
 //as they are set in dgraph already.
 func (r *Error) SetType() {
-	r.Type = []string{
-		"Error",
-	}
+	r.Node.Type = _ErrorTypes
 }
 
 //Values returns all the scalar values for this node.
@@ -405,20 +518,22 @@ func (r *Error) Values() humus.DNode {
 	return &m
 }
 
+/*
 //Values returns all the scalar values for this node.
 //Note that this completely ignores any omitempty tags so use with care.
 func (r *Error) MapValues() humus.Mapper {
-	var m = make(map[string]interface{})
-	m["Error.message"] = r.Message
-	m["Error.errorType"] = r.ErrorType
-	m["Error.time"] = r.Time
-	if r.Uid != "" {
-		m["uid"] = r.Uid
-	}
-	r.SetType()
-	m["dgraph.type"] = r.Type
-	return m
+   var m = make(map[string]interface{})
+   m["Error.message"]= r.Message
+      m["Error.errorType"]= r.ErrorType
+      m["Error.time"]= r.Time
+      if r.Uid != "" {
+      m["uid"] = r.Uid
+   }
+    r.SetType()
+    m["dgraph.type"] = r.Type
+    return m
 }
+*/
 
 //ErrorScalars is simply to avoid a map[string]interface{}
 //It is a mirror of the previous struct with all scalar values.

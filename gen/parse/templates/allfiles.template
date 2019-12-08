@@ -5,9 +5,10 @@ import (
     "time"
     "github.com/Vliro/humus"
     "context"
+    "strconv"
 )
 
 var _ context.Context
 var _ time.Time
 var _ humus.Fields
-
+var _ = strconv.IntSize

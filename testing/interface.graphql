@@ -4,12 +4,18 @@ interface Post {
 }
 
 type Question implements Post {
-    title: String!
-    id: Int!
+    title: String! @search (by:[hash])
+    from: User!
+    comments: [Comment]!
 }
 
 type Comment implements Post {
-    episode: Type!
+    from: User!
+}
+
+type User {
+    name: String! @search(by:[hash])
+    email: String!
 }
 
 enum Type {

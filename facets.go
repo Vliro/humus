@@ -1,6 +1,7 @@
 package humus
 
 import "strings"
+
 //TODO: Allow proper auto-generation of facets. Is it needed though, is @facets poor performance?
 type facet struct {
 	//facets []string

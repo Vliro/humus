@@ -597,12 +597,18 @@ func parseSchema(s *Schema, l *common.Lexer) {
 		case "type":
 			obj := parseObjectDef(l)
 			obj.Desc = desc
+			if o := s.GetObject(obj.Name); o != nil {
+				l.SyntaxError(fmt.Sprintf("duplicate object definition %s", obj.Name))
+			}
 			s.Types[obj.Name] = obj
 			s.objects = append(s.objects, obj)
 
 		case "interface":
 			iface := parseInterfaceDef(l)
 			iface.Desc = desc
+			if o := s.GetObject(iface.Name); o != nil {
+				l.SyntaxError(fmt.Sprintf("duplicate object definition %s", iface.Name))
+			}
 			s.Types[iface.Name] = iface
 			s.interfaces = append(s.interfaces, iface)
 		case "union":
@@ -621,16 +627,13 @@ func parseSchema(s *Schema, l *common.Lexer) {
 			input := parseInputDef(l)
 			input.Desc = desc
 			s.Types[input.Name] = input
-
 		case "scalar":
 			name := l.ConsumeIdent()
 			s.Types[name] = &Scalar{Name: name, Desc: desc}
-
 		case "directive":
 			directive := parseDirectiveDef(l)
 			directive.Desc = desc
 			s.Directives[directive.Name] = directive
-
 		case "extend":
 			parseExtension(s, l)
 

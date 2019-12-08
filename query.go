@@ -4,9 +4,8 @@ import (
 	"sort"
 	"strconv"
 	"strings"
-	"sync"
 )
-
+/*
 var pool sync.Pool
 
 func init() {
@@ -14,7 +13,7 @@ func init() {
 		return new(GeneratedQuery)
 	}
 }
-
+*/
 /*
 	UID represents the primary UID class used in communication with DGraph.
 	This is used in code generation.

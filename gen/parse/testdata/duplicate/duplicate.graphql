@@ -1,0 +1,49 @@
+interface Post {
+    text: String! @search (by:[hash])
+    datePublished: DateTime!
+}
+
+type Question implements Post {
+    title: String! @search (by:[hash])
+    from: User!
+    comments: [Comment]!
+}
+
+type Comment implements Post {
+    from: User!
+}
+
+type User {
+    name: String! @search(by:[hash])
+    email: String!
+}
+
+enum Type {
+    First
+    Second
+}
+
+interface Post {
+    text: String! @search (by:[hash])
+    datePublished: DateTime!
+}
+
+type Question implements Post {
+    title: String! @search (by:[hash])
+    from: User!
+    comments: [Comment]!
+}
+
+type Comment implements Post {
+    from: User!
+}
+
+type User {
+    name: String! @search(by:[hash])
+    email: String!
+}
+
+enum Type {
+    First
+    Second
+}

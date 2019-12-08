@@ -2,7 +2,6 @@ package gen
 
 import (
 	"context"
-	"encoding/json"
 	"fmt"
 	"github.com/Vliro/humus"
 	"github.com/dgraph-io/dgo/protos/api"
@@ -54,7 +53,7 @@ func dropAndSchema() {
 func addData() {
 	var q Question
 	t := time.Now()
-	q.Title = "Third Question"
+	q.Title = "First Question"
 	q.DatePublished = &t
 	var c = User{
 		Name: "User",
@@ -67,9 +66,6 @@ func addData() {
 	com.DatePublished = &t
 	q.Comments = append(q.Comments, &com)
 	mut := humus.CreateMutations(humus.MutateSet, &q)
-	q.Recurse()
-	b, _ := json.Marshal(mut.Values)
-	fmt.Println(string(b))
 	resp, err := db.Mutate(context.Background(), mut)
 	if err != nil {
 		panic(err)
@@ -91,14 +87,15 @@ func TestUpsert(t *testing.T) {
 	c.Uid = humus.UIDVariable("user")
 	txn := db.NewTxn(false)
 	defer txn.Discard(context.Background())
-	mut :=  humus.CreateMutation(&c, humus.MutateSet)
+	mut := humus.CreateMutation(&c, humus.MutateSet)
+	//Set the condition for update.
 	mut.Condition = "@if(eq(len(user),1))"
 	resp, err := txn.Upsert(context.Background(), humus.NewStaticQuery(fmt.Sprintf(upsertQuery, "User")), mut)
 	if err != nil {
 		t.Fail()
 		return
 	}
-	if len(resp.Uids) > 0 {
+	if len(resp.Uids) > 0 || len(resp.Txn.Preds) != 1 {
 		t.Fail()
 		return
 	}
@@ -118,6 +115,26 @@ func TestUpsert(t *testing.T) {
 	}
 }
 
+func TestUpsertInsert(t *testing.T) {
+	var c User
+	c.Email = "email@email.com"
+	c.Name = "User"
+	txn := db.NewTxn(false)
+	defer txn.Discard(context.Background())
+	mut := humus.CreateMutation(&c, humus.MutateSet)
+	//Set the condition for update.
+	mut.Condition = "@if(eq(len(user),0))"
+	resp, err := txn.Upsert(context.Background(), humus.NewStaticQuery(fmt.Sprintf(upsertQuery, "User")), mut)
+	if err != nil {
+		t.Fail()
+		return
+	}
+	if len(resp.Uids) != 0{
+		t.Fail()
+		return
+	}
+}
+
 //Example in getting a question. We only need the username field from the user so just select it.
 var questionFields = QuestionFields.Sub(QuestionFromField, UserFields.Select(UserNameField)).
 	Sub(QuestionCommentsField, CommentFields.
@@ -130,7 +147,7 @@ func TestGet(t *testing.T) {
 		t.Error(err)
 		return
 	}
-	if q.From == nil || q.Comments == nil || q.Comments[0].From == nil || q.From.Uid != q.Comments[0].Uid {
+	if q.From == nil || q.Comments == nil || q.Comments[0].From == nil || q.From.Uid != q.Comments[0].From.Uid {
 		t.Fail()
 		return
 	}

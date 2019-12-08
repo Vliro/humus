@@ -45,7 +45,7 @@ func AttachToListObject(node DNode, field Field, value DNode) SingleMutation {
 	return SingleMutation{MutationType:MutateSet, Object:mapVal}
 }
 //WriteNode saves a single scalar value.
-func SetScalarValue(node DNode, field Field, txn *Txn, value interface{}) (*SingleMutation, error) {
+func SetScalarValue(node DNode, field Field, value interface{}) (*SingleMutation, error) {
 	if node.UID() == "" {
 		return nil, Error(ErrUID)
 	}

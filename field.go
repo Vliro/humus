@@ -49,14 +49,14 @@ func (f FieldList) Get() []Field {
 	return f
 }
 
-
 //Select allows you to perform selection of fields early.
 //This removes the Ignore meta from any field selected.
 func (f FieldList) Select(names ...Predicate) Fields {
 	var newList NewList = make(NewList, len(names))
 	index := 0
-	loop: for _,v := range names {
-		for _,iv := range f {
+loop:
+	for _, v := range names {
+		for _, iv := range f {
 			if iv.Name == v {
 				newList[index] = iv
 				//Strip the MetaIgnore since we select the field. Useful for password fields.
@@ -130,6 +130,7 @@ func (f FieldList) AddName(nam Predicate, sch SchemaList) Fields {
 	newList[len(f)] = sch[nam]
 	return newList
 }
+
 /*
 //Facet adds a field of type facet.
 func (f FieldList) Facet(facetName string, alias string) fields {
@@ -162,6 +163,7 @@ func (f NewList) Sub(name Predicate, fl Fields) Fields {
 	}
 	return f
 }
+
 /*
 func (f NewList) Facet(facetName string, alias string) fields {
 	return append(f, MakeField(Variable(facetName), 0|MetaFacet))
@@ -311,6 +313,7 @@ func (f Field) Add(fi Field) Fields {
 	fields[1] = fi
 	return fields
 }
+
 /*
 func (f Field) Facet(facetName string, alias string) fields {
 	return append(NewList{}, f, MakeField(Variable(facetName), 0|MetaFacet))
@@ -381,7 +384,7 @@ func (f *Field) create(q *GeneratedQuery, parent unsafeSlice, sb *strings.Builde
 		if len(val) > 1 {
 			if len(val) == 2 {
 				if val[0].priority() > val[1].priority() {
-					val.Swap(0,1)
+					val.Swap(0, 1)
 				}
 			} else {
 				sort.Sort(val)
@@ -408,13 +411,13 @@ func (f *Field) create(q *GeneratedQuery, parent unsafeSlice, sb *strings.Builde
 					return err
 				}
 			}
-			if k == len(val) -1 && v.parenthesis() {
+			if k == len(val)-1 && v.parenthesis() {
 				sb.WriteByte(')')
 			}
 			curType = newType
 		}
 	}
-	if f.Fields != nil && f.Fields.Len() > 0{
+	if f.Fields != nil && f.Fields.Len() > 0 {
 		if f.Meta.Lang() {
 			return errors.New("cannot have language meta and children fields")
 		}
@@ -435,11 +438,11 @@ func (f *Field) create(q *GeneratedQuery, parent unsafeSlice, sb *strings.Builde
 			}
 		}
 		if val, ok := q.modifiers[parent.pred()]; ok {
-			for _,v := range val {
+			for _, v := range val {
 				if v.priority() > modifierAggregate {
 					break
 				}
-				err := v.apply(q, 0,modifierField, sb)
+				err := v.apply(q, 0, modifierField, sb)
 				if err != nil {
 					return err
 				}

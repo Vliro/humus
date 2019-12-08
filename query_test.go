@@ -5,7 +5,6 @@ import (
 	"errors"
 	"fmt"
 	"github.com/dgraph-io/dgo/protos/api"
-	"github.com/pkg/profile"
 	"testing"
 )
 
@@ -47,7 +46,6 @@ func newTest(expected string) testQuerier {
 }
 
 func TestBigQuery(t *testing.T) {
-	defer profile.Start(profile.MemProfile).Stop()
 	q := NewQuery(fields)
 	q.Function(Equals).PredValue(ErrorMessageField, "Test")
 	q.Count(CountFirst, ErrorMessageField, 1)
@@ -108,8 +106,7 @@ func BenchmarkQuery(b *testing.B) {
 		q.Filter(MakeFilter(Equals).PredValue(ErrorMessageField, "Test"), ErrorMessageField)
 		q.Filter(MakeFilter(Equals).PredValue(ErrorMessageField, "Test"), ErrorErrorTypeField)
 		q.Facets(ErrorMessageField)
-		str, _ := q.process()
-		fmt.Println(str)
+		_, _ = q.process()
 	}
 	b.ReportAllocs()
 }

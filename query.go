@@ -76,12 +76,11 @@ func (q *Queries) process() (string, error) {
 
 func (q *Queries) names() []string {
 	ret := make([]string, len(q.q))
-	for k, v := range q.q {
+	for k,v := range q.q {
 		ret[k] = "q" + strconv.Itoa(v.index)
 	}
 	return ret
 }
-
 func (q *Queries) NewQuery(f Fields) *GeneratedQuery {
 	newq := &GeneratedQuery{
 		modifiers: make(map[Predicate]modifierList),
@@ -166,6 +165,11 @@ type GeneratedQuery struct {
 	index int
 }
 
+//Facets sets @facets for the edge specified by path.
+func (q *GeneratedQuery) Facets(path Predicate) *GeneratedQuery {
+	q.modifiers[path] = append(q.modifiers[path], facet{})
+	return q
+}
 //NewQuery returns a new singular generation query for use
 //in building a single query.
 func NewQuery(f Fields) *GeneratedQuery {

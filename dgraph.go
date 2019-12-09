@@ -26,13 +26,19 @@ import (
 //Second is the client crt, third is the client key.
 //Fourth is the node crt, fifth is the node key.
 
+//Config represents the configuration for connecting to a Dgraph alpha client.
 type Config struct {
-	//For initialization.
-	IP      string
-	Port    int
-	Tls     bool
-	RootCA  string
+	//IP for this alpha.
+	IP string
+	//Port for this alpha.
+	Port int
+	//Tls connection.
+	Tls bool
+	//RootCA is the path for the RootCA.
+	RootCA string
+	//NodeCRT is the path for the NodeCRT.
 	NodeCRT string
+	//NodeKey is the path for the NodeKey.
 	NodeKey string
 	//Other stuff.
 	LogQueries bool
@@ -74,19 +80,23 @@ type Querier interface {
 	Commit(context.Context) error
 }
 
+//AsyncQuerier is an interface representing a querier that can also
+//perform queries asynchronously.
 type AsyncQuerier interface {
 	Querier
 	QueryAsync(context.Context, Query, ...interface{}) chan Result
 	MutateAsync(context.Context, Query) chan Result
 }
 
+//NewMapper returns a map as a Dnode. This is useful for building up
+//custom structures. For completely custom mutations see CreateCustomMutation.
+//Types are not mandatory but should be supplied for new nodes.
 func NewMapper(uid UID, typ []string) Mapper {
 	if len(typ) > 0 {
 		return Mapper{"uid": uid, "dgraph.type": typ}
 	}
 	return Mapper{"uid": uid}
 }
-
 
 //Uid simply returns a struct that
 //can be used in 1-1 relations, i.e.
@@ -95,9 +105,10 @@ func Uid(u UID) Node {
 	return Node{Uid: u}
 }
 
-//A mapper that allows you to set subrelations.
+//Mapper allows you to set subrelations manually.
 type Mapper map[string]interface{}
 
+//UID returns the uid for this map.
 func (m Mapper) UID() UID {
 	if val, ok := m["uid"].(UID); ok {
 		return val
@@ -152,8 +163,7 @@ func (m Mapper) MapValues() Mapper {
 	return m
 }
 
-//Sets a singular regulation, i.e. 1-1.
-//TODO: Should default be = obj or = obj.values()?
+//Set sets a singular regulation, i.e. 1-1.
 func (m Mapper) Set(child Predicate, all bool, obj DNode) Mapper {
 	if checkNil(obj) {
 		//TODO: what should actually happen here?
@@ -173,6 +183,7 @@ func (m Mapper) Set(child Predicate, all bool, obj DNode) Mapper {
 	return m
 }
 
+//MustSet panics on a nil node. Otherwise it is the same as Set.
 func (m Mapper) MustSet(child Predicate, all bool, obj DNode) Mapper {
 	if checkNil(obj) {
 		//TODO: what should actually happen here?
@@ -200,10 +211,11 @@ func checkNil(c DNode) bool {
 	return false
 }
 
+//SetArray sets a list of edges, saving as the form [node1, node2..].
 func (m Mapper) SetArray(child string, all bool, objs ...DNode) Mapper {
 	var output = make([]interface{}, len(objs))
 	for k, v := range objs {
-		v.SetType()
+		v.Recurse()
 		if all {
 			if val, ok := v.(Saver); ok {
 				output[k] = val.Save()
@@ -231,6 +243,9 @@ type Deleter interface {
 //Number of workers.
 const workers = 5
 
+//DB is the root object for using humus. It is used to immediately communicate with Dgraph
+//as well as spawning new transactions. It handles a pool of dgraph clients as well as the active schema
+//for the database.
 type DB struct {
 	//The api to graph.
 	d *dgo.Dgraph
@@ -270,13 +285,13 @@ func (d *DB) NewTxn(readonly bool) *Txn {
 	txn.db = d
 	return txn
 }
+
 //Select allows you to create a field list of only certain predicates.
 func (d *DB) Select(vals ...Predicate) Fields {
 	return Select(d.schema, vals...)
 }
 
-//Queries outside a Txn context.
-//This is not intended for mutations.
+//Query queries outside a Txn context.
 func (d *DB) Query(ctx context.Context, q Query, objs ...interface{}) error {
 	txn := d.NewTxn(true)
 	defer txn.Discard(context.Background())
@@ -288,7 +303,8 @@ func (d *DB) Query(ctx context.Context, q Query, objs ...interface{}) error {
 	return err
 }
 
-func (d *DB) QueryAsync(ctx context.Context, q Query, objs ...interface{}) chan Result  {
+func (d *DB) QueryAsync(ctx context.Context, q Query, objs ...interface{}) chan Result {
+	//No overhead so no point in deferring a discard in a function that does not make use of it.
 	t := d.NewTxn(true)
 	ch := make(chan Result, 1)
 	f := func() {
@@ -317,33 +333,21 @@ func (d *DB) SetValue(node DNode, pred Predicate, value interface{}) error {
 	}
 }
 
-//SetValueAsync is a simple wrapper to set a single value in the database
-//for a given node. It exists for convenience.
-func (d *DB) SetValueAsync(node DNode, pred Predicate, value interface{}) error {
-	txn := d.NewTxn(true)
-	defer txn.Discard(context.Background())
-	var m = NewMapper(node.UID(), nil)
-	m[string(pred)] = value
-	_, err := txn.Mutate(context.Background(), CreateMutation(m, MutateSet))
-	if err != nil {
-		return err
-	} else {
-		return txn.Commit(context.Background())
-	}
-}
 
+//Commit is a noop.
 func (d *DB) Commit(ctx context.Context) error {
 	return nil
 	//Moot
 }
-
+//Discard is a noop.
 func (d *DB) Discard(ctx context.Context) error {
 	return nil
 	//Moot
 }
-
+//Mutate runs a mutation outside a transaction context. It immediately commits on success.
 func (d *DB) Mutate(ctx context.Context, m Mutate) (*api.Response, error) {
 	txn := d.NewTxn(false)
+	txn.commitNow = true
 	defer txn.Discard(context.Background())
 	resp, err := txn.Mutate(ctx, m)
 	if err != nil {
@@ -399,7 +403,7 @@ type Query interface {
 type Mutate interface {
 	mutate() ([]byte, error)
 	Type() MutationType
-	Cond(int) string
+	Cond() string
 }
 
 //Init creates a new database connection using the given config
@@ -463,6 +467,8 @@ type Txn struct {
 	txn *dgo.Txn
 	//The database. This is used for worker-pool & schema.
 	db *DB
+	//To immediately commit mutations inside this txn.
+	commitNow bool
 }
 
 func (t *Txn) Commit(ctx context.Context) error {
@@ -481,18 +487,19 @@ func (t *Txn) mutate(ctx context.Context, q Mutate) (*api.Response, error) {
 		return nil, err
 	}
 	var m api.Mutation
-	if q.Type() == MutateDelete {
-		//TODO: fix this
-		m.DeleteJson = byt
-		if t.db.c.LogQueries {
-			fmt.Println(string(m.DeleteJson))
-		}
-	} else if q.Type() == MutateSet {
+	typ := q.Type()
+	if typ == MutateSet {
 		m.SetJson = byt
 		if t.db.c.LogQueries {
 			fmt.Println(string(m.SetJson))
 		}
+	} else if typ == MutateDelete {
+		m.DeleteJson = byt
+		if t.db.c.LogQueries {
+			fmt.Println(string(m.DeleteJson))
+		}
 	}
+	m.CommitNow = t.commitNow
 	a, err := t.txn.Mutate(ctx, &m)
 	if err != nil {
 		t.db.logError(context.Background(), err)
@@ -504,7 +511,8 @@ func (t *Txn) mutate(ctx context.Context, q Mutate) (*api.Response, error) {
 }
 
 //Upsert follows the new 1.1 api and performs an upsert.
-//q is a nameless query. Cond is a condition of the form if (eq(len(a), 0) and so on. mutations is a list of mutations to perform.
+//q is a nameless query. For now it is recommended to use a static query for all upserts.
+//Cond is a condition of the form if (eq(len(a), 0) and so on. mutations is a list of mutations to perform.
 func (t *Txn) Upsert(ctx context.Context, q Query, mutations ...Mutate) (*api.Response, error) {
 	if t.txn == nil {
 		return nil, Error(errTransaction)
@@ -526,10 +534,9 @@ func (t *Txn) Upsert(ctx context.Context, q Query, mutations ...Mutate) (*api.Re
 		} else {
 			v.SetJson = b
 		}
-		v.Cond = mutations[k].Cond(k)
+		v.Cond = mutations[k].Cond()
 	}
 	var req = api.Request{
-		//TODO: Dont use create(b) as that performs unnecessary allocations. We do not perform any changes to b which should not cause any issues.
 		Query:     b,
 		Vars:      q.queryVars(),
 		Mutations: muts,
@@ -551,21 +558,20 @@ func (t *Txn) query(ctx context.Context, q Query, objs []interface{}) error {
 		log.Printf("Query input: %s \n", str)
 	}
 	resp, err := t.txn.QueryWithVars(ctx, str, q.queryVars())
+	if err == dgo.ErrAborted && t.db.interruptFunc != nil {
+		t.db.interruptFunc(q)
+	}
 	if err != nil {
-		t.db.logError(context.Background(), err)
+		//t.db.logError(context.Background(), err)
 		return Error(err)
 	}
 	if t.db.c.LogQueries {
 		log.Printf("Query output: %s", string(resp.Json))
 	}
-	//This deserializes using reflect.
 	err = HandleResponse(resp.Json, objs)
 	//TODO: Ignore this error for now.
 	if _, ok := err.(*time.ParseError); ok {
 		return nil
-	}
-	if err == dgo.ErrAborted && t.db.interruptFunc != nil {
-		t.db.interruptFunc(q)
 	}
 	if err != nil {
 		return Error(err)

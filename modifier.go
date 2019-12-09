@@ -47,7 +47,8 @@ func (m modifierList) Swap(i, j int) {
 	m[i],m[j] = m[j], m[i]
 }
 
-//An aggregate value i.e. sum as well as what alias to name it as.
+//AggregateValues represents a modifier with a type(sum),
+//an alias for changing json key as well as what variable or predicate it acts on.
 type AggregateValues struct {
 	Type     AggregateType
 	Alias    string

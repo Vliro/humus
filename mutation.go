@@ -19,7 +19,7 @@ func (m SingleMutation) Type() MutationType {
 	return m.MutationType
 }
 
-func (m SingleMutation) Cond(int) string {
+func (m SingleMutation) Cond() string {
 	return m.Condition
 }
 
@@ -55,24 +55,24 @@ func (m SingleMutation) mutate() ([]byte, error) {
 
 type MutationQuery struct {
 	Values []DNode
-	Conds []string
+	Condition string
 	MutationType MutationType
 }
-
+//CreateMutations creates a list of mutations from a variadic list of Dnodes.
 func CreateMutations(typ MutationType, muts ...DNode) *MutationQuery {
 	return &MutationQuery{
 		Values:       muts,
-		Conds:        nil,
 		MutationType: typ,
 	}
 }
 
-func (m *MutationQuery) Cond(i int) string {
-	return m.Conds[i]
+func (m *MutationQuery) SetCondition(c string) *MutationQuery {
+	m.Condition = c
+	return m
 }
 
-func (m *MutationQuery) AddConditions(conds ...string) {
-	m.Conds = conds
+func (m *MutationQuery) Cond() string {
+	return m.Condition
 }
 
 func (m *MutationQuery) mutate() ([]byte, error) {
@@ -103,14 +103,13 @@ func (m *MutationQuery) Type() MutationType {
 	return m.MutationType
 }
 
-
 type customMutation struct {
 	Value interface{}
 	QueryType MutationType
 	Condition string
 }
 
-func (c customMutation) Cond(int) string {
+func (c customMutation) Cond() string {
 	return c.Condition
 }
 

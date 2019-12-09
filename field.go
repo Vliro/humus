@@ -1,7 +1,6 @@
 package humus
 
 import (
-	"bytes"
 	"errors"
 	"sort"
 	"strconv"
@@ -14,21 +13,26 @@ import (
 	the state of the entire application should be changed.
 	Whenever fields are added to this list they are copied.
 	Example usage:
-
 	var NewFields = CharacterFields.Sub("Character.friends", CharacterFields).Sub("Character.enemies", CharacterFields.
 					Sub("Character.items", ItemFields)
 	This will also ensure fields are copied properly from the global list.
 */
-
+//Fields is an interface for all possible type of fields.  This includes global fields as well as
+//manually generated fields.
 type Fields interface {
 	//Sub allows you to create a sublist of predicates.
-	//If fields is nil, only fetch uid.
+	//If there is an edge on a predicate name, then subbing on that
+	//predicate gets all fields as specified by the fields interfaces.
 	Sub(name Predicate, fields Fields) Fields
+	//Add a field to this list.
 	Add(fi Field) Fields
+	//Get the fields as a slice
 	Get() []Field
+	//Len is the length of the fields.
 	Len() int
 }
-
+//Select selects a subset of fields and returns a new list
+//keeping all valid meta.
 func Select(sch SchemaList, names ...Predicate) Fields {
 	var fields = make(NewList, len(names))
 	for k, v := range names {
@@ -49,8 +53,8 @@ func (f FieldList) Get() []Field {
 	return f
 }
 
-//Select allows you to perform selection of fields early.
-//This removes the Ignore meta from any field selected.
+//Select allows you to perform selection of fields early, at init.
+//This removes the Ignore meta from any field selected to allow password fields.
 func (f FieldList) Select(names ...Predicate) Fields {
 	var newList NewList = make(NewList, len(names))
 	index := 0
@@ -73,7 +77,7 @@ func (f FieldList) Len() int {
 	return len(f)
 }
 
-//No need to reallocate. Typing here is very important as it will no longer copy.
+//NewList simply represents a list of fields where no copying is needed.
 type NewList FieldList
 
 func (f NewList) Get() []Field {
@@ -84,7 +88,6 @@ func (f NewList) Len() int {
 	return len(f)
 }
 
-//TODO: Racy reads? There are never writes to a global field-list unless you are doing something wrong!
 //Sub allows you to add sub-field structures.
 func (f FieldList) Sub(name Predicate, fl Fields) Fields {
 	var newArr NewList = make([]Field, len(f))
@@ -131,19 +134,6 @@ func (f FieldList) AddName(nam Predicate, sch SchemaList) Fields {
 	return newList
 }
 
-/*
-//Facet adds a field of type facet.
-func (f FieldList) Facet(facetName string, alias string) fields {
-	var newArr NewList = make([]Field, len(f)+1)
-	//Copy!
-	n := copy(newArr, f)
-	if n != len(f) {
-		panic("fieldList sub: invalid length! something went wrong")
-	}
-	newArr[len(f)] = MakeField(Variable(facetName), 0|MetaFacet)
-	return newArr
-}*/
-
 //These lists do not need copying as they are never global.
 func (f NewList) Sub(name Predicate, fl Fields) Fields {
 	//linear search but fast either way.
@@ -164,18 +154,6 @@ func (f NewList) Sub(name Predicate, fl Fields) Fields {
 	return f
 }
 
-/*
-func (f NewList) Facet(facetName string, alias string) fields {
-	return append(f, MakeField(Variable(facetName), 0|MetaFacet))
-}
-*/
-func Sub(name Predicate, fl []Field, sch SchemaList) NewList {
-	var newFields = make([]Field, 1)
-	newFields[0] = sch[name]
-	newFields[0].Fields = NewList(fl)
-	return newFields
-}
-
 /*func fields(sch SchemaList, names ...string) NewList{
 	var ret = make([]Field, len(names))
 	for k,v := range names {
@@ -189,24 +167,7 @@ func (f NewList) Add(fi Field) Fields {
 	return append(f, fi)
 }
 
-//CreatePath creates a nested path using paths of the form Pred1/Pred2...
-func CreatePath(paths ...Predicate) Predicate {
-	var sum = 0
-	for _, v := range paths {
-		sum += len(v)
-	}
-	var buf = strings.Builder{}
-	buf.Grow(sum + len(paths) - 1)
-	for k, v := range paths {
-		buf.WriteString(string(v))
-		if k != len(paths)-1 {
-			buf.WriteByte('/')
-		}
-	}
-	return Predicate(buf.String())
-}
-
-//TODO: offset
+//CountType simply refers to a type of pagination.
 type CountType string
 
 const (
@@ -214,7 +175,7 @@ const (
 	CountOffset CountType = "offset"
 	CountAfter  CountType = "after"
 )
-
+//AggregateType simply refers to all types of aggregation.
 type AggregateType string
 
 const (
@@ -224,27 +185,27 @@ const (
 	TypeVal   AggregateType = "val"
 )
 
-type Pagination struct {
+type pagination struct {
 	Type  CountType
 	Value int
 }
 
-func (c Pagination) canApply(mt modifierSource) bool {
+func (c pagination) canApply(mt modifierSource) bool {
 	return true
 }
 
-func (c Pagination) parenthesis() bool {
+func (c pagination) parenthesis() bool {
 	return true
 }
 
-func (c Pagination) apply(root *GeneratedQuery, meta FieldMeta, mt modifierSource, sb *strings.Builder) error {
+func (c pagination) apply(root *GeneratedQuery, meta FieldMeta, mt modifierSource, sb *strings.Builder) error {
 	sb.WriteString(string(c.Type))
 	sb.WriteString(tokenColumn)
 	sb.WriteString(strconv.Itoa(c.Value))
 	return nil
 }
 
-func (c Pagination) priority() modifierType {
+func (c pagination) priority() modifierType {
 	return modifierPagination
 }
 
@@ -291,8 +252,8 @@ const (
 // Field is a recursive data struct which represents a GraphQL query field.
 type Field struct {
 	Meta   FieldMeta
-	Name   Predicate
 	Fields Fields
+	Name   Predicate
 }
 
 //Sub here simply uses fields as Field { fields}.
@@ -328,22 +289,6 @@ func MakeField(name Predicate, meta FieldMeta) Field {
 	//TODO: better facet support
 	var x = Field{Name: name, Meta: meta}
 	return x
-}
-
-func (f Field) writeLanguageTag(sb *bytes.Buffer, l Language) {
-	if l != LanguageNone {
-		sb.WriteByte('@')
-		sb.WriteString(string(l))
-		sb.WriteString(":.")
-		sb.WriteString("@" + string(l) + ":.")
-	}
-}
-
-func (f Field) getName() Predicate {
-	if f.Name[0] == '~' {
-		return f.Name[1:]
-	}
-	return f.Name
 }
 
 // One may have noticed that there is a public create and a private create.

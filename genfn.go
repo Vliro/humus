@@ -5,7 +5,7 @@ import "fmt"
 //Functions associated with the generated package
 
 //GetChild returns the child of node named child with fields supplied by fields.
-//Pagination represents how many (sorted by first) to get as well as an interface
+//pagination represents how many (sorted by first) to get as well as an interface
 //to deserialize to.
 //Do not return interfaces.
 func GetChild(node DNode, child Predicate, fields Fields, count int, filter *Filter) *GeneratedQuery {

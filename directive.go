@@ -1,6 +1,6 @@
 package humus
 
-//All dgraph query directives.
+//Directive is simply all possible Dgraph directives.
 type Directive string
 
 const (

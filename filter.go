@@ -13,8 +13,8 @@ const (
 	logicalNot
 )
 
-//filter represents an object in the query that will be serialized as @filter (function...)
-//It just holds a function.
+//Filter represents an object in the query that will be serialized as @filter (function...)
+//It is just a wrapper over a function.
 type Filter struct {
 //	op logicalOp
 	function
@@ -33,7 +33,7 @@ func (f *Filter) apply(root *GeneratedQuery, meta FieldMeta, mt modifierSource, 
 func (f *Filter) priority() modifierType {
 	return modifierFilter
 }
-
+//MakeFilter returns a new filter with the function type typ.
 func MakeFilter(typ FunctionType) *Filter {
 	return &Filter{function: newFunction(typ)}
 }

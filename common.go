@@ -44,9 +44,10 @@ func (n *Node) UID() UID {
 	return n.Uid
 }
 
-//CreateMutation is a short-hand for creating
-//a single mutation query object.
-//tTODO: Only allow DNodes? Not likely.
+//CreateMutation creates a mutation object from the DNode. This can be used immediately
+//as a value for Mutation. A simple syntax would be
+//GetDB().Mutate(ctx, CreateMutation(node, MutateSet)) where node
+//represents an arbitrary Node.
 func CreateMutation(obj DNode, typ MutationType) SingleMutation {
 	return SingleMutation{
 		Object:    obj,
@@ -61,18 +62,19 @@ func UIDVariable(variable string) UID {
 
 //Here begins common queries.
 
-//From a uid, get value from fields and deserialize into value.
-//TODO: Should this require DNode?
+//GetByUid is shorthand for generating a query for getting a node
+//from its uid given by the fields.
 func GetByUid(uid UID, fields Fields) *GeneratedQuery {
 	q := NewQuery(fields).Function(FunctionUid).Value(uid)
 	return q
 }
-
+//GetByPredicate is shorthand for generating a query for getting nodes
+//from multiple predicate values given by the fields.
 func GetByPredicate(pred Predicate, fields Fields, values ...interface{}) *GeneratedQuery {
-	q := NewQuery(fields).Function(Equals).PredValues(pred, values...)
+	q := NewQuery(fields).Function(Equals).PredValues(pred, values)
 	return q
 }
-
+/*
 func AddScalarList(origin DNode, predicate string, value ...interface{}) SingleMutation {
 	var mapper = make(Mapper)
 	mapper.SetUID(origin.UID())
@@ -86,7 +88,7 @@ func AddToList(origin DNode, predicate string, child DNode) SingleMutation {
 	mapper.SetArray(predicate, false, child)
 	return CreateMutation(mapper, MutateSet)
 }
-
+ */
 func writeInt(i int64, sb *strings.Builder) {
 	var buf [8]byte
 	b := strconv.AppendInt(buf[:0], i, 10)

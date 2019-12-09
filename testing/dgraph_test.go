@@ -142,7 +142,10 @@ var questionFields = QuestionFields.Sub(QuestionFromField, UserFields.Select(Use
 
 func TestGet(t *testing.T) {
 	var q Question
-	err := db.Query(context.Background(), humus.GetByPredicate(QuestionTitleField, questionFields, "First Question"), &q)
+	var qu = humus.NewQueries()
+	qu.NewQuery(questionFields).Function(humus.Equals).PredValues(QuestionTitleField, "First Question")
+	qu.NewQuery(questionFields).Function(humus.Equals).PredValues(QuestionTitleField, "First Question")
+	err := db.Query(context.Background(), qu, &q, &q)
 	if err != nil {
 		t.Error(err)
 		return

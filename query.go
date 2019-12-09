@@ -73,6 +73,14 @@ func (q *Queries) process() (string, error) {
 	return q.create()
 }
 
+func (q *Queries) names() []string {
+	ret := make([]string, len(q.q))
+	for k,v := range q.q {
+		ret[k] = "q" + strconv.Itoa(v.index)
+	}
+	return ret
+}
+
 func (q *Queries) NewQuery(f Fields) *GeneratedQuery {
 	newq := &GeneratedQuery{
 		modifiers: make(map[Predicate]modifierList),
@@ -108,7 +116,7 @@ func (q *Queries) create() (string, error) {
 	final.WriteByte(')')
 	for k, qu := range q.q {
 		final.WriteByte('{')
-		qu.index = k + 1
+		qu.index = k
 		_, err := qu.create(&final)
 		if err != nil {
 			return "", err
@@ -156,12 +164,6 @@ type GeneratedQuery struct {
 	index int
 }
 
-/*
-func (q *GeneratedQuery) Var(v bool) *GeneratedQuery {
-	q.v = v
-	return q
-}
-*/
 //Facets sets @facets for the edge specified by path.
 func (q *GeneratedQuery) Facets(path Predicate) *GeneratedQuery {
 	q.modifiers[path] = append(q.modifiers[path], facet{})
@@ -208,6 +210,16 @@ const (
 	MutateSet    MutationType = "set"
 )
 
+//Default name for query.
+var defaultName = []string{"q0"}
+
+func (q *GeneratedQuery) names() []string {
+	if q.varFunc == nil {
+		return defaultName
+	}
+	return []string{"q" + strconv.Itoa(q.index)}
+}
+
 func (q *GeneratedQuery) create(sb *strings.Builder) (string, error) {
 	//t := time.Now()
 	//sb == nil implies this is a solo query. This means we need to map the GraphQL
@@ -235,6 +247,8 @@ func (q *GeneratedQuery) create(sb *strings.Builder) (string, error) {
 	sb.WriteByte('q')
 	if q.index != 0 {
 		writeInt(int64(q.index), sb)
+	} else {
+		sb.WriteByte('0')
 	}
 	sb.WriteString(tokenLP + "func" + tokenColumn + tokenSpace)
 	err := q.function.create(q, sb)

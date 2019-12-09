@@ -394,6 +394,8 @@ type Query interface {
 	process() (string, error)
 	//What type of query is this? Mutation(set/delete), regular query?
 	queryVars() map[string]string
+	//names returns the names(or keys) for this query.
+	names() []string
 }
 
 type Mutate interface {
@@ -559,7 +561,7 @@ func (t *Txn) query(ctx context.Context, q Query, objs []interface{}) error {
 		log.Printf("Query output: %s", string(resp.Json))
 	}
 	//This deserializes using reflect.
-	err = HandleResponse(resp.Json, objs)
+	err = HandleResponseFast(resp.Json, objs, q.names())
 	//TODO: Ignore this error for now.
 	if _, ok := err.(*time.ParseError); ok {
 		return nil

@@ -2,11 +2,11 @@ package humus
 
 import (
 	"encoding/json"
+	"errors"
 	"fmt"
+	"github.com/buger/jsonparser"
+	"github.com/mailru/easyjson"
 	"reflect"
-	"strconv"
-
-	"github.com/valyala/fastjson"
 )
 
 type EmptyResponseErr struct{}
@@ -14,9 +14,8 @@ type EmptyResponseErr struct{}
 func (e EmptyResponseErr) Error() string {
 	return "Empty response from dgraph."
 }
-
+/*
 //singleResponse parses one response from dgraph into the pointer at inp.
-//TODO: Make this faster. Do not perform a bunch of unnecessary allocations when unmarshalling the object.
 func singleResponse(temp *fastjson.Value, inp interface{}) error {
 	r, err := temp.Array()
 	if err != nil {
@@ -99,9 +98,6 @@ func HandleResponse(res []byte, inp []interface{}, names ...string) error {
 	if d.Len() != len(inp) {
 		return errInvalidLength
 	}
-	/*
-		For static queries. Custom names are provided.
-	*/
 	if len(names) != 0 {
 		for k, v := range inp {
 			err = singleResponse(d.Get(names[k]), v)
@@ -116,9 +112,6 @@ func HandleResponse(res []byte, inp []interface{}, names ...string) error {
 		err = singleResponse(q, inp[0])
 		return err
 	}
-	/*
-		For type Queries with multiple query objects.
-	*/
 	for k, v := range inp {
 		err = singleResponse(d.Get("q"+strconv.Itoa(k)), v)
 		if err != nil {
@@ -126,4 +119,37 @@ func HandleResponse(res []byte, inp []interface{}, names ...string) error {
 		}
 	}
 	return nil
+}
+*/
+func HandleResponseFast(res []byte, inp []interface{}, names []string) error {
+	i := -1
+	return jsonparser.ObjectEach(res, func(key []byte, value []byte, dataType jsonparser.ValueType, offset int) error {
+		i++
+		if string(key) != names[i] {
+			return errors.New(fmt.Sprintf("mismatch between query name and key: %s : %s", string(key), names[i]))
+		}
+		return singleResponseFast(value, inp[i])
+	})
+}
+
+func singleResponseFast(value []byte, inp interface{}) error {
+	val := reflect.TypeOf(inp)
+	kind := val.Kind()
+	if !(kind == reflect.Ptr || kind == reflect.Interface) {
+		return fmt.Errorf("parse: invalid input to singleResponse, got type %s", val.String())
+	}
+	isArray := kind == reflect.Slice || kind == reflect.Array
+	if len(value) == 0 {
+		return nil
+	}
+	//No need for massive reflect to check if it is an array
+	if value[0] == '[' {
+		if !isArray {
+			value = value[1:len(value)-1]
+		}
+	}
+	if val, ok := inp.(easyjson.Unmarshaler); ok {
+		return easyjson.Unmarshal(value, val)
+	}
+	return json.Unmarshal(value, inp)
 }

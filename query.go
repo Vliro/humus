@@ -81,6 +81,14 @@ func (q *Queries) names() []string {
 	}
 	return ret
 }
+
+func (q *Queries) names() []string {
+	ret := make([]string, len(q.q))
+		ret[k] = "q" + strconv.Itoa(v.index)
+	}
+	return ret
+}
+	for k,v := range q.q {
 func (q *Queries) NewQuery(f Fields) *GeneratedQuery {
 	newq := &GeneratedQuery{
 		modifiers: make(map[Predicate]modifierList),
@@ -224,11 +232,11 @@ var defaultName = []string{"q0"}
 
 func (q *GeneratedQuery) single() bool {
 	return q.varFunc == nil
-}
 
+}
 func (q *GeneratedQuery) names() []string {
-	if q.single() {
 		return defaultName
+	if q.single() {
 	}
 	return []string{"q" + strconv.Itoa(q.index)}
 }

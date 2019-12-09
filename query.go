@@ -43,6 +43,7 @@ func (u UID) IntString() string {
 func stringFromInt(id int64) string {
 	return "0x" + strconv.FormatInt(id, 16)
 }
+
 //ParseUid parses a uid from an int64.
 func ParseUid(id int64) UID {
 	return UID(stringFromInt(id))
@@ -76,19 +77,12 @@ func (q *Queries) process() (string, error) {
 
 func (q *Queries) names() []string {
 	ret := make([]string, len(q.q))
-	for k,v := range q.q {
+	for k, v := range q.q {
 		ret[k] = "q" + strconv.Itoa(v.index)
 	}
 	return ret
 }
 
-func (q *Queries) names() []string {
-	ret := make([]string, len(q.q))
-		ret[k] = "q" + strconv.Itoa(v.index)
-	}
-	return ret
-}
-	for k,v := range q.q {
 func (q *Queries) NewQuery(f Fields) *GeneratedQuery {
 	newq := &GeneratedQuery{
 		modifiers: make(map[Predicate]modifierList),
@@ -178,6 +172,7 @@ func (q *GeneratedQuery) Facets(path Predicate) *GeneratedQuery {
 	q.modifiers[path] = append(q.modifiers[path], facet{})
 	return q
 }
+
 //NewQuery returns a new singular generation query for use
 //in building a single query.
 func NewQuery(f Fields) *GeneratedQuery {
@@ -186,12 +181,6 @@ func NewQuery(f Fields) *GeneratedQuery {
 		modifiers: make(map[Predicate]modifierList),
 		fields:    f,
 	}
-}
-
-//Facets sets @facets for the edge specified by path.
-func (q *GeneratedQuery) Facets(path Predicate) *GeneratedQuery {
-	q.modifiers[path] = append(q.modifiers[path], facet{})
-	return q
 }
 
 //NewQueries returns a QueryList used for building
@@ -235,7 +224,7 @@ func (q *GeneratedQuery) single() bool {
 
 }
 func (q *GeneratedQuery) names() []string {
-		return defaultName
+	return defaultName
 	if q.single() {
 	}
 	return []string{"q" + strconv.Itoa(q.index)}

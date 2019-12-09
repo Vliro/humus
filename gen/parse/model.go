@@ -55,6 +55,9 @@ func (m ModelCreator) Create(i *Generator, w io.Writer) {
 func (mc ModelCreator) makeGoStruct(o *schema.Object, m map[string][]Field, g *Generator) (*bytes.Buffer, []Field) {
 	var sb bytes.Buffer
 	var fields []Field
+	if g.config.EasyJson {
+		sb.WriteString("//easyjson:json\n")
+	}
 	sb.WriteString(fmt.Sprintf(topLine, o.Name))
 	//Declare this as a node.
 	sb.WriteString("//This line declares basic properties for a database node. \nhumus.Node \n")
@@ -117,6 +120,9 @@ func (mc ModelCreator) makeGoInterface(o *schema.Interface, g *Generator) (*byte
 	var sb bytes.Buffer
 	var fields []Field
 	sb.WriteString("//Created from a GraphQL interface. \n")
+	if g.config.EasyJson {
+		sb.WriteString("//easyjson:json\n")
+	}
 	sb.WriteString(fmt.Sprintf(topLine, o.Name))
 	//Declare this as a node.
 	sb.WriteString("//This line declares basic properties for a database node. \nhumus.Node \n")

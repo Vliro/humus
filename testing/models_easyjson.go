@@ -19,7 +19,15 @@ var (
 	_ easyjson.Marshaler
 )
 
+<<<<<<< HEAD
+<<<<<<< master
 func easyjsonD2b7633eDecodeGithubComVliroHumusTesting(in *jlexer.Lexer, out *UserScalars) {
+=======
+func easyjsonD2b7633eDecodeGithubComVliroHumusTesting(in *jlexer.Lexer, out *User) {
+>>>>>>> improve deserialize performance
+=======
+func easyjsonD2b7633eDecodeGithubComVliroHumusTesting(in *jlexer.Lexer, out *User) {
+>>>>>>> parse
 	isTopLevel := in.IsStart()
 	if in.IsNull() {
 		if isTopLevel {
@@ -77,7 +85,15 @@ func easyjsonD2b7633eDecodeGithubComVliroHumusTesting(in *jlexer.Lexer, out *Use
 		in.Consumed()
 	}
 }
+<<<<<<< HEAD
+<<<<<<< master
 func easyjsonD2b7633eEncodeGithubComVliroHumusTesting(out *jwriter.Writer, in UserScalars) {
+=======
+func easyjsonD2b7633eEncodeGithubComVliroHumusTesting(out *jwriter.Writer, in User) {
+>>>>>>> improve deserialize performance
+=======
+func easyjsonD2b7633eEncodeGithubComVliroHumusTesting(out *jwriter.Writer, in User) {
+>>>>>>> parse
 	out.RawByte('{')
 	first := true
 	_ = first
@@ -130,6 +146,8 @@ func easyjsonD2b7633eEncodeGithubComVliroHumusTesting(out *jwriter.Writer, in Us
 }
 
 // MarshalJSON supports json.Marshaler interface
+<<<<<<< HEAD
+<<<<<<< master
 func (v UserScalars) MarshalJSON() ([]byte, error) {
 	w := jwriter.Writer{}
 	easyjsonD2b7633eEncodeGithubComVliroHumusTesting(&w, v)
@@ -266,26 +284,45 @@ func easyjsonD2b7633eEncodeGithubComVliroHumusTesting1(out *jwriter.Writer, in U
 func (v User) MarshalJSON() ([]byte, error) {
 	w := jwriter.Writer{}
 	easyjsonD2b7633eEncodeGithubComVliroHumusTesting1(&w, v)
+=======
+func (v User) MarshalJSON() ([]byte, error) {
+	w := jwriter.Writer{}
+	easyjsonD2b7633eEncodeGithubComVliroHumusTesting(&w, v)
+>>>>>>> improve deserialize performance
 	return w.Buffer.BuildBytes(), w.Error
 }
 
 // MarshalEasyJSON supports easyjson.Marshaler interface
 func (v User) MarshalEasyJSON(w *jwriter.Writer) {
+<<<<<<< master
 	easyjsonD2b7633eEncodeGithubComVliroHumusTesting1(w, v)
+=======
+	easyjsonD2b7633eEncodeGithubComVliroHumusTesting(w, v)
+>>>>>>> improve deserialize performance
 }
 
 // UnmarshalJSON supports json.Unmarshaler interface
 func (v *User) UnmarshalJSON(data []byte) error {
 	r := jlexer.Lexer{Data: data}
+<<<<<<< master
 	easyjsonD2b7633eDecodeGithubComVliroHumusTesting1(&r, v)
+=======
+	easyjsonD2b7633eDecodeGithubComVliroHumusTesting(&r, v)
+>>>>>>> improve deserialize performance
 	return r.Error()
 }
 
 // UnmarshalEasyJSON supports easyjson.Unmarshaler interface
 func (v *User) UnmarshalEasyJSON(l *jlexer.Lexer) {
+<<<<<<< master
 	easyjsonD2b7633eDecodeGithubComVliroHumusTesting1(l, v)
 }
 func easyjsonD2b7633eDecodeGithubComVliroHumusTesting2(in *jlexer.Lexer, out *QuestionScalars) {
+=======
+	easyjsonD2b7633eDecodeGithubComVliroHumusTesting(l, v)
+}
+func easyjsonD2b7633eDecodeGithubComVliroHumusTesting1(in *jlexer.Lexer, out *Question) {
+>>>>>>> improve deserialize performance
 	isTopLevel := in.IsStart()
 	if in.IsNull() {
 		if isTopLevel {
@@ -306,6 +343,7 @@ func easyjsonD2b7633eDecodeGithubComVliroHumusTesting2(in *jlexer.Lexer, out *Qu
 		switch key {
 		case "Question.title":
 			out.Title = string(in.String())
+<<<<<<< master
 		case "Post.text":
 			out.Text = string(in.String())
 		case "Post.datePublished":
@@ -793,10 +831,16 @@ func easyjsonD2b7633eEncodeGithubComVliroHumusTesting4(out *jwriter.Writer, in P
 func (v PostScalars) MarshalJSON() ([]byte, error) {
 	w := jwriter.Writer{}
 	easyjsonD2b7633eEncodeGithubComVliroHumusTesting4(&w, v)
+=======
+func (v User) MarshalJSON() ([]byte, error) {
+	w := jwriter.Writer{}
+	easyjsonD2b7633eEncodeGithubComVliroHumusTesting(&w, v)
+>>>>>>> parse
 	return w.Buffer.BuildBytes(), w.Error
 }
 
 // MarshalEasyJSON supports easyjson.Marshaler interface
+<<<<<<< HEAD
 func (v PostScalars) MarshalEasyJSON(w *jwriter.Writer) {
 	easyjsonD2b7633eEncodeGithubComVliroHumusTesting4(w, v)
 }
@@ -805,14 +849,31 @@ func (v PostScalars) MarshalEasyJSON(w *jwriter.Writer) {
 func (v *PostScalars) UnmarshalJSON(data []byte) error {
 	r := jlexer.Lexer{Data: data}
 	easyjsonD2b7633eDecodeGithubComVliroHumusTesting4(&r, v)
+=======
+func (v User) MarshalEasyJSON(w *jwriter.Writer) {
+	easyjsonD2b7633eEncodeGithubComVliroHumusTesting(w, v)
+}
+
+// UnmarshalJSON supports json.Unmarshaler interface
+func (v *User) UnmarshalJSON(data []byte) error {
+	r := jlexer.Lexer{Data: data}
+	easyjsonD2b7633eDecodeGithubComVliroHumusTesting(&r, v)
+>>>>>>> parse
 	return r.Error()
 }
 
 // UnmarshalEasyJSON supports easyjson.Unmarshaler interface
+<<<<<<< HEAD
 func (v *PostScalars) UnmarshalEasyJSON(l *jlexer.Lexer) {
 	easyjsonD2b7633eDecodeGithubComVliroHumusTesting4(l, v)
 }
 func easyjsonD2b7633eDecodeGithubComVliroHumusTesting5(in *jlexer.Lexer, out *Post) {
+=======
+func (v *User) UnmarshalEasyJSON(l *jlexer.Lexer) {
+	easyjsonD2b7633eDecodeGithubComVliroHumusTesting(l, v)
+}
+func easyjsonD2b7633eDecodeGithubComVliroHumusTesting1(in *jlexer.Lexer, out *Question) {
+>>>>>>> parse
 	isTopLevel := in.IsStart()
 	if in.IsNull() {
 		if isTopLevel {
@@ -831,6 +892,57 @@ func easyjsonD2b7633eDecodeGithubComVliroHumusTesting5(in *jlexer.Lexer, out *Po
 			continue
 		}
 		switch key {
+<<<<<<< HEAD
+=======
+=======
+		case "Question.title":
+			out.Title = string(in.String())
+>>>>>>> parse
+		case "Question.from":
+			if in.IsNull() {
+				in.Skip()
+				out.From = nil
+			} else {
+				if out.From == nil {
+					out.From = new(User)
+				}
+				(*out.From).UnmarshalEasyJSON(in)
+			}
+		case "Question.comments":
+			if in.IsNull() {
+				in.Skip()
+				out.Comments = nil
+			} else {
+				in.Delim('[')
+				if out.Comments == nil {
+					if !in.IsDelim(']') {
+						out.Comments = make([]*Comment, 0, 8)
+					} else {
+						out.Comments = []*Comment{}
+					}
+				} else {
+					out.Comments = (out.Comments)[:0]
+				}
+				for !in.IsDelim(']') {
+					var v4 *Comment
+					if in.IsNull() {
+						in.Skip()
+						v4 = nil
+					} else {
+						if v4 == nil {
+							v4 = new(Comment)
+						}
+						(*v4).UnmarshalEasyJSON(in)
+					}
+					out.Comments = append(out.Comments, v4)
+					in.WantComma()
+				}
+				in.Delim(']')
+			}
+<<<<<<< HEAD
+>>>>>>> improve deserialize performance
+=======
+>>>>>>> parse
 		case "Post.text":
 			out.Text = string(in.String())
 		case "Post.datePublished":
@@ -863,9 +975,21 @@ func easyjsonD2b7633eDecodeGithubComVliroHumusTesting5(in *jlexer.Lexer, out *Po
 					out.Type = (out.Type)[:0]
 				}
 				for !in.IsDelim(']') {
+<<<<<<< HEAD
+<<<<<<< master
 					var v19 string
 					v19 = string(in.String())
 					out.Type = append(out.Type, v19)
+=======
+					var v5 string
+					v5 = string(in.String())
+					out.Type = append(out.Type, v5)
+>>>>>>> improve deserialize performance
+=======
+					var v5 string
+					v5 = string(in.String())
+					out.Type = append(out.Type, v5)
+>>>>>>> parse
 					in.WantComma()
 				}
 				in.Delim(']')
@@ -880,6 +1004,8 @@ func easyjsonD2b7633eDecodeGithubComVliroHumusTesting5(in *jlexer.Lexer, out *Po
 		in.Consumed()
 	}
 }
+<<<<<<< HEAD
+<<<<<<< master
 func easyjsonD2b7633eEncodeGithubComVliroHumusTesting5(out *jwriter.Writer, in Post) {
 	out.RawByte('{')
 	first := true
@@ -888,6 +1014,64 @@ func easyjsonD2b7633eEncodeGithubComVliroHumusTesting5(out *jwriter.Writer, in P
 		const prefix string = ",\"Post.text\":"
 		first = false
 		out.RawString(prefix[1:])
+=======
+=======
+>>>>>>> parse
+func easyjsonD2b7633eEncodeGithubComVliroHumusTesting1(out *jwriter.Writer, in Question) {
+	out.RawByte('{')
+	first := true
+	_ = first
+	if in.Title != "" {
+		const prefix string = ",\"Question.title\":"
+		first = false
+		out.RawString(prefix[1:])
+		out.String(string(in.Title))
+	}
+	if in.From != nil {
+		const prefix string = ",\"Question.from\":"
+		if first {
+			first = false
+			out.RawString(prefix[1:])
+		} else {
+			out.RawString(prefix)
+		}
+		(*in.From).MarshalEasyJSON(out)
+	}
+	if len(in.Comments) != 0 {
+		const prefix string = ",\"Question.comments\":"
+		if first {
+			first = false
+			out.RawString(prefix[1:])
+		} else {
+			out.RawString(prefix)
+		}
+		{
+			out.RawByte('[')
+			for v6, v7 := range in.Comments {
+				if v6 > 0 {
+					out.RawByte(',')
+				}
+				if v7 == nil {
+					out.RawString("null")
+				} else {
+					(*v7).MarshalEasyJSON(out)
+				}
+			}
+			out.RawByte(']')
+		}
+	}
+	if in.Text != "" {
+		const prefix string = ",\"Post.text\":"
+		if first {
+			first = false
+			out.RawString(prefix[1:])
+		} else {
+			out.RawString(prefix)
+		}
+<<<<<<< HEAD
+>>>>>>> improve deserialize performance
+=======
+>>>>>>> parse
 		out.String(string(in.Text))
 	}
 	if in.DatePublished != nil {
@@ -920,11 +1104,25 @@ func easyjsonD2b7633eEncodeGithubComVliroHumusTesting5(out *jwriter.Writer, in P
 		}
 		{
 			out.RawByte('[')
+<<<<<<< HEAD
+<<<<<<< master
 			for v20, v21 := range in.Type {
 				if v20 > 0 {
 					out.RawByte(',')
 				}
 				out.String(string(v21))
+=======
+=======
+>>>>>>> parse
+			for v8, v9 := range in.Type {
+				if v8 > 0 {
+					out.RawByte(',')
+				}
+				out.String(string(v9))
+<<<<<<< HEAD
+>>>>>>> improve deserialize performance
+=======
+>>>>>>> parse
 			}
 			out.RawByte(']')
 		}
@@ -933,13 +1131,27 @@ func easyjsonD2b7633eEncodeGithubComVliroHumusTesting5(out *jwriter.Writer, in P
 }
 
 // MarshalJSON supports json.Marshaler interface
+<<<<<<< HEAD
+<<<<<<< master
 func (v Post) MarshalJSON() ([]byte, error) {
 	w := jwriter.Writer{}
 	easyjsonD2b7633eEncodeGithubComVliroHumusTesting5(&w, v)
+=======
+func (v Question) MarshalJSON() ([]byte, error) {
+	w := jwriter.Writer{}
+	easyjsonD2b7633eEncodeGithubComVliroHumusTesting1(&w, v)
+>>>>>>> improve deserialize performance
+=======
+func (v Question) MarshalJSON() ([]byte, error) {
+	w := jwriter.Writer{}
+	easyjsonD2b7633eEncodeGithubComVliroHumusTesting1(&w, v)
+>>>>>>> parse
 	return w.Buffer.BuildBytes(), w.Error
 }
 
 // MarshalEasyJSON supports easyjson.Marshaler interface
+<<<<<<< HEAD
+<<<<<<< master
 func (v Post) MarshalEasyJSON(w *jwriter.Writer) {
 	easyjsonD2b7633eEncodeGithubComVliroHumusTesting5(w, v)
 }
@@ -948,14 +1160,42 @@ func (v Post) MarshalEasyJSON(w *jwriter.Writer) {
 func (v *Post) UnmarshalJSON(data []byte) error {
 	r := jlexer.Lexer{Data: data}
 	easyjsonD2b7633eDecodeGithubComVliroHumusTesting5(&r, v)
+=======
+=======
+>>>>>>> parse
+func (v Question) MarshalEasyJSON(w *jwriter.Writer) {
+	easyjsonD2b7633eEncodeGithubComVliroHumusTesting1(w, v)
+}
+
+// UnmarshalJSON supports json.Unmarshaler interface
+func (v *Question) UnmarshalJSON(data []byte) error {
+	r := jlexer.Lexer{Data: data}
+	easyjsonD2b7633eDecodeGithubComVliroHumusTesting1(&r, v)
+<<<<<<< HEAD
+>>>>>>> improve deserialize performance
+=======
+>>>>>>> parse
 	return r.Error()
 }
 
 // UnmarshalEasyJSON supports easyjson.Unmarshaler interface
+<<<<<<< HEAD
+<<<<<<< master
 func (v *Post) UnmarshalEasyJSON(l *jlexer.Lexer) {
 	easyjsonD2b7633eDecodeGithubComVliroHumusTesting5(l, v)
 }
 func easyjsonD2b7633eDecodeGithubComVliroHumusTesting6(in *jlexer.Lexer, out *ErrorScalars) {
+=======
+=======
+>>>>>>> parse
+func (v *Question) UnmarshalEasyJSON(l *jlexer.Lexer) {
+	easyjsonD2b7633eDecodeGithubComVliroHumusTesting1(l, v)
+}
+func easyjsonD2b7633eDecodeGithubComVliroHumusTesting2(in *jlexer.Lexer, out *Post) {
+<<<<<<< HEAD
+>>>>>>> improve deserialize performance
+=======
+>>>>>>> parse
 	isTopLevel := in.IsStart()
 	if in.IsNull() {
 		if isTopLevel {
@@ -974,6 +1214,8 @@ func easyjsonD2b7633eDecodeGithubComVliroHumusTesting6(in *jlexer.Lexer, out *Er
 			continue
 		}
 		switch key {
+<<<<<<< HEAD
+<<<<<<< master
 		case "Error.message":
 			out.Message = string(in.String())
 		case "Error.errorType":
@@ -988,6 +1230,25 @@ func easyjsonD2b7633eDecodeGithubComVliroHumusTesting6(in *jlexer.Lexer, out *Er
 				}
 				if data := in.Raw(); in.Ok() {
 					in.AddError((*out.Time).UnmarshalJSON(data))
+=======
+=======
+>>>>>>> parse
+		case "Post.text":
+			out.Text = string(in.String())
+		case "Post.datePublished":
+			if in.IsNull() {
+				in.Skip()
+				out.DatePublished = nil
+			} else {
+				if out.DatePublished == nil {
+					out.DatePublished = new(time.Time)
+				}
+				if data := in.Raw(); in.Ok() {
+					in.AddError((*out.DatePublished).UnmarshalJSON(data))
+<<<<<<< HEAD
+>>>>>>> improve deserialize performance
+=======
+>>>>>>> parse
 				}
 			}
 		case "uid":
@@ -1008,9 +1269,21 @@ func easyjsonD2b7633eDecodeGithubComVliroHumusTesting6(in *jlexer.Lexer, out *Er
 					out.Type = (out.Type)[:0]
 				}
 				for !in.IsDelim(']') {
+<<<<<<< HEAD
+<<<<<<< master
 					var v22 string
 					v22 = string(in.String())
 					out.Type = append(out.Type, v22)
+=======
+					var v10 string
+					v10 = string(in.String())
+					out.Type = append(out.Type, v10)
+>>>>>>> improve deserialize performance
+=======
+					var v10 string
+					v10 = string(in.String())
+					out.Type = append(out.Type, v10)
+>>>>>>> parse
 					in.WantComma()
 				}
 				in.Delim(']')
@@ -1025,6 +1298,8 @@ func easyjsonD2b7633eDecodeGithubComVliroHumusTesting6(in *jlexer.Lexer, out *Er
 		in.Consumed()
 	}
 }
+<<<<<<< HEAD
+<<<<<<< master
 func easyjsonD2b7633eEncodeGithubComVliroHumusTesting6(out *jwriter.Writer, in ErrorScalars) {
 	out.RawByte('{')
 	first := true
@@ -1047,13 +1322,40 @@ func easyjsonD2b7633eEncodeGithubComVliroHumusTesting6(out *jwriter.Writer, in E
 	}
 	if in.Time != nil {
 		const prefix string = ",\"Error.time\":"
+=======
+=======
+>>>>>>> parse
+func easyjsonD2b7633eEncodeGithubComVliroHumusTesting2(out *jwriter.Writer, in Post) {
+	out.RawByte('{')
+	first := true
+	_ = first
+	if in.Text != "" {
+		const prefix string = ",\"Post.text\":"
+		first = false
+		out.RawString(prefix[1:])
+		out.String(string(in.Text))
+	}
+	if in.DatePublished != nil {
+		const prefix string = ",\"Post.datePublished\":"
+<<<<<<< HEAD
+>>>>>>> improve deserialize performance
+=======
+>>>>>>> parse
 		if first {
 			first = false
 			out.RawString(prefix[1:])
 		} else {
 			out.RawString(prefix)
 		}
+<<<<<<< HEAD
+<<<<<<< master
 		out.Raw((*in.Time).MarshalJSON())
+=======
+		out.Raw((*in.DatePublished).MarshalJSON())
+>>>>>>> improve deserialize performance
+=======
+		out.Raw((*in.DatePublished).MarshalJSON())
+>>>>>>> parse
 	}
 	if in.Uid != "" {
 		const prefix string = ",\"uid\":"
@@ -1075,11 +1377,25 @@ func easyjsonD2b7633eEncodeGithubComVliroHumusTesting6(out *jwriter.Writer, in E
 		}
 		{
 			out.RawByte('[')
+<<<<<<< HEAD
+<<<<<<< master
 			for v23, v24 := range in.Type {
 				if v23 > 0 {
 					out.RawByte(',')
 				}
 				out.String(string(v24))
+=======
+=======
+>>>>>>> parse
+			for v11, v12 := range in.Type {
+				if v11 > 0 {
+					out.RawByte(',')
+				}
+				out.String(string(v12))
+<<<<<<< HEAD
+>>>>>>> improve deserialize performance
+=======
+>>>>>>> parse
 			}
 			out.RawByte(']')
 		}
@@ -1088,13 +1404,27 @@ func easyjsonD2b7633eEncodeGithubComVliroHumusTesting6(out *jwriter.Writer, in E
 }
 
 // MarshalJSON supports json.Marshaler interface
+<<<<<<< HEAD
+<<<<<<< master
 func (v ErrorScalars) MarshalJSON() ([]byte, error) {
 	w := jwriter.Writer{}
 	easyjsonD2b7633eEncodeGithubComVliroHumusTesting6(&w, v)
+=======
+func (v Post) MarshalJSON() ([]byte, error) {
+	w := jwriter.Writer{}
+	easyjsonD2b7633eEncodeGithubComVliroHumusTesting2(&w, v)
+>>>>>>> improve deserialize performance
+=======
+func (v Post) MarshalJSON() ([]byte, error) {
+	w := jwriter.Writer{}
+	easyjsonD2b7633eEncodeGithubComVliroHumusTesting2(&w, v)
+>>>>>>> parse
 	return w.Buffer.BuildBytes(), w.Error
 }
 
 // MarshalEasyJSON supports easyjson.Marshaler interface
+<<<<<<< HEAD
+<<<<<<< master
 func (v ErrorScalars) MarshalEasyJSON(w *jwriter.Writer) {
 	easyjsonD2b7633eEncodeGithubComVliroHumusTesting6(w, v)
 }
@@ -1103,14 +1433,42 @@ func (v ErrorScalars) MarshalEasyJSON(w *jwriter.Writer) {
 func (v *ErrorScalars) UnmarshalJSON(data []byte) error {
 	r := jlexer.Lexer{Data: data}
 	easyjsonD2b7633eDecodeGithubComVliroHumusTesting6(&r, v)
+=======
+=======
+>>>>>>> parse
+func (v Post) MarshalEasyJSON(w *jwriter.Writer) {
+	easyjsonD2b7633eEncodeGithubComVliroHumusTesting2(w, v)
+}
+
+// UnmarshalJSON supports json.Unmarshaler interface
+func (v *Post) UnmarshalJSON(data []byte) error {
+	r := jlexer.Lexer{Data: data}
+	easyjsonD2b7633eDecodeGithubComVliroHumusTesting2(&r, v)
+<<<<<<< HEAD
+>>>>>>> improve deserialize performance
+=======
+>>>>>>> parse
 	return r.Error()
 }
 
 // UnmarshalEasyJSON supports easyjson.Unmarshaler interface
+<<<<<<< HEAD
+<<<<<<< master
 func (v *ErrorScalars) UnmarshalEasyJSON(l *jlexer.Lexer) {
 	easyjsonD2b7633eDecodeGithubComVliroHumusTesting6(l, v)
 }
 func easyjsonD2b7633eDecodeGithubComVliroHumusTesting7(in *jlexer.Lexer, out *Error) {
+=======
+=======
+>>>>>>> parse
+func (v *Post) UnmarshalEasyJSON(l *jlexer.Lexer) {
+	easyjsonD2b7633eDecodeGithubComVliroHumusTesting2(l, v)
+}
+func easyjsonD2b7633eDecodeGithubComVliroHumusTesting3(in *jlexer.Lexer, out *Error) {
+<<<<<<< HEAD
+>>>>>>> improve deserialize performance
+=======
+>>>>>>> parse
 	isTopLevel := in.IsStart()
 	if in.IsNull() {
 		if isTopLevel {
@@ -1163,9 +1521,21 @@ func easyjsonD2b7633eDecodeGithubComVliroHumusTesting7(in *jlexer.Lexer, out *Er
 					out.Type = (out.Type)[:0]
 				}
 				for !in.IsDelim(']') {
+<<<<<<< HEAD
+<<<<<<< master
 					var v25 string
 					v25 = string(in.String())
 					out.Type = append(out.Type, v25)
+=======
+					var v13 string
+					v13 = string(in.String())
+					out.Type = append(out.Type, v13)
+>>>>>>> improve deserialize performance
+=======
+					var v13 string
+					v13 = string(in.String())
+					out.Type = append(out.Type, v13)
+>>>>>>> parse
 					in.WantComma()
 				}
 				in.Delim(']')
@@ -1180,7 +1550,15 @@ func easyjsonD2b7633eDecodeGithubComVliroHumusTesting7(in *jlexer.Lexer, out *Er
 		in.Consumed()
 	}
 }
+<<<<<<< HEAD
+<<<<<<< master
 func easyjsonD2b7633eEncodeGithubComVliroHumusTesting7(out *jwriter.Writer, in Error) {
+=======
+func easyjsonD2b7633eEncodeGithubComVliroHumusTesting3(out *jwriter.Writer, in Error) {
+>>>>>>> improve deserialize performance
+=======
+func easyjsonD2b7633eEncodeGithubComVliroHumusTesting3(out *jwriter.Writer, in Error) {
+>>>>>>> parse
 	out.RawByte('{')
 	first := true
 	_ = first
@@ -1230,11 +1608,25 @@ func easyjsonD2b7633eEncodeGithubComVliroHumusTesting7(out *jwriter.Writer, in E
 		}
 		{
 			out.RawByte('[')
+<<<<<<< HEAD
+<<<<<<< master
 			for v26, v27 := range in.Type {
 				if v26 > 0 {
 					out.RawByte(',')
 				}
 				out.String(string(v27))
+=======
+=======
+>>>>>>> parse
+			for v14, v15 := range in.Type {
+				if v14 > 0 {
+					out.RawByte(',')
+				}
+				out.String(string(v15))
+<<<<<<< HEAD
+>>>>>>> improve deserialize performance
+=======
+>>>>>>> parse
 			}
 			out.RawByte(']')
 		}
@@ -1245,24 +1637,50 @@ func easyjsonD2b7633eEncodeGithubComVliroHumusTesting7(out *jwriter.Writer, in E
 // MarshalJSON supports json.Marshaler interface
 func (v Error) MarshalJSON() ([]byte, error) {
 	w := jwriter.Writer{}
+<<<<<<< HEAD
+<<<<<<< master
 	easyjsonD2b7633eEncodeGithubComVliroHumusTesting7(&w, v)
+=======
+	easyjsonD2b7633eEncodeGithubComVliroHumusTesting3(&w, v)
+>>>>>>> improve deserialize performance
+=======
+	easyjsonD2b7633eEncodeGithubComVliroHumusTesting3(&w, v)
+>>>>>>> parse
 	return w.Buffer.BuildBytes(), w.Error
 }
 
 // MarshalEasyJSON supports easyjson.Marshaler interface
 func (v Error) MarshalEasyJSON(w *jwriter.Writer) {
+<<<<<<< HEAD
+<<<<<<< master
 	easyjsonD2b7633eEncodeGithubComVliroHumusTesting7(w, v)
+=======
+	easyjsonD2b7633eEncodeGithubComVliroHumusTesting3(w, v)
+>>>>>>> improve deserialize performance
+=======
+	easyjsonD2b7633eEncodeGithubComVliroHumusTesting3(w, v)
+>>>>>>> parse
 }
 
 // UnmarshalJSON supports json.Unmarshaler interface
 func (v *Error) UnmarshalJSON(data []byte) error {
 	r := jlexer.Lexer{Data: data}
+<<<<<<< HEAD
+<<<<<<< master
 	easyjsonD2b7633eDecodeGithubComVliroHumusTesting7(&r, v)
+=======
+	easyjsonD2b7633eDecodeGithubComVliroHumusTesting3(&r, v)
+>>>>>>> improve deserialize performance
+=======
+	easyjsonD2b7633eDecodeGithubComVliroHumusTesting3(&r, v)
+>>>>>>> parse
 	return r.Error()
 }
 
 // UnmarshalEasyJSON supports easyjson.Unmarshaler interface
 func (v *Error) UnmarshalEasyJSON(l *jlexer.Lexer) {
+<<<<<<< HEAD
+<<<<<<< master
 	easyjsonD2b7633eDecodeGithubComVliroHumusTesting7(l, v)
 }
 func easyjsonD2b7633eDecodeGithubComVliroHumusTesting8(in *jlexer.Lexer, out *CommentScalars) {
@@ -1409,6 +1827,16 @@ func (v *CommentScalars) UnmarshalEasyJSON(l *jlexer.Lexer) {
 	easyjsonD2b7633eDecodeGithubComVliroHumusTesting8(l, v)
 }
 func easyjsonD2b7633eDecodeGithubComVliroHumusTesting9(in *jlexer.Lexer, out *Comment) {
+=======
+	easyjsonD2b7633eDecodeGithubComVliroHumusTesting3(l, v)
+}
+func easyjsonD2b7633eDecodeGithubComVliroHumusTesting4(in *jlexer.Lexer, out *Comment) {
+>>>>>>> improve deserialize performance
+=======
+	easyjsonD2b7633eDecodeGithubComVliroHumusTesting3(l, v)
+}
+func easyjsonD2b7633eDecodeGithubComVliroHumusTesting4(in *jlexer.Lexer, out *Comment) {
+>>>>>>> parse
 	isTopLevel := in.IsStart()
 	if in.IsNull() {
 		if isTopLevel {
@@ -1469,9 +1897,21 @@ func easyjsonD2b7633eDecodeGithubComVliroHumusTesting9(in *jlexer.Lexer, out *Co
 					out.Type = (out.Type)[:0]
 				}
 				for !in.IsDelim(']') {
+<<<<<<< HEAD
+<<<<<<< master
 					var v31 string
 					v31 = string(in.String())
 					out.Type = append(out.Type, v31)
+=======
+					var v16 string
+					v16 = string(in.String())
+					out.Type = append(out.Type, v16)
+>>>>>>> improve deserialize performance
+=======
+					var v16 string
+					v16 = string(in.String())
+					out.Type = append(out.Type, v16)
+>>>>>>> parse
 					in.WantComma()
 				}
 				in.Delim(']')
@@ -1486,7 +1926,15 @@ func easyjsonD2b7633eDecodeGithubComVliroHumusTesting9(in *jlexer.Lexer, out *Co
 		in.Consumed()
 	}
 }
+<<<<<<< HEAD
+<<<<<<< master
 func easyjsonD2b7633eEncodeGithubComVliroHumusTesting9(out *jwriter.Writer, in Comment) {
+=======
+func easyjsonD2b7633eEncodeGithubComVliroHumusTesting4(out *jwriter.Writer, in Comment) {
+>>>>>>> improve deserialize performance
+=======
+func easyjsonD2b7633eEncodeGithubComVliroHumusTesting4(out *jwriter.Writer, in Comment) {
+>>>>>>> parse
 	out.RawByte('{')
 	first := true
 	_ = first
@@ -1536,11 +1984,25 @@ func easyjsonD2b7633eEncodeGithubComVliroHumusTesting9(out *jwriter.Writer, in C
 		}
 		{
 			out.RawByte('[')
+<<<<<<< HEAD
+<<<<<<< master
 			for v32, v33 := range in.Type {
 				if v32 > 0 {
 					out.RawByte(',')
 				}
 				out.String(string(v33))
+=======
+=======
+>>>>>>> parse
+			for v17, v18 := range in.Type {
+				if v17 > 0 {
+					out.RawByte(',')
+				}
+				out.String(string(v18))
+<<<<<<< HEAD
+>>>>>>> improve deserialize performance
+=======
+>>>>>>> parse
 			}
 			out.RawByte(']')
 		}
@@ -1551,23 +2013,55 @@ func easyjsonD2b7633eEncodeGithubComVliroHumusTesting9(out *jwriter.Writer, in C
 // MarshalJSON supports json.Marshaler interface
 func (v Comment) MarshalJSON() ([]byte, error) {
 	w := jwriter.Writer{}
+<<<<<<< HEAD
+<<<<<<< master
 	easyjsonD2b7633eEncodeGithubComVliroHumusTesting9(&w, v)
+=======
+	easyjsonD2b7633eEncodeGithubComVliroHumusTesting4(&w, v)
+>>>>>>> improve deserialize performance
+=======
+	easyjsonD2b7633eEncodeGithubComVliroHumusTesting4(&w, v)
+>>>>>>> parse
 	return w.Buffer.BuildBytes(), w.Error
 }
 
 // MarshalEasyJSON supports easyjson.Marshaler interface
 func (v Comment) MarshalEasyJSON(w *jwriter.Writer) {
+<<<<<<< HEAD
+<<<<<<< master
 	easyjsonD2b7633eEncodeGithubComVliroHumusTesting9(w, v)
+=======
+	easyjsonD2b7633eEncodeGithubComVliroHumusTesting4(w, v)
+>>>>>>> improve deserialize performance
+=======
+	easyjsonD2b7633eEncodeGithubComVliroHumusTesting4(w, v)
+>>>>>>> parse
 }
 
 // UnmarshalJSON supports json.Unmarshaler interface
 func (v *Comment) UnmarshalJSON(data []byte) error {
 	r := jlexer.Lexer{Data: data}
+<<<<<<< HEAD
+<<<<<<< master
 	easyjsonD2b7633eDecodeGithubComVliroHumusTesting9(&r, v)
+=======
+	easyjsonD2b7633eDecodeGithubComVliroHumusTesting4(&r, v)
+>>>>>>> improve deserialize performance
+=======
+	easyjsonD2b7633eDecodeGithubComVliroHumusTesting4(&r, v)
+>>>>>>> parse
 	return r.Error()
 }
 
 // UnmarshalEasyJSON supports easyjson.Unmarshaler interface
 func (v *Comment) UnmarshalEasyJSON(l *jlexer.Lexer) {
+<<<<<<< HEAD
+<<<<<<< master
 	easyjsonD2b7633eDecodeGithubComVliroHumusTesting9(l, v)
+=======
+	easyjsonD2b7633eDecodeGithubComVliroHumusTesting4(l, v)
+>>>>>>> improve deserialize performance
+=======
+	easyjsonD2b7633eDecodeGithubComVliroHumusTesting4(l, v)
+>>>>>>> parse
 }

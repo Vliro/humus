@@ -2,7 +2,6 @@ package main
 
 import (
 	"flag"
-	"fmt"
 	"github.com/Vliro/humus/gen/parse"
 )
 
@@ -14,17 +13,8 @@ func main() {
 	flag.StringVar(&conf.Input,"input", "", "Sets the root directory path for parsing SDL files.")
 	flag.StringVar(&conf.Output,"output", "", "Sets the root directory path for outputting go files.")
 	flag.StringVar(&conf.Package, "package", "gen", "Sets the package name in outputted files")
-	flag.StringVar(&conf.State,"mode", "dgraph", "Sets which schema to use in generation for fields. values are graphql or dgraph.")
 	flag.Parse()
-	/*
-		TODO: Fix proper handling if shit goes bad.
-	 */
-	defer func() {
-		if r := recover(); r != nil {
-			fmt.Println("Something went wrong! Resetting all files.")
-			panic(r)
-		}
-	}()
+
 	if conf.Input == "" || conf.Output == "" {
 		flag.Usage()
 		return

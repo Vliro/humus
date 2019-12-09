@@ -17,6 +17,10 @@ func (s *StaticQuery) SetVar(key string, val interface{}) *StaticQuery {
 	return s
 }
 
+func (s StaticQuery) names() []string {
+	return defaultName
+}
+
 //process the query in order to send to DGraph.
 func (s StaticQuery) process() (string, error) {
 	return s.Query, nil

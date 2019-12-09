@@ -1,9 +1,6 @@
 package gen
 
 import (
-	"encoding/json"
-	jsoniter "github.com/json-iterator/go"
-	"github.com/mailru/easyjson"
 	"testing"
 )
 
@@ -17,7 +14,7 @@ func TestReset (t *testing.T) {
 		return
 	}
 }
-
+/*
 func BenchmarkFast(b *testing.B) {
 	var c Comment
 	c.Text = "swag"
@@ -57,4 +54,4 @@ func BenchmarkJsoniter(b *testing.B) {
 		iter.Marshal(&c)
 	}
 	b.ReportAllocs()
-}
+}*/

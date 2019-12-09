@@ -16,3 +16,7 @@
 # Dependency directories (remove the comment below to include it)
 # vendor/
 
+
+testing/models_easyjson.go
+
+.idea/

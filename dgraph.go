@@ -571,7 +571,7 @@ func (t *Txn) query(ctx context.Context, q Query, objs []interface{}) error {
 		log.Printf("Query output: %s", string(resp.Json))
 	}
 	//This deserializes using reflect.
-	err = HandleResponseFast(resp.Json, objs, q.names())
+	err = handleResponse(resp.Json, objs, q.names())
 	//TODO: Ignore this error for now.
 	if _, ok := err.(*time.ParseError); ok {
 		return nil

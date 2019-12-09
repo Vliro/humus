@@ -1,3 +1,8 @@
+type Error {
+Error.message : string  
+Error.errorType : string  
+Error.time : datetime  
+}
 type Post {
 Post.text : string  
 Post.datePublished : datetime  
@@ -14,16 +19,11 @@ type User {
 User.name : string  
 User.email : string  
 }
-type Error {
-Error.message : string  
-Error.errorType : string  
-Error.time : datetime  
-}
+<Post.text>: string @index(hash)  . 
+<Post.datePublished>: datetime  . 
 <Question.title>: string @index(hash)  . 
 <Question.from>: uid  . 
 <Question.comments>: [uid]  . 
-<Post.text>: string @index(hash)  . 
-<Post.datePublished>: datetime  . 
 <Comment.from>: uid  . 
 <User.name>: string @index(hash)  . 
 <User.email>: string  . 

@@ -10,12 +10,17 @@ import (
 
 
 type Config struct {
+	//Deprecated.
 	State string
+	//Input directory.
 	Input string
+	//Output directory.
 	Output string
+	//Package name.
 	Package string
+	//Whether to generate the //easyjson:json preamble.
+	EasyJson bool
 }
-var conf *Config
 var parseState string
 
 //converts graphql -> go

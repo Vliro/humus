@@ -15,6 +15,7 @@ var _ humus.Fields
 var _ = strconv.IntSize
 
 //Created from a GraphQL interface.
+//easyjson:json
 type Post struct {
 	//This line declares basic properties for a database node.
 	humus.Node
@@ -117,6 +118,7 @@ func (s *PostScalars) Fields() humus.FieldList {
 }
 
 //End of model.template
+//easyjson:json
 type Question struct {
 	//This line declares basic properties for a database node.
 	humus.Node
@@ -235,6 +237,7 @@ func (s *QuestionScalars) Fields() humus.FieldList {
 }
 
 //End of model.template
+//easyjson:json
 type Comment struct {
 	//This line declares basic properties for a database node.
 	humus.Node
@@ -346,6 +349,7 @@ func (s *CommentScalars) Fields() humus.FieldList {
 }
 
 //End of model.template
+//easyjson:json
 type User struct {
 	//This line declares basic properties for a database node.
 	humus.Node
@@ -449,6 +453,7 @@ func (s *UserScalars) Fields() humus.FieldList {
 }
 
 //End of model.template
+//easyjson:json
 type Error struct {
 	//This line declares basic properties for a database node.
 	humus.Node

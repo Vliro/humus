@@ -36,14 +36,14 @@ type User {
 ```
 # Generate structs
 ```go
-...
+//...
 type Post struct {  
    //This line declares basic properties for a database node.  
   humus.Node  
   Text          string `json:"Post.text,omitempty"`  
   DatePublished *time.Time `json:"Post.datePublished,omitempty"`  
 }
-...
+//...
 ```
 # Run a query
 ```go

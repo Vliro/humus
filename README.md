@@ -1,3 +1,9 @@
+# Get started
+
+```
+go get github.com/Vliro/humus/gen
+```
+
 # Specify a schema
 
 ```
@@ -15,7 +21,12 @@ type User {
     name: String!  
 }
 ```
-# Generate a schema
+# Generate code
+
+```shell script
+$GOPATH/bin/gen -input=folder_with_graphql_files -output=$OUTPUTFOLDER
+```
+
 ```
 type Post {  
     Post.text : string    
@@ -35,6 +46,7 @@ type User {
 <User.name>: string  . 
 ```
 # Generate structs
+Code below is an extract from the generated code.
 ```go
 //...
 type Question struct {
@@ -49,6 +61,7 @@ type Question struct {
 //...
 ```
 # Run a query
+Run an example query.
 ```go
 //Gets question top level values as well as the edge Question.from.
 var getFields = QuestionFields.Sub(QuestionFrom, UserFields)
@@ -62,5 +75,11 @@ func GetAllQuestions() ([]*Question, error) {
 }
 ```
 
-# Learn
-Read the testing folder and the (work in progress) wiki for exact information.
+# Understand the code
+
+gen is the folder containing all code pertaining to generating Go code from GraphQL specifications.
+testing contains all test code.
+//WIP examples contains example usages of the library.
+
+All code is documented over at Godoc.
+https://godoc.org/github.com/Vliro/humus

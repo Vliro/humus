@@ -23,9 +23,6 @@ type Generator struct {
 	outputs map[string]*bytes.Buffer
 	//the active schema.
 	schema *schema.Schema
-	//metadata
-	//custom fields.
-	customs map[string]map[string]Customs
 	//To set states from certain function
 	States map[string]interface{}
 }
@@ -72,9 +69,6 @@ func (g *Generator) Run() {
 	inter = EnumCreator{}
 	g.writeHeader(g.outputs[EnumFileName])
 	inter.Create(g, g.outputs[EnumFileName])
-	inter = CustomCreator{}
-	g.writeHeader(g.outputs[CustomsFileName])
-	inter.Create(g, g.outputs[CustomsFileName])
 	g.finish()
 }
 
@@ -98,7 +92,7 @@ func (g *Generator) prepare() error {
 		}
 		if !info.IsDir() {
 			//This should be safe.
-			if fp := filepath.Ext(info.Name()); fp != ".graphql" && fp != ".toml" {
+			if fp := filepath.Ext(info.Name()); fp != ".graphql"{
 				return nil
 			}
 			if info.Name() == "dgraph_schema.graphql" {
@@ -112,12 +106,6 @@ func (g *Generator) prepare() error {
 				Use graphQL parser for the schema.
 			*/
 			//
-			if fp := filepath.Ext(info.Name()); fp == ".toml" {
-				if info.Name() == "custom.toml" {
-					g.customs = parseCustoms(bytes.NewReader(fd))
-					return nil
-				}
-			}
 			hasFile = true
 			resultingFile.Write(fd)
 			resultingFile.WriteByte('\n')
@@ -142,14 +130,6 @@ func (g *Generator) prepare() error {
 	*/
 	sc := graphql.MustParseSchema(resultingFile.String(), nil)
 	g.schema = sc.Schema
-
-	customs, err := ioutil.ReadFile(config.Input + "/custom.toml")
-	if len(customs) > 0 {
-		buf := new(bytes.Buffer)
-		g.outputs[CustomsFileName] = buf
-		tom := parseCustoms(bytes.NewReader(customs))
-		g.States[CustomsFileName] = tom
-	}
 	return nil
 }
 

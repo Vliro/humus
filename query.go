@@ -176,7 +176,7 @@ type GeneratedQuery struct {
 	index int
 	//top level variable name
 	variable struct {
-		varName string
+		varName  string
 		varQuery bool
 	}
 	//Whether to allow untagged language.
@@ -327,7 +327,7 @@ func (q *GeneratedQuery) create(sb *strings.Builder) (string, error) {
 		sb.WriteString(string(v))
 	}
 	sb.WriteByte('{')
-	var parentBuf = make(unsafeSlice, 0, 64)
+	var parentBuf = make([]byte, 0, 64)
 	for _, field := range q.fields.Get() {
 		if len(field.Name) > 64 {
 			//This code should pretty much never execute as a predicate is rarely this large.

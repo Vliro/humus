@@ -174,8 +174,8 @@ type AggregateType string
 
 //Types of aggregations.
 const (
-	Min   AggregateType = "min"
-	Sum     AggregateType = "sum"
+	Min AggregateType = "min"
+	Sum AggregateType = "sum"
 	Max AggregateType = "max"
 	Avg AggregateType = "avg"
 )
@@ -295,9 +295,9 @@ func MakeField(name Predicate, meta FieldMeta) Field {
 // while the private counterpart assumes the validity.
 // Returns whether this field is a facet field.
 // Parent is in-fact the current field name from the previous level.
-func (f *Field) create(q *GeneratedQuery, parent unsafeSlice, sb *strings.Builder) error {
+func (f *Field) create(q *GeneratedQuery, parent []byte, sb *strings.Builder) error {
 	//If a field is an object and has no fields do not use it.
-	val, ok := q.modifiers[parent.pred()]
+	val, ok := q.modifiers[Predicate(parent)]
 	//Not star wars, just if fields have to be forced from external modifiers.
 	var forceFields = ok && val.hasModifier(modifierGroupBy)
 	/*

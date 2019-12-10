@@ -24,9 +24,9 @@ func (m SingleMutation) Cond() string {
 }
 
 func (m SingleMutation) mutate() ([]byte, error) {
-	//panic("do not process a single mutation")
+	//panic("do not Process a single mutation")
 	if m.Object == nil {
-		return nil, errors.New("nil value supplied to process")
+		return nil, errors.New("nil value supplied to Process")
 	}
 	m.Object.Recurse()
 	var b []byte
@@ -34,7 +34,7 @@ func (m SingleMutation) mutate() ([]byte, error) {
 	case MutateSet:
 		if val, ok := m.Object.(Saver); ok {
 			if val == nil {
-				return nil, errors.New("nil value supplied to process")
+				return nil, errors.New("nil value supplied to Process")
 			}
 			b, _ = json.Marshal(val.Save())
 		} else {
@@ -43,7 +43,7 @@ func (m SingleMutation) mutate() ([]byte, error) {
 	case MutateDelete:
 		if val, ok := m.Object.(Deleter); ok {
 			if val == nil {
-				return nil, errors.New("nil value supplied to process")
+				return nil, errors.New("nil value supplied to Process")
 			}
 			b, _ = json.Marshal(val.Delete())
 		} else {
@@ -82,14 +82,14 @@ func (m *MutationQuery) mutate() ([]byte, error) {
 		case MutateSet:
 			if val, ok := v.(Saver); ok {
 				if val == nil {
-					return nil, errors.New("nil value supplied to process")
+					return nil, errors.New("nil DNode supplied to Process in mutationQuery")
 				}
 				m.Values[k] = val.Save()
 			}
 		case MutateDelete:
 			if val, ok := v.(Deleter); ok {
 				if val == nil {
-					return nil, errors.New("nil value supplied to process")
+					return nil, errors.New("nil DNode supplied to Process in mutationQuery")
 				}
 				m.Values[k] = val.Delete()
 			}

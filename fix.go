@@ -21,8 +21,8 @@ func (s StaticQuery) names() []string {
 	return defaultName
 }
 
-//process the query in order to send to DGraph.
-func (s StaticQuery) process() (string, error) {
+//Process the query in order to send to DGraph.
+func (s StaticQuery) Process() (string, error) {
 	return s.Query, nil
 }
 

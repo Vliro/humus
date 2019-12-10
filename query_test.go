@@ -12,16 +12,14 @@ import (
 As of right now the tests are performed against static strings.
 Eventually the tests shall run against a dgraph instance with data provided.
 This will be done before it is released.
- */
-
-
+*/
 
 type testQuerier struct {
 	expected string
 }
 
 func (t testQuerier) Query(c context.Context, q Query, vals ...interface{}) error {
-	qu, err := q.process()
+	qu, err := q.Process()
 	if qu != t.expected {
 		fmt.Println(qu)
 		return errors.New("query failed")
@@ -42,7 +40,7 @@ func (t testQuerier) Commit(context.Context) error {
 }
 
 func newTest(expected string) testQuerier {
-	return testQuerier{expected:expected}
+	return testQuerier{expected: expected}
 }
 
 func TestBigQuery(t *testing.T) {
@@ -53,14 +51,15 @@ func TestBigQuery(t *testing.T) {
 	q.Count(CountFirst, ErrorErrorTypeField, 1)
 	q.Count(CountAfter, ErrorMessageField, 1)
 	q.Order(Ascending, ErrorMessageField, ErrorTimeField)
-	q.Count(CountFirst, ErrorMessageField + ErrorMessageField, 1)
-	//q.Agg(TypeSum, ErrorMessageField, "test")
+	q.Count(CountFirst, ErrorMessageField+ErrorMessageField, 1)
+	q.Agg(Sum, ErrorMessageField, "test", "")
 	q.Directive(Cascade)
 	q.Directive(Normalize)
 	q.Filter(MakeFilter(Equals).PredValue(ErrorMessageField, "Test"), ErrorMessageField)
 	q.Filter(MakeFilter(Equals).PredValue(ErrorMessageField, "Test"), ErrorErrorTypeField)
 	q.Facets(ErrorMessageField)
-	_, _ = q.process()
+	str, _ := q.Process()
+	fmt.Println(str)
 }
 
 var fields = ErrorFields.Sub(ErrorMessageField, ErrorFields)
@@ -74,8 +73,8 @@ func TestQuery(t *testing.T) {
 	q.Count(CountFirst, ErrorErrorTypeField, 1)
 	q.Count(CountAfter, ErrorMessageField, 1)
 	q.Order(Ascending, ErrorMessageField, ErrorTimeField)
-	q.Count(CountFirst, ErrorMessageField + ErrorMessageField, 1)
-	q.Agg(TypeSum, ErrorMessageField, "varr","test")
+	q.Count(CountFirst, ErrorMessageField+ErrorMessageField, 1)
+	q.Agg(Sum, ErrorMessageField, "varr", "test")
 	q.Variable("varr", ErrorMessageField, "ErrorTimeField", false)
 	q.Order(Ascending, "", ErrorTimeField)
 	q.Directive(Cascade)
@@ -99,14 +98,14 @@ func BenchmarkQuery(b *testing.B) {
 		q.Count(CountFirst, ErrorErrorTypeField, 1)
 		q.Count(CountAfter, ErrorMessageField, 1)
 		q.Order(Ascending, ErrorMessageField, ErrorTimeField)
-		q.Count(CountFirst, ErrorMessageField + ErrorMessageField, 1)
-		q.Agg(TypeSum, ErrorMessageField, "varr", "swag")
+		q.Count(CountFirst, ErrorMessageField+ErrorMessageField, 1)
+		q.Agg(Sum, ErrorMessageField, "varr", "swag")
 		q.Directive(Cascade)
 		q.Directive(Normalize)
 		q.Filter(MakeFilter(Equals).PredValue(ErrorMessageField, "Test"), ErrorMessageField)
 		q.Filter(MakeFilter(Equals).PredValue(ErrorMessageField, "Test"), ErrorErrorTypeField)
 		q.Facets(ErrorMessageField)
-		_, _ = q.process()
+		_, _ = q.Process()
 	}
 	b.ReportAllocs()
 }
@@ -118,7 +117,7 @@ const staticString = `query {
 func BenchmarkStaticQuery(b *testing.B) {
 	for i := 0; i < b.N; i++ {
 		var stat = NewStaticQuery(fmt.Sprintf(staticString, "0x2"))
-		_,_ = stat.process()
+		_, _ = stat.Process()
 	}
 	b.ReportAllocs()
 }
@@ -130,7 +129,7 @@ func TestQueryFilter(t *testing.T) {
 	q.Filter(MakeFilter(Equals).PredValue(ErrorTimeField, "testFilter"), "")
 	q.Order(Ascending, "", ErrorTimeField)
 	q.Count(CountFirst, "", 5)
-	str, err := q.process()
+	str, err := q.Process()
 	if err != nil {
 		t.Fatal()
 	}
@@ -150,7 +149,7 @@ func TestQueries(t *testing.T) {
 	qu.Filter(MakeFilter(Equals).PredValue(ErrorTimeField, "filterOne"), ErrorTimeField)
 	qu.Order(Ascending, "", ErrorTimeField)
 	qu.Count(CountFirst, "", 5)
-	str,err := list.process()
+	str, err := list.Process()
 	if err != nil {
 		t.Fail()
 		return
@@ -181,6 +180,7 @@ func TestQueries(t *testing.T) {
 		return
 	}
 }
+
 //should average about 4 µs per query generation and 40 allocations.
 //can it be better?
 func BenchmarkQueries(b *testing.B) {
@@ -197,7 +197,7 @@ func BenchmarkQueries(b *testing.B) {
 		qu.Filter(MakeFilter(Equals).PredValue(ErrorTimeField, "testFilterOne"), "")
 		qu.Order(Ascending, "", ErrorTimeField)
 		qu.Count(CountFirst, "", 5)
-		_,_ = list.process()
+		_, _ = list.Process()
 	}
 	b.ReportAllocs()
 }
@@ -205,13 +205,13 @@ func BenchmarkQueries(b *testing.B) {
 func TestVariable(t *testing.T) {
 	const expected = "query{q(func: has(<Error.message>),first:5,orderasc: Error.time){Error.message Error.errorType Error.time  test : math(p)  p as ErrorTimeField  uid}}"
 	q := NewQuery(ErrorFields)
-	q.Variable("test", "", "math(p)",true)
-	q.Variable("p", "","ErrorTimeField", false)
+	q.Variable("test", "", "math(p)", true)
+	q.Variable("p", "", "ErrorTimeField", false)
 	q.Function(Has).Pred(ErrorMessageField)
 	//q.Filter(MakeFilter(Equals).PredValue(ErrorTimeField, "testFilter"), "")
 	q.Order(Ascending, "", ErrorTimeField)
 	q.Count(CountFirst, "", 5)
-	str, err := q.process()
+	str, err := q.Process()
 	if err != nil {
 		t.Fail()
 		return
@@ -226,7 +226,7 @@ func TestMultipleUid(t *testing.T) {
 	q := NewQuery(ErrorFields)
 	q.Function(FunctionUid).Values("0x1", "0x2")
 
-	str,_ := q.process()
+	str, _ := q.Process()
 	fmt.Println(str)
 }
 

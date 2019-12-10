@@ -6,7 +6,8 @@ import (
 )
 
 
-//The common node type that is inherited. This differs from the DNode which is an interface.
+//The common node type that is inherited. This differs from the DNode which is an interface while
+//node is an embedded struct containing basic dgraph properties.
 type Node struct {
 	Uid  UID      `json:"uid,omitempty"`
 	Type []string `json:"dgraph.type,omitempty"`
@@ -74,21 +75,7 @@ func GetByPredicate(pred Predicate, fields Fields, values ...interface{}) *Gener
 	q := NewQuery(fields).Function(Equals).PredValues(pred, values)
 	return q
 }
-/*
-func AddScalarList(origin DNode, predicate string, value ...interface{}) SingleMutation {
-	var mapper = make(Mapper)
-	mapper.SetUID(origin.UID())
-	mapper[predicate] = value
-	return CreateMutation(mapper, MutateSet)
-}
 
-func AddToList(origin DNode, predicate string, child DNode) SingleMutation {
-	var mapper = make(Mapper)
-	mapper.SetUID(origin.UID())
-	mapper.SetArray(predicate, false, child)
-	return CreateMutation(mapper, MutateSet)
-}
- */
 func writeInt(i int64, sb *strings.Builder) {
 	var buf [8]byte
 	b := strconv.AppendInt(buf[:0], i, 10)

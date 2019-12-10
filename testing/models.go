@@ -33,11 +33,14 @@ const (
 
 //SaveValues saves the node values that
 //do not contain any references to other objects.
+//Not needed for now.
+/*
 func (r *Post) SaveValues(ctx context.Context, txn *humus.Txn) error {
-	mut := humus.CreateMutation(r.Values(), humus.MutateSet)
-	_, err := txn.Mutate(ctx, mut)
-	return err
+    mut := humus.CreateMutation(r.Values(), humus.MutateSet)
+    _,err := txn.Mutate(ctx, mut)
+    return err
 }
+*/
 func (r *Post) GetType() []string {
 	return _PostTypes
 }
@@ -109,10 +112,6 @@ func (s *PostScalars) Values() humus.DNode {
 	return s
 }
 
-func (s *PostScalars) MapValues() humus.Mapper {
-	panic("PostScalars called, use the original one instead")
-}
-
 func (s *PostScalars) Fields() humus.FieldList {
 	return PostFields
 }
@@ -143,11 +142,14 @@ const (
 
 //SaveValues saves the node values that
 //do not contain any references to other objects.
+//Not needed for now.
+/*
 func (r *Question) SaveValues(ctx context.Context, txn *humus.Txn) error {
-	mut := humus.CreateMutation(r.Values(), humus.MutateSet)
-	_, err := txn.Mutate(ctx, mut)
-	return err
+    mut := humus.CreateMutation(r.Values(), humus.MutateSet)
+    _,err := txn.Mutate(ctx, mut)
+    return err
 }
+*/
 func (r *Question) GetType() []string {
 	return _QuestionTypes
 }
@@ -228,10 +230,6 @@ func (s *QuestionScalars) Values() humus.DNode {
 	return s
 }
 
-func (s *QuestionScalars) MapValues() humus.Mapper {
-	panic("QuestionScalars called, use the original one instead")
-}
-
 func (s *QuestionScalars) Fields() humus.FieldList {
 	return QuestionFields
 }
@@ -258,11 +256,14 @@ const (
 
 //SaveValues saves the node values that
 //do not contain any references to other objects.
+//Not needed for now.
+/*
 func (r *Comment) SaveValues(ctx context.Context, txn *humus.Txn) error {
-	mut := humus.CreateMutation(r.Values(), humus.MutateSet)
-	_, err := txn.Mutate(ctx, mut)
-	return err
+    mut := humus.CreateMutation(r.Values(), humus.MutateSet)
+    _,err := txn.Mutate(ctx, mut)
+    return err
 }
+*/
 func (r *Comment) GetType() []string {
 	return _CommentTypes
 }
@@ -340,10 +341,6 @@ func (s *CommentScalars) Values() humus.DNode {
 	return s
 }
 
-func (s *CommentScalars) MapValues() humus.Mapper {
-	panic("CommentScalars called, use the original one instead")
-}
-
 func (s *CommentScalars) Fields() humus.FieldList {
 	return CommentFields
 }
@@ -368,11 +365,14 @@ const (
 
 //SaveValues saves the node values that
 //do not contain any references to other objects.
+//Not needed for now.
+/*
 func (r *User) SaveValues(ctx context.Context, txn *humus.Txn) error {
-	mut := humus.CreateMutation(r.Values(), humus.MutateSet)
-	_, err := txn.Mutate(ctx, mut)
-	return err
+    mut := humus.CreateMutation(r.Values(), humus.MutateSet)
+    _,err := txn.Mutate(ctx, mut)
+    return err
 }
+*/
 func (r *User) GetType() []string {
 	return _UserTypes
 }
@@ -444,10 +444,6 @@ func (s *UserScalars) Values() humus.DNode {
 	return s
 }
 
-func (s *UserScalars) MapValues() humus.Mapper {
-	panic("UserScalars called, use the original one instead")
-}
-
 func (s *UserScalars) Fields() humus.FieldList {
 	return UserFields
 }
@@ -474,11 +470,14 @@ const (
 
 //SaveValues saves the node values that
 //do not contain any references to other objects.
+//Not needed for now.
+/*
 func (r *Error) SaveValues(ctx context.Context, txn *humus.Txn) error {
-	mut := humus.CreateMutation(r.Values(), humus.MutateSet)
-	_, err := txn.Mutate(ctx, mut)
-	return err
+    mut := humus.CreateMutation(r.Values(), humus.MutateSet)
+    _,err := txn.Mutate(ctx, mut)
+    return err
 }
+*/
 func (r *Error) GetType() []string {
 	return _ErrorTypes
 }
@@ -551,10 +550,6 @@ type ErrorScalars struct {
 
 func (s *ErrorScalars) Values() humus.DNode {
 	return s
-}
-
-func (s *ErrorScalars) MapValues() humus.Mapper {
-	panic("ErrorScalars called, use the original one instead")
 }
 
 func (s *ErrorScalars) Fields() humus.FieldList {

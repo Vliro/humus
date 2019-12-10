@@ -17,6 +17,10 @@ func handleResponse(res []byte, inp []interface{}, names []string) error {
 	//This uses zero memory allocations to traverse the query tree.
 	return jsonparser.ObjectEach(res, func(key []byte, value []byte, _ jsonparser.ValueType, _ int) error {
 		i++
+		//Skip empty values.
+		if string(value) == "[]" {
+			return nil
+		}
 		if string(key) != names[i] {
 			return errors.New(fmt.Sprintf("mismatch between query name and key: %s : %s", string(key), names[i]))
 		}

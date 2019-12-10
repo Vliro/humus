@@ -43,15 +43,17 @@ func (v variable) canApply(mt modifierSource) bool {
 }
 
 func (v variable) apply(root *GeneratedQuery, meta FieldMeta, mt modifierSource, sb *strings.Builder) error {
-	if v.name == "" || v.value == "" {
+	if v.value == "" {
 		return errors.New("missing values in graphVariable")
 	}
 	sb.WriteByte(' ')
 	sb.WriteString(v.name)
-	if v.alias {
-		sb.WriteString(" : ")
-	} else {
-		sb.WriteString(" as ")
+	if v.name != "" {
+		if v.alias {
+			sb.WriteString(" : ")
+		} else {
+			sb.WriteString(" as ")
+		}
 	}
 	sb.WriteString(v.value)
 	sb.WriteByte(' ')

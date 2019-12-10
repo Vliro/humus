@@ -4,6 +4,7 @@ import (
 	"context"
 	"crypto/tls"
 	"crypto/x509"
+	"errors"
 	"fmt"
 	"github.com/dgraph-io/dgo"
 	"github.com/dgraph-io/dgo/protos/api"
@@ -394,8 +395,8 @@ func (d *DB) logError(ctx context.Context, err error) {
 
 //Allows it to be used in Query.
 type Query interface {
-	//process the query type in order to send to the database.
-	process() (string, error)
+	//Process the query type in order to send to the database.
+	Process() (string, error)
 	//What type of query is this? Mutation(set/delete), regular query?
 	queryVars() map[string]string
 	//names returns the names(or keys) for this query.
@@ -519,7 +520,7 @@ func (t *Txn) Upsert(ctx context.Context, q Query, mutations ...Mutate) (*api.Re
 	if t.txn == nil {
 		return nil, Error(errTransaction)
 	}
-	b, err := q.process()
+	b, err := q.Process()
 	if err != nil {
 		return nil, Error(err)
 	}
@@ -552,9 +553,13 @@ func (t *Txn) Upsert(ctx context.Context, q Query, mutations ...Mutate) (*api.Re
 }
 
 func (t *Txn) query(ctx context.Context, q Query, objs []interface{}) error {
-	str, err := q.process()
+	str, err := q.Process()
 	if err != nil {
 		return err
+	}
+	names := q.names()
+	if len(names) != len(objs) {
+		return Error(errors.New("mismatched length between query amount and input interfaces"))
 	}
 	if t.db.c.LogQueries {
 		log.Printf("Query input: %s \n", str)
@@ -571,8 +576,8 @@ func (t *Txn) query(ctx context.Context, q Query, objs []interface{}) error {
 		log.Printf("Query output: %s", string(resp.Json))
 	}
 	//This deserializes using reflect.
-	err = handleResponse(resp.Json, objs, q.names())
-	//TODO: Ignore this error for now.
+	err = handleResponse(resp.Json, objs, names)
+	//TODO: Ignore this error for now. Some oddity in dgraph.
 	if _, ok := err.(*time.ParseError); ok {
 		return nil
 	}
@@ -603,11 +608,6 @@ func (t *Txn) QueryAsync(ctx context.Context, q Query, objs ...interface{}) chan
 //Query executes the GraphQL+- query.
 //If q is a mutation query the mutation objects are supplied in q and not in objs.
 func (t *Txn) Query(ctx context.Context, q Query, objs ...interface{}) error {
-	//if t.txn == nil {
-	//	return Error(errTransaction)
-	//}
-	//Allow thread-safe appending of queries as might run queries.
-	//TODO: Right now this is only for storing the queries. Running queries in parallel that rely on each other is very much a race condition.
 	t.Lock()
 	defer t.Unlock()
 	t.Queries = append(t.Queries, q)

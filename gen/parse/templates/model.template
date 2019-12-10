@@ -6,11 +6,14 @@ const (
 )
 //SaveValues saves the node values that
 //do not contain any references to other objects.
+//Not needed for now.
+/*
 func (r *{{.Name}}) SaveValues(ctx context.Context, txn *humus.Txn) error {
     mut := humus.CreateMutation(r.Values(), humus.MutateSet)
     _,err := txn.Mutate(ctx, mut)
     return err
 }
+*/
 func (r *{{.Name}}) GetType() []string {
     return _{{.Name}}Types
 }
@@ -99,10 +102,6 @@ type {{.Name}}Scalars struct {
 
 func (s *{{.Name}}Scalars) Values() humus.DNode {
     return s
-}
-
-func (s *{{.Name}}Scalars) MapValues() humus.Mapper {
-    panic("{{.Name}}Scalars called, use the original one instead")
 }
 
 func (s *{{.Name}}Scalars) Fields() humus.FieldList {

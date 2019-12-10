@@ -31,6 +31,7 @@ type Fields interface {
 	//Len is the length of the fields.
 	Len() int
 }
+
 //Select selects a subset of fields and returns a new list
 //keeping all valid meta.
 func Select(sch SchemaList, names ...Predicate) Fields {
@@ -56,7 +57,7 @@ func (f FieldList) Get() []Field {
 //Select allows you to perform selection of fields early, at init.
 //This removes the Ignore meta from any field selected to allow password fields.
 func (f FieldList) Select(names ...Predicate) Fields {
-	var newList NewList = make(NewList, len(names))
+	var newList = make(NewList, len(names))
 	index := 0
 loop:
 	for _, v := range names {
@@ -154,14 +155,6 @@ func (f NewList) Sub(name Predicate, fl Fields) Fields {
 	return f
 }
 
-/*func fields(sch SchemaList, names ...string) NewList{
-	var ret = make([]Field, len(names))
-	for k,v := range names {
-		val := sch[v]
-		ret[k] = val
-	}
-	return ret
-}*/
 //Facet adds a field of type facet.
 func (f NewList) Add(fi Field) Fields {
 	return append(f, fi)
@@ -175,14 +168,16 @@ const (
 	CountOffset CountType = "offset"
 	CountAfter  CountType = "after"
 )
-//AggregateType simply refers to all types of aggregation.
+
+//AggregateType simply refers to all types of aggregation as specified in the query docs.
 type AggregateType string
 
+//Types of aggregations.
 const (
-	TypeCount AggregateType = "count"
-	TypeSum   AggregateType = "sum"
-	TypeVar   AggregateType = "var"
-	TypeVal   AggregateType = "val"
+	Min   AggregateType = "min"
+	Sum     AggregateType = "sum"
+	Max AggregateType = "max"
+	Avg AggregateType = "avg"
 )
 
 type pagination struct {
@@ -219,7 +214,7 @@ func (f FieldMeta) Lang() bool {
 }
 
 func (f FieldMeta) List() bool {
-	return f&MetaLang > 0
+	return f&MetaList > 0
 }
 
 func (f FieldMeta) Reverse() bool {
@@ -236,6 +231,10 @@ func (f FieldMeta) Facet() bool {
 
 func (f FieldMeta) Empty() bool {
 	return f&MetaEmpty > 0
+}
+
+func (f FieldMeta) Ignore() bool {
+	return f&MetaIgnore > 0 || f&MetaFacet > 0
 }
 
 const (
@@ -298,13 +297,18 @@ func MakeField(name Predicate, meta FieldMeta) Field {
 // Parent is in-fact the current field name from the previous level.
 func (f *Field) create(q *GeneratedQuery, parent unsafeSlice, sb *strings.Builder) error {
 	//If a field is an object and has no fields do not use it.
+	val, ok := q.modifiers[parent.pred()]
+	//Not star wars, just if fields have to be forced from external modifiers.
+	var forceFields = ok && val.hasModifier(modifierGroupBy)
+	/*
+		If this is a directed edge without any fields as well as no field-generating modifiers, skip it.
+	*/
 	if f.Meta.Object() && ((f.Fields != nil && f.Fields.Len() == 0) || f.Fields == nil) {
-		return nil
+		if !forceFields {
+			return nil
+		}
 	}
-	if f.Meta.Facet() {
-		return nil
-	}
-	if f.Meta&MetaIgnore > 0 {
+	if f.Meta.Ignore() {
 		return nil
 	}
 	if f.Meta.Lang() {
@@ -317,7 +321,7 @@ func (f *Field) create(q *GeneratedQuery, parent unsafeSlice, sb *strings.Builde
 	} else {
 		sb.WriteString(string(f.Name))
 	}
-	val, ok := q.modifiers[parent.pred()]
+	//First part of modifiers, non-field generating.
 	if ok {
 		//var direction bool
 		var curType modifierType
@@ -362,7 +366,7 @@ func (f *Field) create(q *GeneratedQuery, parent unsafeSlice, sb *strings.Builde
 			curType = newType
 		}
 	}
-	if f.Fields != nil && f.Fields.Len() > 0 {
+	if forceFields || (f.Fields != nil && f.Fields.Len() > 0) {
 		if f.Meta.Lang() {
 			return errors.New("cannot have language meta and children fields")
 		}
@@ -382,7 +386,7 @@ func (f *Field) create(q *GeneratedQuery, parent unsafeSlice, sb *strings.Builde
 				}
 			}
 		}
-		if val, ok := q.modifiers[parent.pred()]; ok {
+		if ok {
 			for _, v := range val {
 				if v.priority() > modifierAggregate {
 					break
@@ -393,7 +397,10 @@ func (f *Field) create(q *GeneratedQuery, parent unsafeSlice, sb *strings.Builde
 				}
 			}
 		}
-		sb.WriteString(" uid" + tokenRB)
+		if !forceFields {
+			sb.WriteString(" uid")
+		}
+		sb.WriteByte('}')
 		//Always add the uid field. I don't think this will be very expensive in terms of dgraph performance.
 	}
 	return nil

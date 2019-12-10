@@ -1,6 +1,7 @@
 package humus
 
 import (
+	"errors"
 	"sort"
 	"strconv"
 	"strings"
@@ -61,8 +62,6 @@ const (
 	tokenFilter = "@filter"
 )
 
-//TODO: These have not been tested yet. Only GeneratedQuery.
-//TODO: Should this allow arbitrary Query interfaces and type switch?
 type Queries struct {
 	q          []*GeneratedQuery
 	varCounter func() int
@@ -71,14 +70,25 @@ type Queries struct {
 }
 
 //Satisfy the Query interface.
-func (q *Queries) process() (string, error) {
+func (q *Queries) Process() (string, error) {
 	return q.create()
 }
 
 func (q *Queries) names() []string {
-	ret := make([]string, len(q.q))
-	for k, v := range q.q {
-		ret[k] = "q" + strconv.Itoa(v.index)
+	c := len(q.q)
+	for _, v := range q.q {
+		if v.variable.varQuery {
+			c--
+		}
+	}
+	ret := make([]string, c)
+	count := 0
+	for _, v := range q.q {
+		if v.variable.varQuery {
+			continue
+		}
+		ret[count] = "q" + strconv.Itoa(v.index)
+		count++
 	}
 	return ret
 }
@@ -116,9 +126,13 @@ func (q *Queries) create() (string, error) {
 		final.WriteString(str)
 	}
 	final.WriteByte(')')
-	for k, qu := range q.q {
+	count := 0
+	for _, qu := range q.q {
 		final.WriteByte('{')
-		qu.index = k
+		if !qu.variable.varQuery {
+			qu.index = count
+			count++
+		}
 		_, err := qu.create(&final)
 		if err != nil {
 			return "", err
@@ -141,9 +155,11 @@ type GeneratedQuery struct {
 	//Since all queries have a graph function this is an embedded struct.
 	//(It is embedded for convenient access as well as unnecessary pointer traversal).
 	function
-	//If it is a var query. Deprecated for now
-	//v bool
-
+	//top level variable name
+	variable struct {
+		varQuery bool
+		varName string
+	}
 	//List of modifiers, i.e. order, pagination etc.
 	modifiers map[Predicate]modifierList
 	//Builder for GraphQL variables.
@@ -197,7 +213,7 @@ func NewQueries() *Queries {
 	return qu
 }
 
-func (q *GeneratedQuery) process() (string, error) {
+func (q *GeneratedQuery) Process() (string, error) {
 	return q.create(nil)
 }
 
@@ -224,8 +240,11 @@ func (q *GeneratedQuery) single() bool {
 
 }
 func (q *GeneratedQuery) names() []string {
-	return defaultName
+	if q.variable.varQuery {
+		return nil
+	}
 	if q.single() {
+		return defaultName
 	}
 	return []string{"q" + strconv.Itoa(q.index)}
 }
@@ -242,7 +261,12 @@ func (q *GeneratedQuery) create(sb *strings.Builder) (string, error) {
 	if err := q.function.check(q); err != nil {
 		return "", err
 	}
+	//Top level modifiers.
+	val, ok := q.modifiers[""]
 	//Single query.
+	if q.single() {
+		return "", errors.New("singular query with var set is invalid")
+	}
 	if q.single() {
 		vars := q.variables()
 		if vars == "" {
@@ -254,19 +278,25 @@ func (q *GeneratedQuery) create(sb *strings.Builder) (string, error) {
 		}
 	}
 	//Write query header.
-	sb.WriteByte('q')
-	if q.index != 0 {
-		writeInt(int64(q.index), sb)
+	if q.variable.varQuery {
+		if q.variable.varName != "" {
+			sb.WriteString(q.variable.varName)
+			sb.WriteString(" as ")
+		}
+		sb.WriteString("var")
 	} else {
-		sb.WriteByte('0')
+		sb.WriteByte('q')
+		if q.index != 0 {
+			writeInt(int64(q.index), sb)
+		} else {
+			sb.WriteByte('0')
+		}
 	}
 	sb.WriteString(tokenLP + "func" + tokenColumn + tokenSpace)
 	err := q.function.create(q, sb)
 	if err != nil {
 		return "", err
 	}
-	//Top level modifiers.
-	val, ok := q.modifiers[""]
 	if ok {
 		//Two passes. Before and after parenthesis. That's just how it be.
 		sort.Sort(val)
@@ -351,13 +381,15 @@ func (q *GeneratedQuery) Count(t CountType, path Predicate, value int) *Generate
 	return q
 }
 
-//Agg adds aggregation on a value variable.
+//Agg adds aggregation on a value variable or a predicate.
 //Note that path here is the root level of the aggregation such that
-//empty path corresponds to top level aggregation.
+//empty path corresponds to top level aggregation, i.e. on the root node.
 //The variable represents which value to aggregate on and alias
 //is the alias for this aggregation.
-func (q *GeneratedQuery) Agg(typ AggregateType, path Predicate, variable string, alias string) *GeneratedQuery {
-	q.modifiers[path] = append(q.modifiers[path], AggregateValues{Type: typ, Alias: alias, Variable: variable})
+//isVariable defines whether or not to use 'val' in order to aggregate.
+//For more flexibility use the Variable function to allow arbitrary modifier.
+func (q *GeneratedQuery) Agg(typ AggregateType, path Predicate, value string, alias string) *GeneratedQuery {
+	q.modifiers[path] = append(q.modifiers[path], aggregateValues{Type: typ, Alias: alias, Variable: value})
 	return q
 }
 
@@ -391,17 +423,30 @@ func (q *GeneratedQuery) variables() string {
 }
 
 //Variable adds a value variable of the form name as value.
+//It is arguably the most important function to add expressions
+//to a generated query as it allows you to add value variables,
+//count variables, alias variables etc.
 //Value can be anything from a math expression to a count.
 //Example: if name is test and value is math(p+q) then
 //result is a variable 'test as math(p+q)' at the path given by path.
 //isAlias simply means that rather than a value variable it is
 //test : math(p+q)
+//Variable is also used for specifying count! Omitting name means it will be fetched
+//as a regular field.
 func (q *GeneratedQuery) Variable(name string, path Predicate, value string, isAlias bool) *GeneratedQuery {
 	q.modifiers[path] = append(q.modifiers[path], variable{
 		name:  name,
 		value: value,
 		alias: isAlias,
 	})
+	return q
+}
+
+//Var sets q as a var query with the variable name name.
+//if name is empty it is just a basic var query.
+func (q *GeneratedQuery) Var(name string) *GeneratedQuery {
+	q.variable.varQuery = true
+	q.variable.varName = name
 	return q
 }
 
@@ -431,7 +476,7 @@ func (q *GeneratedQuery) registerVariable(typ varType, value string) string {
 
 //Static create a static query from the generated version.
 //Since this is performed at init, panic if the query
-//creation does not work. V
+//creation does not work.
 func (q *GeneratedQuery) Static() StaticQuery {
 	str, err := q.create(nil)
 	if err != nil {
@@ -480,4 +525,51 @@ func (q *GeneratedQuery) Value(v interface{}) *GeneratedQuery {
 func (q *GeneratedQuery) Values(v ...interface{}) *GeneratedQuery {
 	q.function.values(v)
 	return q
+}
+
+type Path struct {
+	p Predicate
+	q *GeneratedQuery
+}
+
+//OnPath returns an object for specifying modifiers on the same level.
+//Useful for constructing e.g. GroupBy when you need to specify multiple modifiers
+//on the same level.
+func (q *GeneratedQuery) Path(path Predicate) Path {
+	return Path{path, q}
+}
+
+func (p Path) Variable(name string, value string, isAlias bool) Path {
+	p.q.Variable(name, p.p, value, isAlias)
+	return p
+}
+
+func (p Path) Facets() Path {
+	p.q.Facets(p.p)
+	return p
+}
+
+func (p Path) Filter(f *Filter) Path {
+	p.q.Filter(f, p.p)
+	return p
+}
+
+func (p Path) Order(t OrderType, pred Predicate) Path {
+	p.q.Order(t, p.p, pred)
+	return p
+}
+
+func (p Path) Count(t CountType, val int) Path {
+	p.q.Count(t, p.p, val)
+	return p
+}
+
+func (p Path) Agg(typ AggregateType, variable string, name string) Path {
+	p.q.Agg(typ, p.p, variable, name)
+	return p
+}
+
+func (p Path) GroupBy(pred Predicate) Path {
+	p.q.GroupBy(p.p, pred)
+	return p
 }

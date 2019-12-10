@@ -136,16 +136,17 @@ func TestUpsertInsert(t *testing.T) {
 }
 
 //Example in getting a question. We only need the username field from the user so just select it.
-var questionFields = QuestionFields.Sub(QuestionFromField, UserFields.Select(UserNameField)).
+var questionFields = QuestionFields.
 	Sub(QuestionCommentsField, CommentFields.
 		Sub(CommentFromField, UserFields.Select(UserNameField)))
 
 func TestGet(t *testing.T) {
 	var q Question
 	var qu = humus.NewQueries()
+	quer := qu.NewQuery(questionFields).Function(humus.Equals).PredValues(QuestionTitleField, "First Question")
+	quer.Var("s")
 	qu.NewQuery(questionFields).Function(humus.Equals).PredValues(QuestionTitleField, "First Question")
-	qu.NewQuery(questionFields).Function(humus.Equals).PredValues(QuestionTitleField, "First Question")
-	err := db.Query(context.Background(), qu, &q, &q)
+	err := db.Query(context.Background(), qu, &q)
 	if err != nil {
 		t.Error(err)
 		return
@@ -154,4 +155,15 @@ func TestGet(t *testing.T) {
 		t.Fail()
 		return
 	}
+}
+
+func BenchmarkGetQuery(b *testing.B) {
+	for i := 0; i < b.N; i++ {
+		var qu = humus.NewQueries()
+		quer := qu.NewQuery(questionFields).Function(humus.Equals).PredValues(QuestionTitleField, "First Question")
+		quer.Var("s")
+		qu.NewQuery(questionFields).Function(humus.Equals).PredValues(QuestionTitleField, "First Question")
+		_, _ = qu.Process()
+	}
+	b.ReportAllocs()
 }

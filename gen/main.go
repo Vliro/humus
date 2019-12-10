@@ -13,6 +13,7 @@ func main() {
 	flag.StringVar(&conf.Input,"input", "", "Sets the root directory path for parsing SDL files.")
 	flag.StringVar(&conf.Output,"output", "", "Sets the root directory path for outputting go files.")
 	flag.StringVar(&conf.Package, "package", "gen", "Sets the package name in outputted files")
+	flag.BoolVar(&conf.EasyJson, "json", true, "Sets whether to generate easyjson preamble for code generation.")
 	flag.Parse()
 
 	if conf.Input == "" || conf.Output == "" {

@@ -50,13 +50,13 @@ type Question struct {
 ```
 # Run a query
 ```go
-//Gets question top level values as well as the edge Question.from
+//Gets question top level values as well as the edge Question.from.
 var getFields = QuestionFields.Sub(QuestionFrom, UserFields)
-
-func GetAllPosts() ([]*Post, error) {
-	var p []*Post
+//Get all questions in the database.
+func GetAllQuestions() ([]*Question, error) {
+	var p []*Question
 	var q = humus.NewQuery(getFields).
-		Function(humus.Type).Value("Post")
+		Function(humus.Type).Value("Question")
 	err := db.Query(context.Background(), q, &p)
 	return p, err
 }

@@ -155,32 +155,32 @@ type GeneratedQuery struct {
 	//Since all queries have a graph function this is an embedded struct.
 	//(It is embedded for convenient access as well as unnecessary pointer traversal).
 	function
-	//top level variable name
-	variable struct {
-		varQuery bool
-		varName string
-	}
-	//List of modifiers, i.e. order, pagination etc.
-	modifiers map[Predicate]modifierList
 	//Builder for GraphQL variables.
 	varBuilder strings.Builder
+	//Which directives to apply on this query, such as @cascade.
+	directives []Directive
+	//The list of fields used in this query.
+	fields Fields
+	//The overall language for this query.
+	language Language
+	//List of modifiers, i.e. order, pagination etc.
+	modifiers map[Predicate]modifierList
 	//Map for dealing with GraphQL variables. It is inherited in multi-query layout.
 	varMap map[string]string
 	//function for getting next query value in multi-query. It is also used
 	//to define whether it is a single query.
 	varFunc func() int
-	//The overall language for this query.
-	language Language
-	//Whether to allow untagged language.
-	strictLanguage bool
-	//Which directives to apply on this query, such as @cascade.
-	directives []Directive
-	//The list of fields used in this query.
-	fields Fields
 	//varCounter is used for single queries, to keep track of the next GraphQL variable to be assigned.
 	varCounter int
 	//For multiple queries. Used to keep track of the query name.
 	index int
+	//top level variable name
+	variable struct {
+		varName string
+		varQuery bool
+	}
+	//Whether to allow untagged language.
+	strictLanguage bool
 }
 
 //Facets sets @facets for the edge specified by path.
@@ -264,7 +264,7 @@ func (q *GeneratedQuery) create(sb *strings.Builder) (string, error) {
 	//Top level modifiers.
 	val, ok := q.modifiers[""]
 	//Single query.
-	if q.single() {
+	if q.single() && q.variable.varQuery {
 		return "", errors.New("singular query with var set is invalid")
 	}
 	if q.single() {
@@ -463,10 +463,7 @@ func (q *GeneratedQuery) registerVariable(typ varType, value string) string {
 		val = q.varCounter
 		q.varCounter++
 	}
-	var buf [9]byte
-	buf[0] = '$'
-	b := strconv.AppendInt(buf[:1], int64(val), 10)
-	key := string(b)
+	key := "$" + strconv.Itoa(val)
 	q.varBuilder.WriteString(key)
 	q.varBuilder.WriteByte(':')
 	q.varBuilder.WriteString(string(typ))

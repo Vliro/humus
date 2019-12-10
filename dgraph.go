@@ -41,7 +41,7 @@ type Config struct {
 	NodeCRT string
 	//NodeKey is the path for the NodeKey.
 	NodeKey string
-	//Other stuff.
+	//Log queries in stdout along their result.
 	LogQueries bool
 }
 
@@ -165,6 +165,7 @@ func (m Mapper) MapValues() Mapper {
 }
 
 //Set sets a singular regulation, i.e. 1-1.
+//If all uses saver interface or the entire object. Otherwise, only uid is used.
 func (m Mapper) Set(child Predicate, all bool, obj DNode) Mapper {
 	if checkNil(obj) {
 		//TODO: what should actually happen here?
@@ -268,6 +269,8 @@ func (d *DB) Schema() SchemaList {
 
 //OnAborted sets the function for which to call
 //when returned error is errAborted.
+//The query variable is either a Mutate or a Query and should
+//be handled accordingly.
 func (d *DB) OnAborted(f func(query interface{})) {
 	d.interruptFunc = f
 }
@@ -288,6 +291,8 @@ func (d *DB) NewTxn(readonly bool) *Txn {
 }
 
 //Select allows you to create a field list of only certain predicates.
+//It is recommended to select from generated field lists as it s run at init
+//and causes less overhead in queries.
 func (d *DB) Select(vals ...Predicate) Fields {
 	return Select(d.schema, vals...)
 }
@@ -304,6 +309,7 @@ func (d *DB) Query(ctx context.Context, q Query, objs ...interface{}) error {
 	return err
 }
 
+//QueryAsync runs the query and returns a channel with the result.
 func (d *DB) QueryAsync(ctx context.Context, q Query, objs ...interface{}) chan Result {
 	//No overhead so no point in deferring a discard in a function that does not make use of it.
 	t := d.NewTxn(true)
@@ -334,17 +340,18 @@ func (d *DB) SetValue(node DNode, pred Predicate, value interface{}) error {
 	}
 }
 
-
 //Commit is a noop.
 func (d *DB) Commit(ctx context.Context) error {
 	return nil
 	//Moot
 }
+
 //Discard is a noop.
 func (d *DB) Discard(ctx context.Context) error {
 	return nil
 	//Moot
 }
+
 //Mutate runs a mutation outside a transaction context. It immediately commits on success.
 func (d *DB) Mutate(ctx context.Context, m Mutate) (*api.Response, error) {
 	txn := d.NewTxn(false)
@@ -352,19 +359,17 @@ func (d *DB) Mutate(ctx context.Context, m Mutate) (*api.Response, error) {
 	defer txn.Discard(context.Background())
 	resp, err := txn.Mutate(ctx, m)
 	if err != nil {
-		fmt.Println(err)
-	} else {
-		_ = txn.Commit(ctx)
+		return nil, err
 	}
 	return resp, err
 }
 
-//Cleanup should be defered at the main function.
-func (d *DB) Cleanup(ctx context.Context) {
+//Cleanup should be deferred at the main function.
+func (d *DB) Cleanup() {
 	d.pool.StopWait()
 }
 
-//Simply performs the alter command.
+//Alter runs the command given by op to the dgraph instance.
 func (d *DB) Alter(ctx context.Context, op *api.Operation) error {
 	err := d.d.Alter(ctx, op)
 	return err
@@ -373,7 +378,7 @@ func (d *DB) Alter(ctx context.Context, op *api.Operation) error {
 func (d *DB) logError(ctx context.Context, err error) {
 	f := func() {
 		//Get the type name.
-		if strings.Contains(err.Error(), "connection refused") {
+		if strings.Contains(err.Error(), "connection") {
 			fmt.Println(err)
 			return
 		}
@@ -393,25 +398,33 @@ func (d *DB) logError(ctx context.Context, err error) {
 	return
 }
 
-//Allows it to be used in Query.
+//Query is the humus interface for a query. GeneratedQuery, Queries, StaticQuery all satisfy this
+//interface and is used in generating all necessary information
+//to send the query to the database.
 type Query interface {
 	//Process the query type in order to send to the database.
 	Process() (string, error)
 	//What type of query is this? Mutation(set/delete), regular query?
 	queryVars() map[string]string
-	//names returns the names(or keys) for this query.
+	//names returns the names(or keys) for this query in order for deserialization.
 	names() []string
 }
 
+//Mutate is the interface satisfied by all objects used in sending a json to the database.
+//Any mutation sent to the database satisfies this interface.
 type Mutate interface {
 	mutate() ([]byte, error)
 	Type() MutationType
 	Cond() string
 }
 
-//Init creates a new database connection using the given config
-//and schema.
-func Init(conf *Config, sch map[Predicate]Field) *DB {
+//Init is the entrypoint for humus. Init creates a a database object
+//using the connection information as specified in the config.
+//It uses the information specified to set up a grpc connection
+//to the specified destination with or without TLS.
+//It also sets the database schema using a pregenerated schema
+//from humus/gen. Any query or mutation to the database goes through this object.
+func Init(conf *Config, sch SchemaList) *DB {
 	if conf.Port < 1000 {
 		panic("graphinit: invalid dgraph port number")
 	}
@@ -419,7 +432,6 @@ func Init(conf *Config, sch map[Predicate]Field) *DB {
 	return db
 }
 
-//Takes a connection create of the form http://ip:port/
 func connect(conf *Config, sch SchemaList) *DB {
 	//TODO: allow multiple dgraph clusters.
 	var conn *grpc.ClientConn
@@ -577,7 +589,7 @@ func (t *Txn) query(ctx context.Context, q Query, objs []interface{}) error {
 	}
 	//This deserializes using reflect.
 	err = handleResponse(resp.Json, objs, names)
-	//TODO: Ignore this error for now. Some oddity in dgraph.
+	//TODO: Ignore this error for now. Some oddity in dgraph when time is defaulted.
 	if _, ok := err.(*time.ParseError); ok {
 		return nil
 	}

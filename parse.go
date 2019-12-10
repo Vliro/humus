@@ -15,9 +15,13 @@ import (
 func handleResponse(res []byte, inp []interface{}, names []string) error {
 	i := -1
 	//This uses zero memory allocations to traverse the query tree.
+	//Since we do not want to deserialize the query root but rather the containing values
+	//traversing the query root with zero allocations is a large benefit, making jsonparser
+	//a very useful library here.
+	//Alternatively you can deserialize into an arbitrary object and use that but it is a lot less efficient.
 	return jsonparser.ObjectEach(res, func(key []byte, value []byte, _ jsonparser.ValueType, _ int) error {
 		i++
-		//Skip empty values.
+		//Skip empty return values.
 		if string(value) == "[]" {
 			return nil
 		}

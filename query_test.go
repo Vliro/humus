@@ -184,7 +184,6 @@ func TestQueries(t *testing.T) {
 //should average about 4 µs per query generation and 40 allocations.
 //can it be better?
 func BenchmarkQueries(b *testing.B) {
-	//defer profile.Start(profile.MemProfile).Stop()
 	for i := 0; i < b.N; i++ {
 		list := NewQueries()
 		q := list.NewQuery(ErrorFields)
@@ -237,4 +236,12 @@ func BenchmarkDNode(b *testing.B) {
 		x := a.(DNode)
 		_ = x
 	}
+}
+
+func TestWithFunction(t *testing.T) {
+	q := NewQuery(ErrorFields)
+	q.Function(Less.WithFunction("val")).Values("name", 1)
+
+	s, _ := q.Process()
+	fmt.Println(s)
 }

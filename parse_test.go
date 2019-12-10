@@ -4,7 +4,7 @@ import (
 	"testing"
 )
 
-var res = []byte(`{
+var testErrorValue = []byte(`{
     "q0": [
       {
         "Error.errorType": "test",
@@ -15,13 +15,13 @@ var res = []byte(`{
   }`)
 
 func TestDeserialize(t *testing.T) {
-	var err dbError
-	er := handleResponse(res, []interface{}{&err}, []string{"q0"})
-	if er != nil {
+	var res dbError
+	err := handleResponse(testErrorValue, []interface{}{&res}, []string{"q0"})
+	if err != nil {
 		t.Fail()
 		return
 	}
-	if err.Message != "testagain" || err.ErrorType != "test" {
+	if res.Message != "testagain" || res.ErrorType != "test" {
 		t.Fail()
 	}
 }

@@ -15,6 +15,11 @@ type SingleMutation struct {
 	Condition string
 }
 
+func (s SingleMutation) WithCond(cond string) SingleMutation {
+	s.Condition = cond
+	return s
+}
+
 func (m SingleMutation) Type() MutationType {
 	return m.MutationType
 }

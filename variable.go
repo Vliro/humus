@@ -32,6 +32,7 @@ func processInterface(value interface{}) (string, varType) {
 	}
 }
 
+//variable represents the struct for a field variable.
 type variable struct {
 	name  string
 	value string

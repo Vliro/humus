@@ -6,6 +6,15 @@ import (
 )
 
 type FunctionType string
+
+//WithFunction creates an in/equality function with a subfunction.
+//Possible values for typ is count and val. For instance, cases with
+//lt(count(predicate),1). would be Less.WithFunction("count") with two function variables,
+//predicate, 1.
+func (f FunctionType) WithFunction(typ string) FunctionType {
+	return FunctionType(string(f) + "(" + typ)
+}
+
 type OrderType string
 
 type Predicate string
@@ -179,6 +188,10 @@ func (f *function) mapVariables(q *GeneratedQuery) {
 			}
 			continue
 		}
+		//Do not cause variable names in a function to be GraphQL mapped.
+		if k == 0 && strings.IndexByte(string(f.Type), '(') != -1 {
+			continue
+		}
 		//Build the variable using the integer from the query.
 		key := q.registerVariable(v.Type, v.Value)
 		f.Variables[k].Value = key
@@ -200,32 +213,28 @@ func (f *function) create(q *GeneratedQuery, sb *strings.Builder) error {
 
 func (f *function) buildVarString(sb *strings.Builder) {
 	for k, v := range f.Variables {
-		if v.Type == typePred {
+		switch v.Type {
+		case typePred:
 			sb.WriteByte('<')
 			sb.WriteString(Predicate(v.Value).String())
 			sb.WriteByte('>')
-		} else if v.Type == typeUid {
+			/*
+				Handle custom functions.
+			*/
+		case typeUid:
 			sb.WriteByte('"')
 			sb.WriteString(v.Value)
 			sb.WriteByte('"')
-		} else {
+		default:
 			sb.WriteString(v.Value)
+		}
+		if k == 0 && strings.IndexByte(string(f.Type), '(') != -1 {
+			sb.WriteByte(')')
 		}
 		if k != len(f.Variables)-1 {
 			sb.WriteByte(',')
 		}
 	}
-}
-
-type FunctionError struct {
-	Type FunctionType
-}
-
-func (f FunctionError) Error() string {
-	return fmt.Sprintf("invalid arguments of function type %s", string(f.Type))
-}
-func NewFunctionError(t FunctionType) FunctionError {
-	return FunctionError{t}
 }
 
 func (f *function) check(q *GeneratedQuery) error {

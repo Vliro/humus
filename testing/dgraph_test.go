@@ -160,8 +160,8 @@ func TestGet(t *testing.T) {
 func BenchmarkGetQuery(b *testing.B) {
 	for i := 0; i < b.N; i++ {
 		var qu = humus.NewQueries()
-		quer := qu.NewQuery(questionFields).Function(humus.Equals).PredValues(QuestionTitleField, "First Question")
-		quer.Var("s")
+		query := qu.NewQuery(questionFields).Function(humus.Equals).PredValues(QuestionTitleField, "First Question")
+		query.Var("s")
 		qu.NewQuery(questionFields).Function(humus.Equals).PredValues(QuestionTitleField, "First Question")
 		_, _ = qu.Process()
 	}

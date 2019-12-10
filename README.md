@@ -37,11 +37,14 @@ type User {
 # Generate structs
 ```go
 //...
-type Post struct {  
-   //This line declares basic properties for a database node.  
-  humus.Node  
-  Text          string `json:"Post.text,omitempty"`  
-  DatePublished *time.Time `json:"Post.datePublished,omitempty"`  
+type Question struct {
+	//This line declares basic properties for a database node.
+	humus.Node
+	//List of interfaces implemented.
+	Post
+	//Regular fields
+	Title string `json:"Question.title,omitempty"`
+	From  *User  `json:"Question.from,omitempty"`
 }
 //...
 ```

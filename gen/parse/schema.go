@@ -119,9 +119,9 @@ func toDgraphType(str string, flag flags, forType bool) string {
 		return "uid"
 	}
 	//Artifact from GraphQL. Not sure yet.
-	/*if flag&flagEnum != 0 && !forType {
+	if flag&flagEnum != 0 && !forType {
 		return "int"
-	}*/
+	}
 	switch str {
 	case "int", "string":
 		return str

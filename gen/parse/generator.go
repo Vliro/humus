@@ -134,21 +134,19 @@ func (g *Generator) prepare() error {
 }
 
 func (g *Generator) finish() {
-	if g.config.State == "graphql" {
+	/*if g.config.State == "graphql" {
 		sch, err := os.Create(g.config.Output + SchemaName)
 		if err != nil {
 			panic(err)
 		}
 		defer sch.Close()
+	}*/
+	dgraphSch, err := os.Create(g.config.Output + "/schema.txt")
+	if err != nil {
+		panic(err)
 	}
-	if g.config.State == "dgraph" {
-		dgraphSch, err := os.Create(g.config.Output + "/schema.txt")
-		if err != nil {
-			panic(err)
-		}
-		defer dgraphSch.Close()
-		makeSchema(dgraphSch, g)
-	}
+	defer dgraphSch.Close()
+	makeSchema(dgraphSch, g)
 	for k,v := range g.outputs {
 		if v.Len() > 0 {
 			newbuf := goFmt(v.Bytes())

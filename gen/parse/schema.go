@@ -96,7 +96,10 @@ func makeSchema(output io.Writer, g *Generator) {
 		_, _ = io.Copy(&buffer, &ib)
 		ib = bytes.Buffer{}
 	}
-	io.Copy(output, &buffer)
+	_, err := io.Copy(output, &buffer)
+	if err != nil {
+		panic(err)
+	}
 }
 
 //returns name + type

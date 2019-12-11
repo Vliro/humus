@@ -5,7 +5,6 @@ import (
 	"strings"
 )
 
-
 //The common node type that is inherited. This differs from the DNode which is an interface while
 //node is an embedded struct containing basic dgraph properties.
 type Node struct {
@@ -51,14 +50,15 @@ func (n *Node) UID() UID {
 //represents an arbitrary Node.
 func CreateMutation(obj DNode, typ MutationType) SingleMutation {
 	return SingleMutation{
-		Object:    obj,
+		Object:       obj,
 		MutationType: typ,
 	}
 }
+
 //UidFromVariable returns the proper uid mapping for
 //upserts, of the form uid(variable).
 func UIDVariable(variable string) UID {
-	return UID("uid("+variable+")")
+	return UID("uid(" + variable + ")")
 }
 
 //Here begins common queries.
@@ -66,13 +66,14 @@ func UIDVariable(variable string) UID {
 //GetByUid is shorthand for generating a query for getting a node
 //from its uid given by the fields.
 func GetByUid(uid UID, fields Fields) *GeneratedQuery {
-	q := NewQuery(fields).Function(FunctionUid).Value(uid)
+	q := NewQuery(fields).Function(FunctionUid).Values(uid)
 	return q
 }
+
 //GetByPredicate is shorthand for generating a query for getting nodes
 //from multiple predicate values given by the fields.
 func GetByPredicate(pred Predicate, fields Fields, values ...interface{}) *GeneratedQuery {
-	q := NewQuery(fields).Function(Equals).PredValues(pred, values)
+	q := NewQuery(fields).Function(Equals).Values(pred, values)
 	return q
 }
 

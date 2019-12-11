@@ -77,6 +77,8 @@ func makeSchema(output io.Writer, g *Generator) {
 							continue fieldLoop
 						}
 					}
+				case "count":
+					directives.WriteString("@count")
 				case "search":
 					directives.WriteString("@index(")
 					for _, v := range dir.Args {

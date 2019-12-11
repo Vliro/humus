@@ -185,7 +185,15 @@ type GeneratedQuery struct {
 
 //Facets sets @facets for the edge specified by path.
 func (q *GeneratedQuery) Facets(path Predicate) *GeneratedQuery {
-	q.modifiers[path] = append(q.modifiers[path], facet{})
+	q.modifiers[path] = append(q.modifiers[path], Facet{})
+	return q
+}
+
+//OnFacet returns an object.
+func (q *GeneratedQuery) OnFacet(path Predicate, f func(facet *Facet)) *GeneratedQuery {
+	var fac Facet
+	f(&fac)
+	q.modifiers[path] = append(q.modifiers[path], fac)
 	return q
 }
 
@@ -375,8 +383,8 @@ func (q *GeneratedQuery) Directive(dir Directive) *GeneratedQuery {
 	return q
 }
 
-//Count adds a count to a predicate specified by the path. If path = "" it is applied at root.
-func (q *GeneratedQuery) Count(t CountType, path Predicate, value int) *GeneratedQuery {
+//Paginate adds a count to a predicate specified by the path. If path = "" it is applied at root.
+func (q *GeneratedQuery) Paginate(t CountType, path Predicate, value int) *GeneratedQuery {
 	q.modifiers[path] = append(q.modifiers[path], pagination{Type: t, Value: value})
 	return q
 }
@@ -388,6 +396,7 @@ func (q *GeneratedQuery) Count(t CountType, path Predicate, value int) *Generate
 //is the alias for this aggregation.
 //isVariable defines whether or not to use 'val' in order to aggregate.
 //For more flexibility use the Variable function to allow arbitrary modifier.
+//For count, value is a predicate to count on.
 func (q *GeneratedQuery) Agg(typ AggregateType, path Predicate, value string, alias string) *GeneratedQuery {
 	q.modifiers[path] = append(q.modifiers[path], aggregateValues{Type: typ, Alias: alias, Variable: value})
 	return q
@@ -404,7 +413,6 @@ func (q *GeneratedQuery) GroupBy(path Predicate, value Predicate) *GeneratedQuer
 //If path is "Node.edge" then the first edge from Node will have a filter
 //applied alongside the "Node.edge" predicate. If path is "" it is applied at root.
 func (q *GeneratedQuery) Filter(f *Filter, path Predicate) *GeneratedQuery {
-	f.mapVariables(q)
 	q.modifiers[path] = append(q.modifiers[path], f)
 	return q
 }
@@ -493,31 +501,6 @@ func (q *GeneratedQuery) Function(ft FunctionType) *GeneratedQuery {
 	return q
 }
 
-//Pred adds a predicate variable for this query's graphQL function, e.g. for a has function.
-func (q *GeneratedQuery) Pred(pred Predicate) *GeneratedQuery {
-	q.function.pred(pred)
-	return q
-}
-
-//PredValue sets a predicate alongside a value for this query's graphQL function.
-func (q *GeneratedQuery) PredValue(pred Predicate, value interface{}) *GeneratedQuery {
-	q.function.predValue(pred, value)
-	return q
-}
-
-//PredValues sets a predicate alongside multiple values for this query's graphQL function.
-func (q *GeneratedQuery) PredValues(pred Predicate, value ...interface{}) *GeneratedQuery {
-	q.function.predMultiple(pred, value)
-	return q
-}
-
-//Value sets a single value. A single value is represented by a string, a predicate,
-//an uid, a float or an integer. Otherwise it defaults to the string representation of the value.
-func (q *GeneratedQuery) Value(v interface{}) *GeneratedQuery {
-	q.function.value(v)
-	return q
-}
-
 //Values simple performs the same as Value but for a variadic number of arguments.
 func (q *GeneratedQuery) Values(v ...interface{}) *GeneratedQuery {
 	q.function.values(v)
@@ -557,7 +540,7 @@ func (p Path) Order(t OrderType, pred Predicate) Path {
 }
 
 func (p Path) Count(t CountType, val int) Path {
-	p.q.Count(t, p.p, val)
+	p.q.Paginate(t, p.p, val)
 	return p
 }
 

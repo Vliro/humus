@@ -155,7 +155,7 @@ func (f NewList) Sub(name Predicate, fl Fields) Fields {
 	return f
 }
 
-//Facet adds a field of type facet.
+//Facet adds a field of type Facet.
 func (f NewList) Add(fi Field) Fields {
 	return append(f, fi)
 }
@@ -174,10 +174,12 @@ type AggregateType string
 
 //Types of aggregations.
 const (
-	Min AggregateType = "min"
-	Sum AggregateType = "sum"
-	Max AggregateType = "max"
-	Avg AggregateType = "avg"
+	Val   AggregateType = ""
+	Min   AggregateType = "min"
+	Sum   AggregateType = "sum"
+	Max   AggregateType = "max"
+	Avg   AggregateType = "avg"
+	Count AggregateType = "count"
 )
 
 type pagination struct {
@@ -285,7 +287,7 @@ func (f Field) Get() []Field {
 
 // MakeField constructs a Field of given name and returns the Field.
 func MakeField(name Predicate, meta FieldMeta) Field {
-	//TODO: better facet support
+	//TODO: better Facet support
 	var x = Field{Name: name, Meta: meta}
 	return x
 }
@@ -293,7 +295,7 @@ func MakeField(name Predicate, meta FieldMeta) Field {
 // One may have noticed that there is a public create and a private create.
 // The different being the public method checks the validity of the Field structure
 // while the private counterpart assumes the validity.
-// Returns whether this field is a facet field.
+// Returns whether this field is a Facet field.
 // Parent is in-fact the current field name from the previous level.
 func (f *Field) create(q *GeneratedQuery, parent []byte, sb *strings.Builder) error {
 	//If a field is an object and has no fields do not use it.

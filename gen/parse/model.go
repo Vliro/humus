@@ -233,16 +233,16 @@ func createField(objectName string, name string, typ string, sb *bytes.Buffer, f
 
 	sb.WriteString(strings.Title(name))
 	if flag&flagFacet > 0 {
-		if flag&flagReverse > 0 {
-			if !(reverseMap[directiveName] != objectName) {
-				fi.WrittenTag = "~"
-			}
-			fi.WrittenTag += reverseMap[directiveName] + "." + directiveName + "|" + name
-			fi.Tag = fi.WrittenTag
-		} else {
-			fi.Tag = objectName + "." + directiveName + "|" + name
-			fi.WrittenTag = fi.Tag
+		//if flag&flagReverse > 0 {
+		if !(reverseMap[directiveName] != objectName) {
+			fi.WrittenTag = "~"
 		}
+		fi.WrittenTag += reverseMap[directiveName] + "." + directiveName + "|" + name
+		fi.Tag = fi.WrittenTag
+		//} else {
+		//		fi.Tag = objectName + "." + directiveName + "|" + name
+		//		fi.WrittenTag = fi.Tag
+		//	}
 	} else {
 		fi.WrittenTag = dbName
 	}

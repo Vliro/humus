@@ -16,6 +16,7 @@ func newMeta() *Schema {
 	}
 	return s
 }
+
 //TODO: Continue adding dgraph directives.
 var metaSrc = `
 	# The ` + "`" + `Int` + "`" + ` scalar type represents non-fractional signed whole numeric values. Int can represent values between -(2^31) and 2^31 - 1.
@@ -54,6 +55,10 @@ var metaSrc = `
 		# [Markdown](https://daringfireball.net/projects/markdown/).
 		reason: String = "No longer supported"
 	) on FIELD_DEFINITION | ENUM_VALUE
+	#Allows DGraph count directive.
+	directive @count(
+	) on FIELD_DEFINITION
+	
 	#Allows DGraph search.
 	directive @search(
 	  by: [String]

@@ -12,6 +12,18 @@ const (
 	modifierFunction
 )
 
+type Operation func(m Mod)
+
+type Mod interface {
+	Paginate(t OrderType) bool
+	Variable(name string, value string, isAlias bool) bool
+	Filter(t FunctionType, variables ...interface{}) bool
+	//ConnectedFilter()
+	Sort(t OrderType, p Predicate) bool
+	Aggregate(t AggregateType, v string) bool
+	Count(p Predicate, alias string)
+}
+
 type modifierType uint8
 
 const (
@@ -60,9 +72,9 @@ func (m modifierList) Swap(i, j int) {
 //aggregateValues represents a modifier with a type(sum),
 //an alias for changing json key as well as what variable or predicate it acts on.
 type aggregateValues struct {
-	Type          AggregateType
-	Alias         string
-	Variable      string
+	Type     AggregateType
+	Alias    string
+	Variable string
 }
 
 func (a aggregateValues) canApply(mt modifierSource) bool {
@@ -79,10 +91,15 @@ func (a aggregateValues) apply(root *GeneratedQuery, meta FieldMeta, mt modifier
 		sb.WriteString(" : ")
 	}
 	sb.WriteString(string(a.Type))
+	isCount := a.Type == "count"
 	sb.WriteByte('(')
-	sb.WriteString("val(")
+	if !isCount {
+		sb.WriteString("val(")
+	}
 	sb.WriteString(a.Variable)
-	sb.WriteByte(')')
+	if !isCount {
+		sb.WriteByte(')')
+	}
 	sb.WriteByte(')')
 	sb.WriteByte(' ')
 	return nil

@@ -71,7 +71,7 @@ func (o Ordering) priority() modifierType {
 	return modifierOrder
 }
 
-//If you change the names here make sure to follow the type Type + name as dictated in gen.
+//If you change the names here make sure to follow the type typ + name as dictated in gen.
 type varType string
 
 const (
@@ -94,10 +94,9 @@ type graphVariable struct {
 //the function type, checks the type as well as the list of arguments.
 //It uses GraphQL variables to minimize risk of any type of injection.
 type function struct {
-	Type      FunctionType
-	Variables []graphVariable
+	typ       FunctionType
+	variables []graphVariable
 }
-
 
 //OR, NOT, AND implements basic logicals.
 //This is not a fully featured function, made for simple examples such as single and or single OR
@@ -130,7 +129,7 @@ func (f *function) AND(fi *Filter) *Filter {
 */
 //Functions returns a new function. It preallocates a list of size four, a common case most likely.
 func newFunction(ft FunctionType) function {
-	return function{Type: ft, Variables: make([]graphVariable, 0, 4)}
+	return function{typ: ft, variables: make([]graphVariable, 0, 4)}
 }
 
 //value adds a variable to the function depending on its type.
@@ -139,20 +138,20 @@ func newFunction(ft FunctionType) function {
 func (f *function) value(v interface{}) *function {
 	val, typ := processInterface(v)
 	vv := graphVariable{val, typ}
-	f.Variables = append(f.Variables, vv)
+	f.variables = append(f.variables, vv)
 	return f
 }
 
 func (f *function) values(v []interface{}) *function {
 	for k := range v {
 		val, typ := processInterface(v[k])
-		f.Variables = append(f.Variables, graphVariable{val, typ})
+		f.variables = append(f.variables, graphVariable{val, typ})
 	}
 	return f
 }
 
 func (f *function) pred(name Predicate) *function {
-	f.Variables = append(f.Variables, graphVariable{string(name), typePred})
+	f.variables = append(f.variables, graphVariable{string(name), typePred})
 	return f
 }
 
@@ -161,23 +160,23 @@ func (f *function) predValue(name Predicate, v interface{}) *function {
 	val, typ := processInterface(v)
 	v1 := graphVariable{string(name), typePred}
 	v2 := graphVariable{val, typ}
-	f.Variables = append(f.Variables, v1, v2)
+	f.variables = append(f.variables, v1, v2)
 	return f
 }
 
 func (f *function) predMultiple(name Predicate, v []interface{}) *function {
 	v1 := graphVariable{string(name), typePred}
-	f.Variables = append(f.Variables, v1)
+	f.variables = append(f.variables, v1)
 	for _, vv := range v {
 		val, typ := processInterface(vv)
 		v2 := graphVariable{val, typ}
-		f.Variables = append(f.Variables, v2)
+		f.variables = append(f.variables, v2)
 	}
 	return f
 }
 
 func (f *function) mapVariables(q *GeneratedQuery) {
-	for k, v := range f.Variables {
+	for k, v := range f.variables {
 		//Handle the two special cases that do not need variable mapping.
 		if v.Type == typePred {
 			continue
@@ -189,12 +188,12 @@ func (f *function) mapVariables(q *GeneratedQuery) {
 			continue
 		}
 		//Do not cause variable names in a function to be GraphQL mapped.
-		if k == 0 && strings.IndexByte(string(f.Type), '(') != -1 {
+		if k == 0 && strings.IndexByte(string(f.typ), '(') != -1 {
 			continue
 		}
 		//Build the variable using the integer from the query.
 		key := q.registerVariable(v.Type, v.Value)
-		f.Variables[k].Value = key
+		f.variables[k].Value = key
 	}
 }
 
@@ -204,7 +203,7 @@ func (f *function) create(q *GeneratedQuery, sb *strings.Builder) error {
 	}
 	//f.mapVariables(q)
 	//Write the default values.
-	sb.WriteString(string(f.Type))
+	sb.WriteString(string(f.typ))
 	sb.WriteByte('(')
 	f.buildVarString(sb)
 	sb.WriteByte(')')
@@ -212,7 +211,7 @@ func (f *function) create(q *GeneratedQuery, sb *strings.Builder) error {
 }
 
 func (f *function) buildVarString(sb *strings.Builder) {
-	for k, v := range f.Variables {
+	for k, v := range f.variables {
 		switch v.Type {
 		case typePred:
 			sb.WriteByte('<')
@@ -228,26 +227,26 @@ func (f *function) buildVarString(sb *strings.Builder) {
 		default:
 			sb.WriteString(v.Value)
 		}
-		if k == 0 && strings.IndexByte(string(f.Type), '(') != -1 {
+		if k == 0 && strings.IndexByte(string(f.typ), '(') != -1 {
 			sb.WriteByte(')')
 		}
-		if k != len(f.Variables)-1 {
+		if k != len(f.variables)-1 {
 			sb.WriteByte(',')
 		}
 	}
 }
 
 func (f *function) check(q *GeneratedQuery) error {
-	if f.Type == "" {
+	if f.typ == "" {
 		return errMissingFunction
 	}
-	if len(f.Variables) == 0 {
+	if len(f.variables) == 0 {
 		return errMissingVariables
 	}
-	switch f.Type {
+	switch f.typ {
 	case Has:
-		if len(f.Variables) != 1 && f.Variables[0].Type != typePred {
-			return fmt.Errorf("%s function too many variables or invalid types, have %v need %v", f.Type, len(f.Variables), 1)
+		if len(f.variables) != 1 && f.variables[0].Type != typePred {
+			return fmt.Errorf("%s function too many variables or invalid types, have %v need %v", f.typ, len(f.variables), 1)
 		}
 		break
 	}

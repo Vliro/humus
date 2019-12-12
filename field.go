@@ -155,18 +155,18 @@ func (f NewList) Sub(name Predicate, fl Fields) Fields {
 	return f
 }
 
-//Facet adds a field of type Facet.
+//facet adds a field of type facet.
 func (f NewList) Add(fi Field) Fields {
 	return append(f, fi)
 }
 
-//CountType simply refers to a type of pagination.
-type CountType string
+//PaginationType simply refers to a type of pagination.
+type PaginationType string
 
 const (
-	CountFirst  CountType = "first"
-	CountOffset CountType = "offset"
-	CountAfter  CountType = "after"
+	CountFirst  PaginationType = "first"
+	CountOffset PaginationType = "offset"
+	CountAfter  PaginationType = "after"
 )
 
 //AggregateType simply refers to all types of aggregation as specified in the query docs.
@@ -183,7 +183,7 @@ const (
 )
 
 type pagination struct {
-	Type  CountType
+	Type  PaginationType
 	Value int
 }
 
@@ -277,7 +277,7 @@ func (f Field) Add(fi Field) Fields {
 }
 
 /*
-func (f Field) Facet(facetName string, alias string) fields {
+func (f Field) facet(facetName string, alias string) fields {
 	return append(NewList{}, f, MakeField(Variable(facetName), 0|MetaFacet))
 }*/
 
@@ -287,7 +287,7 @@ func (f Field) Get() []Field {
 
 // MakeField constructs a Field of given name and returns the Field.
 func MakeField(name Predicate, meta FieldMeta) Field {
-	//TODO: better Facet support
+	//TODO: better facet support
 	var x = Field{Name: name, Meta: meta}
 	return x
 }
@@ -295,18 +295,16 @@ func MakeField(name Predicate, meta FieldMeta) Field {
 // One may have noticed that there is a public create and a private create.
 // The different being the public method checks the validity of the Field structure
 // while the private counterpart assumes the validity.
-// Returns whether this field is a Facet field.
+// Returns whether this field is a facet field.
 // Parent is in-fact the current field name from the previous level.
 func (f *Field) create(q *GeneratedQuery, parent []byte, sb *strings.Builder) error {
 	//If a field is an object and has no fields do not use it.
 	val, ok := q.modifiers[Predicate(parent)]
-	//Not star wars, just if fields have to be forced from external modifiers.
-	var forceFields = ok && val.hasModifier(modifierGroupBy)
-	/*
-		If this is a directed edge without any fields as well as no field-generating modifiers, skip it.
-	*/
+	withGroup := len(val.g.m) != 0
+	withFacets := val.f.active
+	withFields := !withGroup || !withFacets
 	if f.Meta.Object() && ((f.Fields != nil && f.Fields.Len() == 0) || f.Fields == nil) {
-		if !forceFields {
+		if withFields {
 			return nil
 		}
 	}
@@ -325,50 +323,35 @@ func (f *Field) create(q *GeneratedQuery, parent []byte, sb *strings.Builder) er
 	}
 	//First part of modifiers, non-field generating.
 	if ok {
-		//var direction bool
-		var curType modifierType
-		//The state to keep track of non-colliding values
-		//TODO: Use this between values to ensure query is correct.
-		//var uniqueState uint8
-
 		//Dont call sort for size 1,2 (common sizes)
-		if len(val) > 1 {
-			if len(val) == 2 {
-				if val[0].priority() > val[1].priority() {
-					val.Swap(0, 1)
+		if len(val.m) > 1 {
+			if len(val.m) == 2 {
+				if val.m[0].priority() > val.m[1].priority() {
+					val.m.Swap(0, 1)
 				}
 			} else {
-				sort.Sort(val)
+				sort.Sort(val.m)
 			}
 		}
-		for k, v := range val {
-			newType := v.priority()
-			if newType <= modifierAggregate {
-				continue
+		err := val.m.runNormal(q, f.Meta, modifierField, sb)
+		if err != nil {
+			return err
+		}
+		if withFacets {
+			err = val.f.apply(q, f.Meta, modifierField, sb)
+			if err != nil {
+				return err
 			}
-			if v.canApply(modifierField) {
-				if newType > curType && v.parenthesis() {
-					sb.WriteByte('(')
-				}
-				err := v.apply(q, f.Meta, modifierField, sb)
-				if k != len(val)-1 && v.parenthesis() {
-					if p := val[k+1].priority(); p == newType {
-						sb.WriteByte(',')
-					} else if p != newType {
-						sb.WriteByte(')')
-					}
-				}
-				if err != nil {
-					return err
-				}
-			}
-			if k == len(val)-1 && v.parenthesis() {
-				sb.WriteByte(')')
-			}
-			curType = newType
 		}
 	}
-	if forceFields || (f.Fields != nil && f.Fields.Len() > 0) {
+	if withGroup {
+		err := val.g.apply(q, 0, modifierField, sb)
+		if err != nil {
+			return err
+		}
+	}
+
+	if f.Fields != nil && f.Fields.Len() > 0 {
 		if f.Meta.Lang() {
 			return errors.New("cannot have language meta and children fields")
 		}
@@ -389,21 +372,13 @@ func (f *Field) create(q *GeneratedQuery, parent []byte, sb *strings.Builder) er
 			}
 		}
 		if ok {
-			for _, v := range val {
-				if v.priority() > modifierAggregate {
-					break
-				}
-				err := v.apply(q, 0, modifierField, sb)
-				if err != nil {
-					return err
-				}
+			err := val.m.runVariables(q, f.Meta, modifierField, sb, false)
+			if err != nil {
+				return err
 			}
 		}
-		if !forceFields {
-			sb.WriteString(" uid")
-		}
-		sb.WriteByte('}')
-		//Always add the uid field. I don't think this will be very expensive in terms of dgraph performance.
+		sb.WriteString(" uid}")
 	}
+	//Always add the uid field. I don't think this will be very expensive in terms of dgraph performance.
 	return nil
 }

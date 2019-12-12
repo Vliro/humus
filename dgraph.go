@@ -62,7 +62,7 @@ type DNode interface {
 	//as they default nods always return a FieldList and not a NewList for instance.
 	Fields() FieldList
 	//Serializes all the scalar values that are not hidden. It usually returns
-	//a type of *{{.Type}}Scalars.
+	//a type of *{{.typ}}Scalars.
 	Values() DNode
 	//Recurse allows you to set types and UIDS for all sub nodes.
 	Recurse()

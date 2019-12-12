@@ -181,40 +181,17 @@ func (m modifierList) runVariables(q *GeneratedQuery, meta FieldMeta, where modi
 	return nil
 }
 
+//assume sorted
 func (m modifierList) runFacet(q *GeneratedQuery, meta FieldMeta, sb *strings.Builder) error {
-	var oldType, newType modifierType
+	sb.WriteString("@facets(")
 	for k, v := range m {
-		newType = v.priority()
-		var peek modifierType
-		if k != len(m)-1 {
-			peek = m[k+1].priority()
-		} else {
-			peek = newType
-		}
-		if newType > oldType && k != 0 {
-			sb.WriteByte(')')
-		}
-		if newType > oldType {
-			sb.WriteString("@facets(")
-		}
 		err := v.apply(q, meta, modifierField, sb)
-		if k != len(m)-1 && v.parenthesis() {
-			if peek == newType {
-				sb.WriteByte(',')
-			} else if peek != newType {
-				sb.WriteByte(')')
-			}
+		if k != len(m)-1 {
+			sb.WriteByte(',')
 		}
 		if err != nil {
 			return err
 		}
-		if k == len(m)-1 && v.parenthesis() {
-			sb.WriteByte(')')
-		}
-		if k != len(m)-1 && peek == newType {
-			sb.WriteByte(',')
-		}
-		oldType = newType
 	}
 	sb.WriteByte(')')
 	return nil

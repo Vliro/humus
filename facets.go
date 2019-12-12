@@ -26,6 +26,12 @@ Applies a filter on the current facet.
 */
 func (f *facetCreator) Filter(t FunctionType, variables ...interface{}) bool {
 	var filter Filter
+	//Only allow one filter as a modifier for now since there is no way to allow connecting filters.
+	for _, v := range f.f.m {
+		if v.priority() == modifierFilter {
+			return false
+		}
+	}
 	filter.typ = t
 	filter.variables = make([]graphVariable, len(variables))
 	for k, v := range variables {
@@ -42,7 +48,11 @@ func (f *facetCreator) Filter(t FunctionType, variables ...interface{}) bool {
 }
 
 func (f *facetCreator) Sort(t OrderType, p Predicate) bool {
-	return false
+	f.f.m = append(f.f.m, Ordering{
+		Type:      t,
+		Predicate: p,
+	})
+	return true
 }
 
 func (f *facetCreator) Aggregate(t AggregateType, v string, alias string) bool {

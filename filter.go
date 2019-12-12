@@ -19,6 +19,7 @@ type Filter struct {
 	//	op logicalOp
 	function
 	//	node *Filter
+	ignoreHeader bool
 }
 
 func (f *Filter) canApply(mt modifierSource) bool {
@@ -52,10 +53,14 @@ func (f *Filter) stringify(q *GeneratedQuery, sb *strings.Builder) error {
 
 func (f *Filter) create(q *GeneratedQuery, sb *strings.Builder) error {
 	//No nil checks. Done during check.
-	sb.WriteString(tokenFilter)
-	sb.WriteByte('(')
+	if !f.ignoreHeader {
+		sb.WriteString(tokenFilter)
+		sb.WriteByte('(')
+	}
 	err := f.stringify(q, sb)
-	sb.WriteByte(')')
+	if !f.ignoreHeader {
+		sb.WriteByte(')')
+	}
 	return err
 }
 

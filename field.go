@@ -2,7 +2,6 @@ package humus
 
 import (
 	"errors"
-	"sort"
 	"strconv"
 	"strings"
 )
@@ -304,10 +303,10 @@ func (f *Field) create(q *GeneratedQuery, parent []byte, sb *strings.Builder) er
 	if ok {
 		withGroup = len(val.g.m) != 0
 		withFacets = val.f.active
-		withFields = !withGroup || !withFacets
+		withFields = withGroup || withFacets
 	}
 	if f.Meta.Object() && ((f.Fields != nil && f.Fields.Len() == 0) || f.Fields == nil) {
-		if withFields {
+		if !withFields {
 			return nil
 		}
 	}
@@ -327,15 +326,7 @@ func (f *Field) create(q *GeneratedQuery, parent []byte, sb *strings.Builder) er
 	//First part of modifiers, non-field generating.
 	if ok {
 		//Dont call sort for size 1,2 (common sizes)
-		if len(val.m) > 1 {
-			if len(val.m) == 2 {
-				if val.m[0].priority() > val.m[1].priority() {
-					val.m.Swap(0, 1)
-				}
-			} else {
-				sort.Sort(val.m)
-			}
-		}
+		val.m.sort()
 		err := val.m.runNormal(q, f.Meta, modifierField, sb)
 		if err != nil {
 			return err
@@ -375,7 +366,7 @@ func (f *Field) create(q *GeneratedQuery, parent []byte, sb *strings.Builder) er
 			}
 		}
 		if ok {
-			err := val.m.runVariables(q, f.Meta, modifierField, sb, false)
+			err := val.m.runVariables(q, f.Meta, modifierField, sb)
 			if err != nil {
 				return err
 			}

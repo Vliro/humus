@@ -21,8 +21,24 @@ func (f *facetCreator) Variable(name string, value string, isAlias bool) bool {
 	return true
 }
 
+/*
+Applies a filter on the current facet.
+*/
 func (f *facetCreator) Filter(t FunctionType, variables ...interface{}) bool {
-	return false
+	var filter Filter
+	filter.typ = t
+	filter.variables = make([]graphVariable, len(variables))
+	for k, v := range variables {
+		val, typ := processInterface(v)
+		filter.variables[k] = graphVariable{
+			Value: val,
+			Type:  typ,
+		}
+	}
+	filter.mapVariables(f.q)
+	filter.ignoreHeader = true
+	f.f.m = append(f.f.m, &filter)
+	return true
 }
 
 func (f *facetCreator) Sort(t OrderType, p Predicate) bool {
@@ -47,14 +63,14 @@ func (f facet) canApply(mt modifierSource) bool {
 }
 
 func (f facet) apply(root *GeneratedQuery, meta FieldMeta, mt modifierSource, sb *strings.Builder) error {
-	sb.WriteString("@facets")
 	if len(f.m) > 0 {
-		sb.WriteByte('(')
-		err := f.m.runVariables(root, meta, mt, sb, true)
+		f.m.sort()
+		err := f.m.runFacet(root, meta, sb)
 		if err != nil {
 			return err
 		}
-		sb.WriteByte(')')
+	} else {
+		sb.WriteString("@facets")
 	}
 	return nil
 }

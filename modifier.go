@@ -2,6 +2,7 @@ package humus
 
 import (
 	"errors"
+	"sort"
 	"strings"
 )
 
@@ -13,8 +14,8 @@ Begin simple mods
 
 type mapElement struct {
 	m modifierList
-	g groupBy
 	f facet
+	g groupBy
 	q *GeneratedQuery
 }
 
@@ -102,6 +103,18 @@ type modifier interface {
 
 type modifierList []modifier
 
+func (m modifierList) sort() {
+	if len(m) > 1 {
+		if len(m) == 2 {
+			if m[0].priority() > m[1].priority() {
+				m.Swap(0, 1)
+			}
+		} else {
+			sort.Sort(m)
+		}
+	}
+}
+
 func (m modifierList) runNormal(q *GeneratedQuery, meta FieldMeta, where modifierSource, sb *strings.Builder) error {
 	var curType modifierType
 	for k, v := range m {
@@ -155,8 +168,8 @@ func (m modifierList) runTopLevel(q *GeneratedQuery, meta FieldMeta, where modif
 	return nil
 }
 
-func (m modifierList) runVariables(q *GeneratedQuery, meta FieldMeta, where modifierSource, sb *strings.Builder, commaSeparated bool) error {
-	for k, v := range m {
+func (m modifierList) runVariables(q *GeneratedQuery, meta FieldMeta, where modifierSource, sb *strings.Builder) error {
+	for _, v := range m {
 		if v.priority() > modifierAggregate {
 			break
 		}
@@ -164,10 +177,46 @@ func (m modifierList) runVariables(q *GeneratedQuery, meta FieldMeta, where modi
 		if err != nil {
 			return err
 		}
-		if commaSeparated && k < len(m)-1 {
+	}
+	return nil
+}
+
+func (m modifierList) runFacet(q *GeneratedQuery, meta FieldMeta, sb *strings.Builder) error {
+	var oldType, newType modifierType
+	for k, v := range m {
+		newType = v.priority()
+		var peek modifierType
+		if k != len(m)-1 {
+			peek = m[k+1].priority()
+		} else {
+			peek = newType
+		}
+		if newType > oldType && k != 0 {
+			sb.WriteByte(')')
+		}
+		if newType > oldType {
+			sb.WriteString("@facets(")
+		}
+		err := v.apply(q, meta, modifierField, sb)
+		if k != len(m)-1 && v.parenthesis() {
+			if peek == newType {
+				sb.WriteByte(',')
+			} else if peek != newType {
+				sb.WriteByte(')')
+			}
+		}
+		if err != nil {
+			return err
+		}
+		if k == len(m)-1 && v.parenthesis() {
+			sb.WriteByte(')')
+		}
+		if k != len(m)-1 && peek == newType {
 			sb.WriteByte(',')
 		}
+		oldType = newType
 	}
+	sb.WriteByte(')')
 	return nil
 }
 
@@ -343,7 +392,7 @@ func (g groupBy) apply(root *GeneratedQuery, meta FieldMeta, mt modifierSource, 
 	sb.WriteString(string(g.p))
 	sb.WriteByte(')')
 	sb.WriteByte('{')
-	g.m.runVariables(root, 0, mt, sb, false)
+	g.m.runVariables(root, 0, mt, sb)
 	sb.WriteByte('}')
 	return nil
 }

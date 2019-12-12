@@ -91,6 +91,12 @@ func TestAt(t *testing.T) {
 		m.Filter(FunctionUid, UID("0x1"), UID("0x2"))
 	})
 
+	q.At(ErrorMessageField, func(m Mod) {
+		m.Sort(Descending, ErrorMessageField)
+		m.Sort(Ascending, ErrorErrorTypeField)
+		m.Filter(FunctionUid, UID("0x1"), UID("0x2"))
+	})
+
 	q.GroupBy(ErrorTimeField, ErrorMessageField, func(m Mod) {
 		m.Variable("yolo", "swag", false)
 		m.Variable("hej", "swag", false)
@@ -110,11 +116,16 @@ func TestAt(t *testing.T) {
 func BenchmarkAt(b *testing.B) {
 	for i := 0; i < b.N; i++ {
 		q := NewQuery(ErrorFields).Function(Equals).Values(ErrorMessageField, "yolo")
-
 		q.At("", func(m Mod) {
 			m.Sort(Descending, ErrorMessageField)
 			m.Sort(Ascending, ErrorErrorTypeField)
 			m.Filter(FunctionUid, "0x1", "0x2")
+		})
+
+		q.At(ErrorMessageField, func(m Mod) {
+			m.Sort(Descending, ErrorMessageField)
+			m.Sort(Ascending, ErrorErrorTypeField)
+			m.Filter(FunctionUid, UID("0x1"), UID("0x2"))
 		})
 
 		q.GroupBy(ErrorTimeField, ErrorMessageField, func(m Mod) {
@@ -126,9 +137,11 @@ func BenchmarkAt(b *testing.B) {
 		q.Facets(ErrorErrorTypeField, func(m Mod) {
 			m.Variable("test", "test", false)
 			m.Variable("d", "d", false)
+			m.Filter(Equals, Predicate("test"), "swag")
 		})
 
-		_, _ = q.Process()
+		s := q.Static()
+		_ = s
 	}
 	b.ReportAllocs()
 }

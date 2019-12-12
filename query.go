@@ -2,7 +2,6 @@ package humus
 
 import (
 	"errors"
-	"sort"
 	"strconv"
 	"strings"
 )
@@ -183,7 +182,10 @@ type GeneratedQuery struct {
 	strictLanguage bool
 }
 
-//Facets sets @facets for the edge specified by path.
+//Facets sets @facets for the edge specified by path along with all values as specified by op.
+//This can be  used to fetch facets, store facets in query variables or something in that manner.
+//For instance, generating a line in the fashion of @facets(value as friendsSince)
+//will store the facet value 'friendsSince' into the value variable 'value'.
 func (q *GeneratedQuery) Facets(path Predicate, op Operation) *GeneratedQuery {
 	val, ok := q.modifiers[path]
 	if !ok {
@@ -195,7 +197,7 @@ func (q *GeneratedQuery) Facets(path Predicate, op Operation) *GeneratedQuery {
 	if op != nil {
 		op(f)
 	}
-	val.f.active = true
+	f.f.active = true
 	return q
 }
 
@@ -267,7 +269,7 @@ func (q *GeneratedQuery) create(sb *strings.Builder) (string, error) {
 	if sb == nil {
 		sb = new(strings.Builder)
 		q.mapVariables(q)
-		sb.Grow(512)
+		sb.Grow(256)
 	}
 	if err := q.function.check(q); err != nil {
 		return "", err
@@ -310,7 +312,7 @@ func (q *GeneratedQuery) create(sb *strings.Builder) (string, error) {
 	}
 	if ok {
 		//Two passes. Before and after parenthesis. That's just how it be.
-		sort.Sort(val.m)
+		val.m.sort()
 		err := val.m.runTopLevel(q, 0, modifierFunction, sb)
 		if err != nil {
 			return "", err
@@ -339,7 +341,7 @@ func (q *GeneratedQuery) create(sb *strings.Builder) (string, error) {
 		sb.WriteByte(' ')
 	}
 	if ok {
-		err = val.m.runVariables(q, 0, modifierFunction, sb, false)
+		err = val.m.runVariables(q, 0, modifierFunction, sb)
 		if err != nil {
 			return "", err
 		}

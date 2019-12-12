@@ -8,7 +8,6 @@ import (
 	"text/template"
 )
 
-
 type Config struct {
 	//Deprecated.
 	State string
@@ -18,23 +17,22 @@ type Config struct {
 	Output string
 	//Package name.
 	Package string
-	//Whether to generate the //easyjson:json preamble.
-	EasyJson bool
 }
+
 var parseState string
 
 //converts graphql -> go
 func getBuiltIn(key string) (string, bool) {
-	val,ok := builtins[key]
+	val, ok := builtins[key]
 	return val, ok
 }
 
 const (
-	ModelFileName = "/models.go"
+	ModelFileName    = "/models.go"
 	FunctionFileName = "/generated.go"
-	EnumFileName = "/enums.go"
-	SchemaName = "/dgraph_schema.graphql"
-	CustomsFileName = "/customs.go"
+	EnumFileName     = "/enums.go"
+	SchemaName       = "/dgraph_schema.graphql"
+	CustomsFileName  = "/customs.go"
 )
 
 const (
@@ -50,7 +48,7 @@ func (g *Generator) writeHeader(w *bytes.Buffer) {
 }
 
 func addImport(imp string, imports []string) []string {
-	for _,v := range imports {
+	for _, v := range imports {
 		if v == imp {
 			return imports
 		}

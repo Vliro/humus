@@ -182,25 +182,6 @@ type GeneratedQuery struct {
 	strictLanguage bool
 }
 
-//Facets sets @facets for the edge specified by path along with all values as specified by op.
-//This can be  used to fetch facets, store facets in query variables or something in that manner.
-//For instance, generating a line in the fashion of @facets(value as friendsSince)
-//will store the facet value 'friendsSince' into the value variable 'value'.
-func (q *GeneratedQuery) Facets(path Predicate, op Operation) *GeneratedQuery {
-	val, ok := q.modifiers[path]
-	if !ok {
-		val = new(mapElement)
-		val.q = q
-		q.modifiers[path] = val
-	}
-	var f = (*facetCreator)(val)
-	if op != nil {
-		op(f)
-	}
-	f.f.active = true
-	return q
-}
-
 //NewQuery returns a new singular generation query for use
 //in building a single query.
 func NewQuery(f Fields) *GeneratedQuery {
@@ -369,6 +350,10 @@ func (q *GeneratedQuery) Directive(dir Directive) *GeneratedQuery {
 	return q
 }
 
+/*
+At allows you to run modifiers at a path. Modifiers include
+pagination, sorting, filters among others.
+*/
 func (q *GeneratedQuery) At(path Predicate, op Operation) *GeneratedQuery {
 	val, ok := q.modifiers[path]
 	if !ok {
@@ -404,10 +389,31 @@ func (q *GeneratedQuery) Agg(typ AggregateType, path Predicate, value string, al
 	return q
 }*/
 
-//GroupBy sets GroupBy on the !leaf! path.
-//The reason for it being a leaf path is it needs to be traversable even if
-//contains no sub-fields.
-//Op returns a list of
+/*
+Facets sets @facets for the edge specified by path along with all values as specified by op.
+This can be  used to fetch facets, store facets in query variables or something in that manner.
+For instance, generating a line in the fashion of @facets(value as friendsSince)
+will store the facet value 'friendsSince' into the value variable 'value'.
+*/
+func (q *GeneratedQuery) Facets(path Predicate, op Operation) *GeneratedQuery {
+	val, ok := q.modifiers[path]
+	if !ok {
+		val = new(mapElement)
+		val.q = q
+		q.modifiers[path] = val
+	}
+	var f = (*facetCreator)(val)
+	if op != nil {
+		op(f)
+	}
+	f.f.active = true
+	return q
+}
+
+/*
+GroupBy allows you to groupBy at a leaf field. Using op specify a list of variables and operations
+to be written as aggregation at this level. onWhich specifies what predicate to actually group on.
+*/
 func (q *GeneratedQuery) GroupBy(path Predicate, onWhich Predicate, op Operation) *GeneratedQuery {
 	val, ok := q.modifiers[path]
 	if !ok {

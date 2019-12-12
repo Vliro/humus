@@ -300,9 +300,12 @@ func MakeField(name Predicate, meta FieldMeta) Field {
 func (f *Field) create(q *GeneratedQuery, parent []byte, sb *strings.Builder) error {
 	//If a field is an object and has no fields do not use it.
 	val, ok := q.modifiers[Predicate(parent)]
-	withGroup := len(val.g.m) != 0
-	withFacets := val.f.active
-	withFields := !withGroup || !withFacets
+	var withGroup, withFacets, withFields bool
+	if ok {
+		withGroup = len(val.g.m) != 0
+		withFacets = val.f.active
+		withFields = !withGroup || !withFacets
+	}
 	if f.Meta.Object() && ((f.Fields != nil && f.Fields.Len() == 0) || f.Fields == nil) {
 		if withFields {
 			return nil

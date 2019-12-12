@@ -126,51 +126,13 @@ func (f *function) AND(fi *Filter) *Filter {
 		node:          fi,
 	}
 }
+
 */
-//Functions returns a new function. It preallocates a list of size four, a common case most likely.
-func newFunction(ft FunctionType) function {
-	return function{typ: ft, variables: make([]graphVariable, 0, 4)}
-}
-
-//value adds a variable to the function depending on its type.
-//Possible values are int, float, string, predicate, uid.
-//Other values are possible but will be formatted as fmt.Sprintf.
-func (f *function) value(v interface{}) *function {
-	val, typ := processInterface(v)
-	vv := graphVariable{val, typ}
-	f.variables = append(f.variables, vv)
-	return f
-}
-
-func (f *function) values(v []interface{}) *function {
-	for k := range v {
-		val, typ := processInterface(v[k])
-		f.variables = append(f.variables, graphVariable{val, typ})
-	}
-	return f
-}
-
-func (f *function) pred(name Predicate) *function {
-	f.variables = append(f.variables, graphVariable{string(name), typePred})
-	return f
-}
-
-//PredValue is simply a shorthand for function such as equals.
-func (f *function) predValue(name Predicate, v interface{}) *function {
-	val, typ := processInterface(v)
-	v1 := graphVariable{string(name), typePred}
-	v2 := graphVariable{val, typ}
-	f.variables = append(f.variables, v1, v2)
-	return f
-}
-
-func (f *function) predMultiple(name Predicate, v []interface{}) *function {
-	v1 := graphVariable{string(name), typePred}
-	f.variables = append(f.variables, v1)
-	for _, vv := range v {
-		val, typ := processInterface(vv)
-		v2 := graphVariable{val, typ}
-		f.variables = append(f.variables, v2)
+func (f *function) values(val []interface{}) *function {
+	f.variables = make([]graphVariable, len(val))
+	for k, v := range val {
+		val, typ := processInterface(v)
+		f.variables[k] = graphVariable{val, typ}
 	}
 	return f
 }

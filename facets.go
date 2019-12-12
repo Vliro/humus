@@ -8,12 +8,12 @@ type facet struct {
 	m      modifierList
 }
 
-func (f *facet) Paginate(t PaginationType, value int) bool {
+func (f *facetCreator) Paginate(t PaginationType, value int) bool {
 	return false
 }
 
-func (f *facet) Variable(name string, value string, isAlias bool) bool {
-	f.m = append(f.m, variable{
+func (f *facetCreator) Variable(name string, value string, isAlias bool) bool {
+	f.f.m = append(f.f.m, variable{
 		name:  name,
 		value: value,
 		alias: isAlias,
@@ -21,15 +21,15 @@ func (f *facet) Variable(name string, value string, isAlias bool) bool {
 	return true
 }
 
-func (f *facet) Filter(t FunctionType, variables ...interface{}) bool {
+func (f *facetCreator) Filter(t FunctionType, variables ...interface{}) bool {
 	return false
 }
 
-func (f *facet) Sort(t OrderType, p Predicate) bool {
+func (f *facetCreator) Sort(t OrderType, p Predicate) bool {
 	return false
 }
 
-func (f *facet) Aggregate(t AggregateType, v string, alias string) bool {
+func (f *facetCreator) Aggregate(t AggregateType, v string, alias string) bool {
 	f.m = append(f.m, aggregateValues{
 		Type:     t,
 		Alias:    alias,
@@ -38,7 +38,7 @@ func (f *facet) Aggregate(t AggregateType, v string, alias string) bool {
 	return true
 }
 
-func (f *facet) Count(p Predicate, alias string) bool {
+func (f *facetCreator) Count(p Predicate, alias string) bool {
 	return false
 }
 

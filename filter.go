@@ -34,11 +34,6 @@ func (f *Filter) priority() modifierType {
 	return modifierFilter
 }
 
-//MakeFilter returns a new filter with the function type typ.
-func MakeFilter(typ FunctionType) *Filter {
-	return &Filter{function: newFunction(typ)}
-}
-
 func (f *Filter) parenthesis() bool {
 	return false
 }
@@ -65,30 +60,6 @@ func (f *Filter) create(q *GeneratedQuery, sb *strings.Builder) error {
 }
 
 //Function related calls.
-
-//Pred sets a predicate variable, for a has function.
-func (f *Filter) Pred(pred Predicate) *Filter {
-	f.function.pred(pred)
-	return f
-}
-
-//PredValue sets a predicate alongside a value, useful for eq.
-func (f *Filter) PredValue(pred Predicate, value interface{}) *Filter {
-	f.function.predValue(pred, value)
-	return f
-}
-
-//PredValues sets a predicate alongside a list
-func (f *Filter) PredValues(pred Predicate, value ...interface{}) *Filter {
-	f.function.predMultiple(pred, value)
-	return f
-}
-
-//Value is a wrapper to add a value to this filter.
-func (f *Filter) Value(v interface{}) *Filter {
-	f.function.value(v)
-	return f
-}
 
 //Values is a wrapper to add a list of values to this filter.
 func (f *Filter) Values(v ...interface{}) *Filter {

@@ -15,7 +15,14 @@ type mapElement struct {
 	m modifierList
 	g groupBy
 	f facet
+	q *GeneratedQuery
 }
+
+type facetCreator mapElement
+
+type groupCreator mapElement
+
+type modifierCreator mapElement
 
 const (
 	modifierField modifierSource = iota
@@ -126,13 +133,13 @@ func (m modifierList) runVariables(q *GeneratedQuery, meta FieldMeta, where modi
 	return nil
 }
 
-func (m *modifierList) Paginate(t PaginationType, value int) bool {
-	*m = append(*m, pagination{Type: t, Value: value})
+func (m *modifierCreator) Paginate(t PaginationType, value int) bool {
+	m.m = append(m.m, pagination{Type: t, Value: value})
 	return true
 }
 
-func (m *modifierList) Variable(name string, value string, isAlias bool) bool {
-	*m = append(*m, variable{
+func (m *modifierCreator) Variable(name string, value string, isAlias bool) bool {
+	m.m = append(m.m, variable{
 		name:  name,
 		value: value,
 		alias: isAlias,
@@ -140,7 +147,7 @@ func (m *modifierList) Variable(name string, value string, isAlias bool) bool {
 	return true
 }
 
-func (m *modifierList) Filter(t FunctionType, variables ...interface{}) bool {
+func (m *modifierCreator) Filter(t FunctionType, variables ...interface{}) bool {
 	var filter Filter
 	filter.typ = t
 	filter.variables = make([]graphVariable, len(variables))
@@ -151,20 +158,21 @@ func (m *modifierList) Filter(t FunctionType, variables ...interface{}) bool {
 			Type:  typ,
 		}
 	}
-	*m = append(*m, &filter)
+	filter.mapVariables(m.q)
+	m.m = append(m.m, &filter)
 	return true
 }
 
-func (m *modifierList) Sort(t OrderType, p Predicate) bool {
-	*m = append(*m, Ordering{
+func (m *modifierCreator) Sort(t OrderType, p Predicate) bool {
+	m.m = append(m.m, Ordering{
 		Type:      t,
 		Predicate: p,
 	})
 	return true
 }
 
-func (m *modifierList) Aggregate(t AggregateType, v string, alias string) bool {
-	*m = append(*m, aggregateValues{
+func (m *modifierCreator) Aggregate(t AggregateType, v string, alias string) bool {
+	m.m = append(m.m, aggregateValues{
 		Type:     t,
 		Alias:    alias,
 		Variable: v,
@@ -172,8 +180,8 @@ func (m *modifierList) Aggregate(t AggregateType, v string, alias string) bool {
 	return true
 }
 
-func (m *modifierList) Count(p Predicate, alias string) bool {
-	*m = append(*m, variable{
+func (m *modifierCreator) Count(p Predicate, alias string) bool {
+	m.m = append(m.m, variable{
 		name:  alias,
 		value: "count(" + string(p) + ")",
 		alias: true,
@@ -251,12 +259,12 @@ type groupBy struct {
 	p Predicate
 }
 
-func (g *groupBy) Paginate(t PaginationType, value int) bool {
+func (g *groupCreator) Paginate(t PaginationType, value int) bool {
 	return false
 }
 
-func (g *groupBy) Variable(name string, value string, isAlias bool) bool {
-	g.m = append(g.m, variable{
+func (g *groupCreator) Variable(name string, value string, isAlias bool) bool {
+	g.g.m = append(g.g.m, variable{
 		name:  name,
 		value: value,
 		alias: isAlias,
@@ -264,16 +272,16 @@ func (g *groupBy) Variable(name string, value string, isAlias bool) bool {
 	return true
 }
 
-func (g *groupBy) Filter(t FunctionType, variables ...interface{}) bool {
+func (g *groupCreator) Filter(t FunctionType, variables ...interface{}) bool {
 	return false
 }
 
-func (g *groupBy) Sort(t OrderType, p Predicate) bool {
+func (g *groupCreator) Sort(t OrderType, p Predicate) bool {
 	return false
 }
 
-func (g *groupBy) Aggregate(t AggregateType, v string, alias string) bool {
-	g.m = append(g.m, aggregateValues{
+func (g *groupCreator) Aggregate(t AggregateType, v string, alias string) bool {
+	g.g.m = append(g.g.m, aggregateValues{
 		Type:     t,
 		Alias:    alias,
 		Variable: v,
@@ -281,7 +289,7 @@ func (g *groupBy) Aggregate(t AggregateType, v string, alias string) bool {
 	return true
 }
 
-func (g *groupBy) Count(p Predicate, alias string) bool {
+func (g *groupCreator) Count(p Predicate, alias string) bool {
 	return false
 }
 

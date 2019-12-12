@@ -95,7 +95,7 @@ func (q *Queries) names() []string {
 
 func (q *Queries) NewQuery(f Fields) *GeneratedQuery {
 	newq := &GeneratedQuery{
-		modifiers: make(map[Predicate]mapElement),
+		modifiers: make(map[Predicate]*mapElement),
 		fields:    f,
 		varMap:    q.vars,
 	}
@@ -164,7 +164,7 @@ type GeneratedQuery struct {
 	//The overall language for this query.
 	language Language
 	//List of modifiers, i.e. order, pagination etc.
-	modifiers map[Predicate]mapElement
+	modifiers map[Predicate]*mapElement
 	//Map for dealing with GraphQL variables. It is inherited in multi-query layout.
 	varMap map[string]string
 	//function for getting next query value in multi-query. It is also used
@@ -185,12 +185,17 @@ type GeneratedQuery struct {
 
 //Facets sets @facets for the edge specified by path.
 func (q *GeneratedQuery) Facets(path Predicate, op Operation) *GeneratedQuery {
-	val := q.modifiers[path]
+	val, ok := q.modifiers[path]
+	if !ok {
+		val = new(mapElement)
+		val.q = q
+		q.modifiers[path] = val
+	}
+	var f = (*facetCreator)(val)
 	if op != nil {
-		op(&val.f)
+		op(f)
 	}
 	val.f.active = true
-	q.modifiers[path] = val
 	return q
 }
 
@@ -199,7 +204,7 @@ func (q *GeneratedQuery) Facets(path Predicate, op Operation) *GeneratedQuery {
 func NewQuery(f Fields) *GeneratedQuery {
 	return &GeneratedQuery{
 		varMap:    make(map[string]string),
-		modifiers: make(map[Predicate]mapElement),
+		modifiers: make(map[Predicate]*mapElement),
 		fields:    f,
 	}
 }
@@ -333,9 +338,11 @@ func (q *GeneratedQuery) create(sb *strings.Builder) (string, error) {
 		}
 		sb.WriteByte(' ')
 	}
-	err = val.m.runVariables(q, 0, modifierFunction, sb, false)
-	if err != nil {
-		return "", err
+	if ok {
+		err = val.m.runVariables(q, 0, modifierFunction, sb, false)
+		if err != nil {
+			return "", err
+		}
 	}
 	//Add default uid to top level field and close query.
 	sb.WriteString(" uid" + tokenRB)
@@ -361,11 +368,16 @@ func (q *GeneratedQuery) Directive(dir Directive) *GeneratedQuery {
 }
 
 func (q *GeneratedQuery) At(path Predicate, op Operation) *GeneratedQuery {
-	val := q.modifiers[path]
-	if op != nil {
-		op(&val.m)
+	val, ok := q.modifiers[path]
+	if !ok {
+		val = new(mapElement)
+		val.q = q
+		q.modifiers[path] = val
 	}
-	q.modifiers[path] = val
+	var m = (*modifierCreator)(val)
+	if op != nil {
+		op(m)
+	}
 	return q
 }
 
@@ -395,14 +407,17 @@ func (q *GeneratedQuery) Agg(typ AggregateType, path Predicate, value string, al
 //contains no sub-fields.
 //Op returns a list of
 func (q *GeneratedQuery) GroupBy(path Predicate, onWhich Predicate, op Operation) *GeneratedQuery {
-	val := q.modifiers[path]
-	var g groupBy
-	if op != nil {
-		op(&g)
+	val, ok := q.modifiers[path]
+	if !ok {
+		val = new(mapElement)
+		val.q = q
+		q.modifiers[path] = val
 	}
-	g.p = onWhich
-	val.g = g
-	q.modifiers[path] = val
+	var g = (*groupCreator)(val)
+	if op != nil {
+		op(g)
+	}
+	g.g.p = onWhich
 	return q
 }
 
@@ -428,28 +443,6 @@ func (q *GeneratedQuery) variables() string {
 	return q.varBuilder.String()
 }
 
-/*
-//Variable adds a value variable of the form name as value.
-//It is arguably the most important function to add expressions
-//to a generated query as it allows you to add value variables,
-//count variables, alias variables etc.
-//Value can be anything from a math expression to a count.
-//Example: if name is test and value is math(p+q) then
-//result is a variable 'test as math(p+q)' at the path given by path.
-//isAlias simply means that rather than a value variable it is
-//test : math(p+q)
-//Variable is also used for specifying count! Omitting name means it will be fetched
-//as a regular field.
-func (q *GeneratedQuery) Variable(name string, path Predicate, value string, isAlias bool) *GeneratedQuery {
-	val := q.modifiers[path]
-	q.modifiers[path].m = append(q.modifiers[path], variable{
-		name:  name,
-		value: value,
-		alias: isAlias,
-	})
-	return q
-}
-*/
 //Var sets q as a var query with the variable name name.
 //if name is empty it is just a basic var query.
 func (q *GeneratedQuery) Var(name string) *GeneratedQuery {
@@ -497,7 +490,7 @@ func (q *GeneratedQuery) Static() StaticQuery {
 //variables. variables are automatically mapped to GraphQL variables as a way
 //of avoiding SQL injections.
 func (q *GeneratedQuery) Function(ft FunctionType) *GeneratedQuery {
-	q.function = function{typ: ft, variables: make([]graphVariable, 0, 4)}
+	q.function = function{typ: ft}
 	return q
 }
 

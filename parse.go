@@ -1,13 +1,14 @@
 package humus
 
 import (
-	"encoding/json"
 	"errors"
 	"fmt"
-	"github.com/buger/jsonparser"
-	"github.com/mailru/easyjson"
+	"github.com/Vliro/humus/parse"
+	jsoniter "github.com/json-iterator/go"
 	"reflect"
 )
+
+var json = jsoniter.ConfigCompatibleWithStandardLibrary
 
 //handleResponse takes the raw input from Dgraph and deserializes into the interfaces
 //as provided by inp given the query names. It will use easyjson if available,
@@ -19,7 +20,7 @@ func handleResponse(res []byte, inp []interface{}, names []string) error {
 	//traversing the query root with zero allocations is a large benefit, making jsonparser
 	//a very useful library here.
 	//Alternatively you can deserialize into an arbitrary object and use that but it is a lot less efficient.
-	return jsonparser.ObjectEach(res, func(key []byte, value []byte, _ jsonparser.ValueType, _ int) error {
+	return parse.ObjectEach(res, func(key []byte, value []byte, _ parse.ValueType, _ int) error {
 		i++
 		//Skip empty return values.
 		if string(value) == "[]" {
@@ -47,9 +48,6 @@ func singleResponse(value []byte, inp interface{}) error {
 		if !isArray {
 			value = value[1 : len(value)-1]
 		}
-	}
-	if val, ok := inp.(easyjson.Unmarshaler); ok {
-		return easyjson.Unmarshal(value, val)
 	}
 	return json.Unmarshal(value, inp)
 }

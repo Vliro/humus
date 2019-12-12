@@ -25,3 +25,14 @@ func TestDeserialize(t *testing.T) {
 		t.Fail()
 	}
 }
+
+func BenchmarkDeserialize(b *testing.B) {
+	for i := 0; i < b.N; i++ {
+		var res dbError
+		err := handleResponse(testErrorValue, []interface{}{&res}, []string{"q0"})
+		if err != nil {
+			return
+		}
+	}
+	b.ReportAllocs()
+}

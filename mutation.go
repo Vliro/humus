@@ -1,7 +1,6 @@
 package humus
 
 import (
-	"encoding/json"
 	"github.com/pkg/errors"
 )
 
@@ -9,7 +8,7 @@ import (
 //interface{} is used over DNode as the structure of a mutation might
 //change so a map[string]interface{} is needed for certain mutations.
 type SingleMutation struct {
-	Object DNode
+	Object       DNode
 	MutationType MutationType
 	//Used for upsert.
 	Condition string
@@ -59,10 +58,11 @@ func (m SingleMutation) mutate() ([]byte, error) {
 }
 
 type MutationQuery struct {
-	Values []DNode
-	Condition string
+	Values       []DNode
+	Condition    string
 	MutationType MutationType
 }
+
 //CreateMutations creates a list of mutations from a variadic list of Dnodes.
 func CreateMutations(typ MutationType, muts ...DNode) *MutationQuery {
 	return &MutationQuery{
@@ -81,7 +81,7 @@ func (m *MutationQuery) Cond() string {
 }
 
 func (m *MutationQuery) mutate() ([]byte, error) {
-	for k,v := range m.Values {
+	for k, v := range m.Values {
 		v.Recurse()
 		switch m.MutationType {
 		case MutateSet:
@@ -109,7 +109,7 @@ func (m *MutationQuery) Type() MutationType {
 }
 
 type customMutation struct {
-	Value interface{}
+	Value     interface{}
 	QueryType MutationType
 	Condition string
 }
@@ -126,12 +126,13 @@ func (c customMutation) mutate() ([]byte, error) {
 func (c customMutation) Type() MutationType {
 	return c.QueryType
 }
+
 //CreateCustomMutation allows you to create a mutation from an interface
 //and not a DNode. This is useful alongside custom queries to set values, especially
 //working with facets.
 func CreateCustomMutation(obj interface{}, typ MutationType) Mutate {
 	return customMutation{
-		Value: obj,
-		QueryType:  typ,
+		Value:     obj,
+		QueryType: typ,
 	}
 }

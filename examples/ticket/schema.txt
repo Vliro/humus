@@ -1,0 +1,25 @@
+type Event {
+Event.name : string  
+Event.prices : [int]  
+Event.description : string  
+}
+type User {
+User.name : string  
+User.email : string  
+User.fullName : string  
+}
+type Error {
+Error.message : string  
+Error.errorType : string  
+Error.time : datetime  
+}
+<Event.name>: string @index(hash)  . 
+<Event.attending>: [uid] @reverse @count . 
+<Event.prices>: [int]  . 
+<Event.description>: string  . 
+<User.name>: string @index(hash)  . 
+<User.email>: string  . 
+<User.fullName>: string  . 
+<Error.message>: string  . 
+<Error.errorType>: string  . 
+<Error.time>: datetime  . 

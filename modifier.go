@@ -29,15 +29,53 @@ const (
 	modifierFunction
 )
 
+/*
+Operation is a closure callback given a mod. Any operations called on this
+applies the given operation at the path.
+*/
 type Operation func(m Mod)
 
+/*
+Mod is the core for applying operations at certain predicate levels.
+There are two kind of 'mods', those which exist at root/edge level and those
+at field level. Paginate, Filter, Sort exists at root/edge level with the remaining
+existing at field level. This is an important distinction
+For Paginate, a path of "" applies the pagination at the top level (root) and given a single
+predicate P it applies it on the edge.
+For Variable, a path of "" applies the variable at the root field level, at the top level node.
+*/
 type Mod interface {
+	/*
+		Paginate creates a pagination at this level given the pagination type
+		and the value.
+	*/
 	Paginate(t PaginationType, value int) bool
-	Variable(name string, value string, isAlias bool) bool
+	/*
+		Filter creates a filter at this level given a function type and a list of variables with the
+		same syntax as a function.
+	*/
 	Filter(t FunctionType, variables ...interface{}) bool
+	/*
+		Sort applies a sorting at this level.
+	*/
 	Sort(t OrderType, p Predicate) bool
+	/*
+		Aggregate sets an aggregation at this level.
+	*/
 	Aggregate(t AggregateType, v string, alias string) bool
+	/*
+		Count sets a count variable at this level, e.g.
+		result : count(uid) given a "uid" as predicate and
+		"result" as alias.
+	*/
 	Count(p Predicate, alias string) bool
+	/*
+		Variable sets a variable at this level.
+		It either generates a value variable or an alias variable.
+		If name is omitted so is the prefix for the variable. This
+		can be useful for setting facet variables where name is omitted.
+	*/
+	Variable(name string, value string, isAlias bool) bool
 }
 
 type modifierType uint8

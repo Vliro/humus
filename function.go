@@ -82,6 +82,7 @@ const (
 	typeFloat   varType = "float"
 	typeGeo     varType = "geo"
 	typeDefault varType = ""
+	typeVar     varType = "val"
 )
 
 //graphVariable represents a variable before it is parsed and written into a query.

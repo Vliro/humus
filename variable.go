@@ -7,6 +7,13 @@ import (
 	"strings"
 )
 
+/*
+Variable represents a value variable. This static type enforces a
+'val' in the query generation in e.g. functions and filters.
+//TODO, not implemented yet.
+*/
+type Variable string
+
 //processInterface takes the type and returns what variable it is as well as a string representation of it.
 //this function is the reason why using the default generated values is important since it includes the static type
 //of predicate/uid.,
@@ -27,6 +34,8 @@ func processInterface(value interface{}) (string, varType) {
 		return strconv.FormatFloat(float64(a), 'f', 16, 32), typeFloat
 	case float64:
 		return strconv.FormatFloat(a, 'f', 16, 64), typeFloat
+	case Variable:
+		return string(a), typeVar
 	default:
 		return fmt.Sprintf("%s", a), typeString
 	}
@@ -44,7 +53,7 @@ func (v variable) canApply(mt modifierSource) bool {
 }
 
 func (v variable) apply(root *GeneratedQuery, meta FieldMeta, mt modifierSource, sb *strings.Builder) error {
-	if v.value == "" {
+	if v.value == "" && v.name == "" {
 		return errors.New("missing values in graphVariable")
 	}
 	sb.WriteByte(' ')

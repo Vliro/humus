@@ -32,9 +32,9 @@ type dbError struct {
 	//This line declares basic properties for a database node.
 	Node
 	//Regular fields
-	Message   string    `json:"Error.message,omitempty"`
-	ErrorType string    `json:"Error.errorType,omitempty"`
-	Time      time.Time `json:"Error.time,omitempty"`
+	Message   string    `json:"message" predicate:"Error.message,omitempty"`
+	ErrorType string    `json:"errorType,omitempty" predicate:"Error.errorType,omitempty"`
+	Time      time.Time `json:"time,omitempty" predicate:"Error.time,omitempty"`
 }
 
 var ErrorFields FieldList = []Field{MakeField("Error.message", 0), MakeField("Error.errorType", 0), MakeField("Error.time", 0)}

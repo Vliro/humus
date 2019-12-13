@@ -13,7 +13,7 @@ import (
 const topLine = "type %v struct {\n"
 
 //Make sure there is space beforehand.
-const lineDeclaration = " %v `json:\"%v\"` \n"
+const lineDeclaration = " %v `json:\"%v\" predicate:\"%v\"` \n"
 
 const bottomLine = "}\n"
 
@@ -248,6 +248,7 @@ func createField(objectName string, name string, typ string, sb *bytes.Buffer, f
 	sb.WriteString(fmt.Sprintf(lineDeclaration,
 		//Ensure it is capitalized for export.
 		fi.TypeLabel,
+		name,
 		fi.WrittenTag))
 	fi.Name = strings.Title(name)
 	fi.Type = typ

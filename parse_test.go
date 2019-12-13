@@ -1,7 +1,9 @@
 package humus
 
 import (
+	"fmt"
 	"testing"
+	"time"
 )
 
 var testErrorValue = []byte(`{
@@ -24,6 +26,16 @@ func TestDeserialize(t *testing.T) {
 	if res.Message != "testagain" || res.ErrorType != "test" {
 		t.Fail()
 	}
+}
+
+func TestSerialize(t *testing.T) {
+	var res = dbError{
+		Message:   "testagain",
+		ErrorType: "test",
+		Time:      time.Now(),
+	}
+	b, _ := json.Marshal(res)
+	fmt.Println(string(b))
 }
 
 func BenchmarkDeserialize(b *testing.B) {

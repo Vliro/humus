@@ -3,8 +3,8 @@ package humus
 //The common node type that is inherited. This differs from the DNode which is an interface while
 //node is an embedded struct containing basic dgraph properties.
 type Node struct {
-	Uid  UID      `json:"uid,omitempty"`
-	Type []string `json:"dgraph.type,omitempty"`
+	Uid  UID      `json:"uid,omitempty" predicate:"uid,omitempty"`
+	Type []string `json:"dgraph.type,omitempty" predicate:"uid,omitempty"`
 }
 
 func (n *Node) Fields() FieldList {

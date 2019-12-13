@@ -8,7 +8,13 @@ import (
 	"reflect"
 )
 
-var json = jsoniter.ConfigCompatibleWithStandardLibrary
+var json = jsoniter.Config{
+	EscapeHTML:             true,
+	SortMapKeys:            true,
+	ValidateJsonRawMessage: true,
+	MaxDepth:               -1,
+	TagKey:                 "predicate",
+}.Froze()
 
 //handleResponse takes the raw input from Dgraph and deserializes into the interfaces
 //as provided by inp given the query names. It will use easyjson if available,

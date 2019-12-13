@@ -27,6 +27,6 @@ func (r *{{.Name}}) recurse(counter int) int {
 }
 //Recurse iterates through the node and allocates type and UID
 //to pointer nodes.
-func (r *{{.Name}}) Recurse() {
-    r.recurse(0)
+func (r *{{.Name}}) Recurse(counter int) int {
+    return r.recurse(0)
 }

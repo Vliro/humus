@@ -4,6 +4,7 @@ type Event {
     attending: [User]! @hasInverse(field: attending) @source @count
     prices: [Int]!
     description: String!
+    premium: Int! @facet(edge: attending)
 }
 
 type User {

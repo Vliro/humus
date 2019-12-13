@@ -11,7 +11,7 @@ var eventFields = EventFields.Sub(EventAttendingField, UserFields)
 
 func GetEvent(uid humus.UID) ([]*Event, error) {
 	var ev []*Event
-	err := db.Query(context.Background(), humus.GetByUid(uid, eventFields), &ev)
+	err := db.Query(context.Background(), humus.NewQuery(eventFields).Function(humus.FunctionUid).Values(uid), &ev)
 	return ev, err
 }
 
@@ -76,18 +76,11 @@ func EventOrderByPremium(uid humus.UID) (*Event, error) {
 	return &res, err
 }
 
-func AttendingEvent(uid humus.UID) (*Event, int) {
-	var res = struct {
-		Event
-		Value int `json:"result"`
-	}{}
-	var q = humus.NewQuery(EventFields).Function(humus.FunctionUid).Values(uid)
-	q.At("", func(m humus.Mod) {
-		m.Aggregate(humus.Count, string(EventAttendingField), "result")
-	})
-	err := db.Query(context.Background(), q, &res)
-	if err != nil {
-		return nil, -1
-	}
-	return &res.Event, res.Value
+var userField = UserFields.Sub(UserAttendingField, UserFields)
+
+func GetUserWithAttending(name string) (*User, error) {
+	var us User
+	q := humus.NewQuery(userField).Function(humus.Equals).Values(UserNameField, name).Facets(UserAttendingField, nil)
+	err := db.Query(context.Background(), q, &us)
+	return &us, err
 }

@@ -34,8 +34,8 @@ func (r *Event) recurse(counter int) int {
 
 //Recurse iterates through the node and allocates type and UID
 //to pointer nodes.
-func (r *Event) Recurse() {
-	r.recurse(0)
+func (r *Event) Recurse(counter int) int {
+	return r.recurse(counter)
 }
 func (r *User) recurse(counter int) int {
 	if r != nil {
@@ -57,8 +57,8 @@ func (r *User) recurse(counter int) int {
 
 //Recurse iterates through the node and allocates type and UID
 //to pointer nodes.
-func (r *User) Recurse() {
-	r.recurse(0)
+func (r *User) Recurse(counter int) int {
+	return r.recurse(counter)
 }
 func (r *Error) recurse(counter int) int {
 	if r != nil {
@@ -76,8 +76,8 @@ func (r *Error) recurse(counter int) int {
 
 //Recurse iterates through the node and allocates type and UID
 //to pointer nodes.
-func (r *Error) Recurse() {
-	r.recurse(0)
+func (r *Error) Recurse(counter int) int {
+	return r.recurse(counter)
 }
 
 //Beginning of field.template. General functions.

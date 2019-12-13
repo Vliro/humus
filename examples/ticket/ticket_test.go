@@ -6,6 +6,7 @@ import (
 	"github.com/Vliro/humus"
 	"github.com/dgraph-io/dgo/protos/api"
 	"io/ioutil"
+	"strconv"
 	"testing"
 )
 
@@ -53,11 +54,6 @@ func TestTicket(t *testing.T) {
 		t.Fail()
 		return
 	}
-	_, i := AttendingEvent(ev.Uid)
-	if i != 2 {
-		t.Fail()
-	}
-	fmt.Println(i)
 }
 
 func TestMain(m *testing.M) {
@@ -87,6 +83,15 @@ func TestMain(m *testing.M) {
 	if err != nil {
 		panic(err)
 	}
+	makethousand()
+	q := humus.NewQuery(eventFields).Function(humus.Type).Values("Event")
+	var ev []*Event
+	err = db.Query(context.Background(), q, &ev)
+	if err != nil {
+		panic(err)
+	}
+	us, err := GetUserWithAttending("User")
+	_ = us
 	m.Run()
 }
 
@@ -103,4 +108,29 @@ func TestFacets(t *testing.T) {
 	})
 	str, _ := q.Process()
 	fmt.Println(str)
+}
+
+func makethousand() {
+	var us = User{
+		Name:     "User",
+		Email:    "mail@mail.com",
+		FullName: "User Man",
+		Premium:  5,
+	}
+	var arr = make([]humus.DNode, 100)
+	for i := 0; i < 100; i++ {
+		arr[i] = &Event{
+			Name:        "Event " + strconv.Itoa(i),
+			Attending:   []*User{&us},
+			Prices:      []int{1, 4, 1},
+			Description: "Event description",
+		}
+	}
+	mu := humus.CreateMutations(humus.MutateSet, arr...)
+	resp, err := db.Mutate(context.Background(), mu)
+
+	if err != nil {
+		panic(err)
+	}
+	fmt.Println(len(resp.Uids), " nodes created.")
 }

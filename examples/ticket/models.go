@@ -23,9 +23,10 @@ type Event struct {
 	Attending   []*User `json:"Event.attending,omitempty"`
 	Prices      []int   `json:"Event.prices,omitempty"`
 	Description string  `json:"Event.description,omitempty"`
+	Premium     int     `json:"~Event.attending|premium,omitempty"`
 }
 
-var EventFields humus.FieldList = []humus.Field{MakeField("Event.name", 0), MakeField("Event.attending", 0|humus.MetaObject|humus.MetaList|humus.MetaReverse), MakeField("Event.prices", 0|humus.MetaList), MakeField("Event.description", 0)}
+var EventFields humus.FieldList = []humus.Field{MakeField("Event.name", 0), MakeField("Event.attending", 0|humus.MetaObject|humus.MetaList|humus.MetaReverse), MakeField("Event.prices", 0|humus.MetaList), MakeField("Event.description", 0), MakeField("~Event.attending|premium", 0|humus.MetaFacet)}
 
 //Generating constant field values.
 const (
@@ -33,6 +34,7 @@ const (
 	EventAttendingField   humus.Predicate = "Event.attending"
 	EventPricesField      humus.Predicate = "Event.prices"
 	EventDescriptionField humus.Predicate = "Event.description"
+	EventPremiumField     humus.Predicate = "~Event.attending|premium"
 )
 
 //SaveValues saves the node values that
@@ -84,6 +86,7 @@ func (r *Event) Values() humus.DNode {
 	m.Name = r.Name
 	m.Prices = r.Prices
 	m.Description = r.Description
+	m.Premium = r.Premium
 	r.SetType()
 	m.Node = r.Node
 	return &m
@@ -97,11 +100,12 @@ func (r *Event) MapValues() humus.Mapper {
    m["Event.name"]= r.Name
       m["Event.prices"]= r.Prices
       m["Event.description"]= r.Description
+      m["~Event.attending|premium"]= r.Premium
       if r.Uid != "" {
       m["uid"] = r.Uid
    }
     r.SetType()
-    m["dgraph.type"] = r.typ
+    m["dgraph.type"] = r.Type
     return m
 }
 */
@@ -113,6 +117,7 @@ type EventScalars struct {
 	Name        string `json:"Event.name,omitempty"`
 	Prices      []int  `json:"Event.prices,omitempty"`
 	Description string `json:"Event.description,omitempty"`
+	Premium     int    `json:"~Event.attending|premium,omitempty"`
 }
 
 func (s *EventScalars) Values() humus.DNode {
@@ -215,7 +220,7 @@ func (r *User) MapValues() humus.Mapper {
       m["uid"] = r.Uid
    }
     r.SetType()
-    m["dgraph.type"] = r.typ
+    m["dgraph.type"] = r.Type
     return m
 }
 */
@@ -324,7 +329,7 @@ func (r *Error) MapValues() humus.Mapper {
       m["uid"] = r.Uid
    }
     r.SetType()
-    m["dgraph.type"] = r.typ
+    m["dgraph.type"] = r.Type
     return m
 }
 */

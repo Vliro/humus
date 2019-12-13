@@ -1,3 +1,8 @@
+type Error {
+Error.message : string  
+Error.errorType : string  
+Error.time : datetime  
+}
 type Event {
 Event.name : string  
 Event.prices : [int]  
@@ -7,11 +12,6 @@ type User {
 User.name : string  
 User.email : string  
 User.fullName : string  
-}
-type Error {
-Error.message : string  
-Error.errorType : string  
-Error.time : datetime  
 }
 <Event.name>: string @index(hash)  . 
 <Event.attending>: [uid] @reverse @count . 

@@ -1,10 +1,5 @@
 package humus
 
-import (
-	"strconv"
-	"strings"
-)
-
 //The common node type that is inherited. This differs from the DNode which is an interface while
 //node is an embedded struct containing basic dgraph properties.
 type Node struct {
@@ -20,8 +15,8 @@ func (n *Node) Values() DNode {
 	return n
 }
 
-func (n *Node) Recurse() {
-
+func (n *Node) Recurse(counter int) int {
+	return counter
 }
 
 func (n *Node) MapValues() Mapper {
@@ -73,12 +68,6 @@ func GetByUid(uid UID, fields Fields) *GeneratedQuery {
 //GetByPredicate is shorthand for generating a query for getting nodes
 //from multiple predicate values given by the fields.
 func GetByPredicate(pred Predicate, fields Fields, values ...interface{}) *GeneratedQuery {
-	q := NewQuery(fields).Function(Equals).Values(pred, values)
+	q := NewQuery(fields).Function(Equals).Values(values...)
 	return q
-}
-
-func writeInt(i int64, sb *strings.Builder) {
-	var buf [8]byte
-	b := strconv.AppendInt(buf[:0], i, 10)
-	sb.Write(b)
 }

@@ -65,7 +65,7 @@ type DNode interface {
 	//a type of *{{.typ}}Scalars.
 	Values() DNode
 	//Recurse allows you to set types and UIDS for all sub nodes.
-	Recurse()
+	Recurse(counter int) int
 }
 
 //Querier is an abstraction over DB/TXN. Also allows for testing.
@@ -152,8 +152,8 @@ func (m Mapper) Fields() FieldList {
 	return nil
 }
 
-func (m Mapper) Recurse() {
-
+func (m Mapper) Recurse(counter int) int {
+	return counter
 }
 
 func (m Mapper) Values() DNode {
@@ -171,7 +171,7 @@ func (m Mapper) Set(child Predicate, all bool, obj DNode) Mapper {
 		//TODO: what should actually happen here?
 		return m
 	}
-	obj.Recurse()
+	obj.Recurse(0)
 	if all {
 		if val, ok := obj.(Saver); ok {
 			m[string(child)] = val.Save()
@@ -192,7 +192,7 @@ func (m Mapper) MustSet(child Predicate, all bool, obj DNode) Mapper {
 		//panic for now.
 		panic("mapper MustSet nil value")
 	}
-	obj.Recurse()
+	obj.Recurse(0)
 	if all {
 		if val, ok := obj.(Saver); ok {
 			m[string(child)] = val.Save()
@@ -216,8 +216,9 @@ func checkNil(c DNode) bool {
 //SetArray sets a list of edges, saving as the form [node1, node2..].
 func (m Mapper) SetArray(child string, all bool, objs ...DNode) Mapper {
 	var output = make([]interface{}, len(objs))
+	var counter = 0
 	for k, v := range objs {
-		v.Recurse()
+		counter = v.Recurse(counter)
 		if all {
 			if val, ok := v.(Saver); ok {
 				output[k] = val.Save()
@@ -385,7 +386,7 @@ func (d *DB) logError(ctx context.Context, err error) {
 		errorName := fmt.Sprintf("%T", err)
 		value := err.Error()
 		var result dbError
-		result.Recurse()
+		result.Recurse(0)
 		result.Message = value
 		result.Time = time.Now()
 		result.ErrorType = errorName

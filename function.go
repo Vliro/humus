@@ -130,10 +130,17 @@ func (f *function) AND(fi *Filter) *Filter {
 
 */
 func (f *function) values(val []interface{}) *function {
-	f.variables = make([]graphVariable, len(val))
-	for k, v := range val {
-		val, typ := processInterface(v)
-		f.variables[k] = graphVariable{val, typ}
+	if f.variables == nil {
+		f.variables = make([]graphVariable, len(val))
+		for k, v := range val {
+			val, typ := processInterface(v)
+			f.variables[k] = graphVariable{val, typ}
+		}
+	} else {
+		for _, v := range val {
+			val, typ := processInterface(v)
+			f.variables = append(f.variables, graphVariable{val, typ})
+		}
 	}
 	return f
 }

@@ -110,7 +110,7 @@ func (m modifierList) sort() {
 				m.Swap(0, 1)
 			}
 		} else {
-			sort.Sort(m)
+			sort.Stable(m)
 		}
 	}
 }

@@ -33,15 +33,17 @@ func handleResponse(res []byte, inp []interface{}, names []string) error {
 }
 
 func singleResponse(value []byte, inp interface{}) error {
-	val := reflect.TypeOf(inp)
-	kind := val.Kind()
-	if !(kind == reflect.Ptr || kind == reflect.Interface) {
-		return fmt.Errorf("parse: invalid non-assignable input to singleResponse, got type %s", val.String())
-	}
-	isArray := kind == reflect.Slice || kind == reflect.Array
 	if len(value) == 0 {
 		return nil
 	}
+	val := reflect.TypeOf(inp)
+	kind := val.Kind()
+	if !(kind == reflect.Ptr) {
+		return fmt.Errorf("parse: invalid non-assignable input to singleResponse, got type %s", val.String())
+	}
+	val = val.Elem()
+	kind = val.Kind()
+	isArray := kind == reflect.Slice || kind == reflect.Array
 	//No need for massive reflect to check if it is an array
 	if value[0] == '[' {
 		if !isArray {

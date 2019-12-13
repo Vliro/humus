@@ -210,14 +210,6 @@ func (q *GeneratedQuery) Process() (string, error) {
 	return q.create(nil)
 }
 
-/*
-//Order adds an ordering of type t at the given object path to the predicate pred.
-//Requires is that the path points to an object predicate where pred is a predicate in the given object.
-func (q *GeneratedQuery) Order(t OrderType, path Predicate, pred Predicate) *GeneratedQuery {
-	q.modifiers[path] = append(q.modifiers[path], Ordering{Type: t, Predicate: pred})
-	return q
-}*/
-
 //MutationType defines whether a mutation sets or deletes values.
 type MutationType string
 
@@ -281,7 +273,7 @@ func (q *GeneratedQuery) create(sb *strings.Builder) (string, error) {
 	} else {
 		sb.WriteByte('q')
 		if q.index != 0 {
-			writeInt(int64(q.index), sb)
+			sb.WriteString(strconv.Itoa(q.index))
 		} else {
 			sb.WriteByte('0')
 		}
@@ -369,27 +361,6 @@ func (q *GeneratedQuery) At(path Predicate, op Operation) *GeneratedQuery {
 }
 
 /*
-//Paginate adds a count to a predicate specified by the path. If path = "" it is applied at root.
-func (q *GeneratedQuery) Paginate(t PaginationType, path Predicate, value int) *GeneratedQuery {
-	q.modifiers[path] = append(q.modifiers[path], pagination{Type: t, Value: value})
-	return q
-}
-*/
-/*
-//Agg adds aggregation on a value variable or a predicate.
-//Note that path here is the root level of the aggregation such that
-//empty path corresponds to top level aggregation, i.e. on the root node.
-//The variable represents which value to aggregate on and alias
-//is the alias for this aggregation.
-//isVariable defines whether or not to use 'val' in order to aggregate.
-//For more flexibility use the Variable function to allow arbitrary modifier.
-//For count, value is a predicate to count on.
-func (q *GeneratedQuery) Agg(typ AggregateType, path Predicate, value string, alias string) *GeneratedQuery {
-	q.modifiers[path] = append(q.modifiers[path], aggregateValues{Type: typ, Alias: alias, Variable: value})
-	return q
-}*/
-
-/*
 Facets sets @facets for the edge specified by path along with all values as specified by op.
 This can be  used to fetch facets, store facets in query variables or something in that manner.
 For instance, generating a line in the fashion of @facets(value as friendsSince)
@@ -429,15 +400,6 @@ func (q *GeneratedQuery) GroupBy(path Predicate, onWhich Predicate, op Operation
 	return q
 }
 
-/*
-//Filter adds a subfilter to the edge specified by path.
-//If path is "Node.edge" then the first edge from Node will have a filter
-//applied alongside the "Node.edge" predicate. If path is "" it is applied at root.
-func (q *GeneratedQuery) Filter(f *Filter, path Predicate) *GeneratedQuery {
-	q.modifiers[path] = append(q.modifiers[path], f)
-	return q
-}
-*/
 //Language sets the language for the query to apply to all fields.
 //If strict do not allow untagged language.
 func (q *GeneratedQuery) Language(l Language, strict bool) *GeneratedQuery {

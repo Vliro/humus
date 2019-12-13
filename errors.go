@@ -15,13 +15,14 @@ var ErrUID = errors.New("missing UID")
 
 var errMissingFunction = errors.New("missing function")
 var errMissingVariables = errors.New("missing variables in function")
+
 //Call this on a top level error.
 func Error(err error) error {
 	if err == nil {
 		return nil
 	}
 
-	return errors2.Wrap(err,"mulbase")
+	return errors2.Wrap(err, "mulbase")
 }
 
 var fErrNil = "nil check failed for %s"
@@ -83,10 +84,6 @@ func (r *dbError) Values() DNode {
 	return &m
 }
 
-func (d *dbError) Recurse() {
-
-}
-
 //ErrorScalars is simply to avoid a map[string]interface{}
 //It is a mirror of the previous struct with all scalar values.
 type ErrorScalars struct {
@@ -100,11 +97,6 @@ func (s *ErrorScalars) Values() DNode {
 	return s
 }
 
-
 func (s *ErrorScalars) Fields() FieldList {
 	return ErrorFields
-}
-
-func (s *ErrorScalars) Recurse() {
-
 }

@@ -29,6 +29,7 @@ type Fields interface {
 	Get() []Field
 	//Len is the length of the fields.
 	Len() int
+	Select(names ...Predicate) Fields
 }
 
 //Select selects a subset of fields and returns a new list
@@ -79,6 +80,24 @@ func (f FieldList) Len() int {
 
 //NewList simply represents a list of fields where no copying is needed.
 type NewList FieldList
+
+func (f NewList) Select(names ...Predicate) Fields {
+	var newList = make(NewList, len(names))
+	index := 0
+loop:
+	for _, v := range names {
+		for _, iv := range f {
+			if iv.Name == v {
+				newList[index] = iv
+				//Strip the MetaIgnore since we select the field. Useful for password fields.
+				newList[index].Meta &^= MetaIgnore
+				index++
+				continue loop
+			}
+		}
+	}
+	return newList
+}
 
 func (f NewList) Get() []Field {
 	return f
@@ -254,6 +273,10 @@ type Field struct {
 	Meta   FieldMeta
 	Fields Fields
 	Name   Predicate
+}
+
+func (f Field) Select(names ...Predicate) Fields {
+	panic("do not call Select on singular field")
 }
 
 //Sub here simply uses fields as Field { fields}.

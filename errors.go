@@ -61,7 +61,7 @@ func (r *dbError) GetType() []string {
 }
 
 //fields returns all Scalar fields for this value.
-func (r *dbError) Fields() FieldList {
+func (r *dbError) Fields() Fields {
 	return ErrorFields
 }
 
@@ -73,6 +73,7 @@ func (r *dbError) SetType() {
 	}
 }
 
+/*
 //values returns all the scalar values for this node.
 func (r *dbError) Values() DNode {
 	var m ErrorScalars
@@ -83,8 +84,9 @@ func (r *dbError) Values() DNode {
 	m.Node = r.Node
 	return &m
 }
-
+*/
 //ErrorScalars is simply to avoid a map[string]interface{}
+/*
 //It is a mirror of the previous struct with all scalar values.
 type ErrorScalars struct {
 	Node
@@ -100,3 +102,4 @@ func (s *ErrorScalars) Values() DNode {
 func (s *ErrorScalars) Fields() FieldList {
 	return ErrorFields
 }
+*/

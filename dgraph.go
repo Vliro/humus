@@ -58,12 +58,11 @@ type DNode interface {
 	SetType()
 	//Returns the type.
 	GetType() []string
-	//Returns all scalar fields for this node. This is not of fields interface
-	//as they default nods always return a FieldList and not a NewList for instance.
-	Fields() FieldList
+	//Returns all fields for this node.
+	Fields() Fields
 	//Serializes all the scalar values that are not hidden. It usually returns
 	//a type of *{{.typ}}Scalars.
-	Values() DNode
+	//Values() DNode
 	//Recurse allows you to set types and UIDS for all sub nodes.
 	Recurse(counter int) int
 }
@@ -148,7 +147,7 @@ func (m Mapper) SetType() {
 	fmt.Println("SetType called on Mapper. Is this intended?")
 }
 
-func (m Mapper) Fields() FieldList {
+func (m Mapper) Fields() Fields {
 	return nil
 }
 
@@ -156,6 +155,7 @@ func (m Mapper) Recurse(counter int) int {
 	return counter
 }
 
+/*
 func (m Mapper) Values() DNode {
 	return m
 }
@@ -163,7 +163,7 @@ func (m Mapper) Values() DNode {
 func (m Mapper) MapValues() Mapper {
 	return m
 }
-
+*/
 //Set sets a singular regulation, i.e. 1-1.
 //If all uses saver interface or the entire object. Otherwise, only uid is used.
 func (m Mapper) Set(child Predicate, all bool, obj DNode) Mapper {

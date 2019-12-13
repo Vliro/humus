@@ -4,10 +4,10 @@ package humus
 //node is an embedded struct containing basic dgraph properties.
 type Node struct {
 	Uid  UID      `json:"uid,omitempty" predicate:"uid,omitempty"`
-	Type []string `json:"dgraph.type,omitempty" predicate:"uid,omitempty"`
+	Type []string `json:"dgraph.type,omitempty" predicate:"dgraph.type,omitempty"`
 }
 
-func (n *Node) Fields() FieldList {
+func (n *Node) Fields() Fields {
 	return nil
 }
 

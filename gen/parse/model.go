@@ -17,7 +17,7 @@ const lineDeclaration = " %v `json:\"%v\" predicate:\"%v\"` \n"
 
 const bottomLine = "}\n"
 
-const fieldDecl = "var %vFields humus.FieldList = []humus.Field{%s} "
+const fieldDecl = "var %vFields humus.Fields = humus.FieldList([]humus.Field{%s}) "
 
 const makeFieldName = "MakeField(%s, %v)"
 

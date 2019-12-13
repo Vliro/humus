@@ -2,7 +2,6 @@ package humus
 
 import (
 	"errors"
-	"sort"
 	"strconv"
 	"strings"
 )
@@ -95,7 +94,7 @@ func (q *Queries) names() []string {
 
 func (q *Queries) NewQuery(f Fields) *GeneratedQuery {
 	newq := &GeneratedQuery{
-		modifiers: make(map[Predicate]modifierList),
+		modifiers: make(map[Predicate]*mapElement),
 		fields:    f,
 		varMap:    q.vars,
 	}
@@ -164,7 +163,7 @@ type GeneratedQuery struct {
 	//The overall language for this query.
 	language Language
 	//List of modifiers, i.e. order, pagination etc.
-	modifiers map[Predicate]modifierList
+	modifiers map[Predicate]*mapElement
 	//Map for dealing with GraphQL variables. It is inherited in multi-query layout.
 	varMap map[string]string
 	//function for getting next query value in multi-query. It is also used
@@ -183,26 +182,12 @@ type GeneratedQuery struct {
 	strictLanguage bool
 }
 
-//Facets sets @facets for the edge specified by path.
-func (q *GeneratedQuery) Facets(path Predicate) *GeneratedQuery {
-	q.modifiers[path] = append(q.modifiers[path], Facet{})
-	return q
-}
-
-//OnFacet returns an object.
-func (q *GeneratedQuery) OnFacet(path Predicate, f func(facet *Facet)) *GeneratedQuery {
-	var fac Facet
-	f(&fac)
-	q.modifiers[path] = append(q.modifiers[path], fac)
-	return q
-}
-
 //NewQuery returns a new singular generation query for use
 //in building a single query.
 func NewQuery(f Fields) *GeneratedQuery {
 	return &GeneratedQuery{
 		varMap:    make(map[string]string),
-		modifiers: make(map[Predicate]modifierList),
+		modifiers: make(map[Predicate]*mapElement),
 		fields:    f,
 	}
 }
@@ -223,13 +208,6 @@ func NewQueries() *Queries {
 
 func (q *GeneratedQuery) Process() (string, error) {
 	return q.create(nil)
-}
-
-//Order adds an ordering of type t at the given object path to the predicate pred.
-//Requires is that the path points to an object predicate where pred is a predicate in the given object.
-func (q *GeneratedQuery) Order(t OrderType, path Predicate, pred Predicate) *GeneratedQuery {
-	q.modifiers[path] = append(q.modifiers[path], Ordering{Type: t, Predicate: pred})
-	return q
 }
 
 //MutationType defines whether a mutation sets or deletes values.
@@ -264,7 +242,7 @@ func (q *GeneratedQuery) create(sb *strings.Builder) (string, error) {
 	if sb == nil {
 		sb = new(strings.Builder)
 		q.mapVariables(q)
-		sb.Grow(512)
+		sb.Grow(256)
 	}
 	if err := q.function.check(q); err != nil {
 		return "", err
@@ -295,7 +273,7 @@ func (q *GeneratedQuery) create(sb *strings.Builder) (string, error) {
 	} else {
 		sb.WriteByte('q')
 		if q.index != 0 {
-			writeInt(int64(q.index), sb)
+			sb.WriteString(strconv.Itoa(q.index))
 		} else {
 			sb.WriteByte('0')
 		}
@@ -307,25 +285,10 @@ func (q *GeneratedQuery) create(sb *strings.Builder) (string, error) {
 	}
 	if ok {
 		//Two passes. Before and after parenthesis. That's just how it be.
-		sort.Sort(val)
-		for _, v := range val {
-			if v.priority() > modifierFilter && v.canApply(modifierFunction) {
-				sb.WriteByte(',')
-				err := v.apply(q, 0, modifierFunction, sb)
-				if err != nil {
-					return "", err
-				}
-			}
-		}
-		//TODO: Check this through.
-		sb.WriteByte(')')
-		for _, v := range val {
-			if v.priority() == modifierFilter && v.canApply(modifierFunction) {
-				err := v.apply(q, 0, modifierFunction, sb)
-				if err != nil {
-					return "", err
-				}
-			}
+		val.m.sort()
+		err := val.m.runTopLevel(q, 0, modifierFunction, sb)
+		if err != nil {
+			return "", err
 		}
 	} else {
 		sb.WriteByte(')')
@@ -350,14 +313,10 @@ func (q *GeneratedQuery) create(sb *strings.Builder) (string, error) {
 		}
 		sb.WriteByte(' ')
 	}
-	for _, v := range val {
-		if v.priority() <= modifierAggregate && v.canApply(modifierField) {
-			err := v.apply(q, 0, modifierFunction, sb)
-			if err != nil {
-				return "", err
-			}
-		} else {
-			break
+	if ok {
+		err = val.m.runVariables(q, 0, modifierFunction, sb)
+		if err != nil {
+			return "", err
 		}
 	}
 	//Add default uid to top level field and close query.
@@ -383,37 +342,61 @@ func (q *GeneratedQuery) Directive(dir Directive) *GeneratedQuery {
 	return q
 }
 
-//Paginate adds a count to a predicate specified by the path. If path = "" it is applied at root.
-func (q *GeneratedQuery) Paginate(t CountType, path Predicate, value int) *GeneratedQuery {
-	q.modifiers[path] = append(q.modifiers[path], pagination{Type: t, Value: value})
+/*
+At allows you to run modifiers at a path. Modifiers include
+pagination, sorting, filters among others.
+*/
+func (q *GeneratedQuery) At(path Predicate, op Operation) *GeneratedQuery {
+	val, ok := q.modifiers[path]
+	if !ok {
+		val = new(mapElement)
+		val.q = q
+		q.modifiers[path] = val
+	}
+	var m = (*modifierCreator)(val)
+	if op != nil {
+		op(m)
+	}
 	return q
 }
 
-//Agg adds aggregation on a value variable or a predicate.
-//Note that path here is the root level of the aggregation such that
-//empty path corresponds to top level aggregation, i.e. on the root node.
-//The variable represents which value to aggregate on and alias
-//is the alias for this aggregation.
-//isVariable defines whether or not to use 'val' in order to aggregate.
-//For more flexibility use the Variable function to allow arbitrary modifier.
-//For count, value is a predicate to count on.
-func (q *GeneratedQuery) Agg(typ AggregateType, path Predicate, value string, alias string) *GeneratedQuery {
-	q.modifiers[path] = append(q.modifiers[path], aggregateValues{Type: typ, Alias: alias, Variable: value})
+/*
+Facets sets @facets for the edge specified by path along with all values as specified by op.
+This can be  used to fetch facets, store facets in query variables or something in that manner.
+For instance, generating a line in the fashion of @facets(value as friendsSince)
+will store the facet value 'friendsSince' into the value variable 'value'.
+*/
+func (q *GeneratedQuery) Facets(path Predicate, op Operation) *GeneratedQuery {
+	val, ok := q.modifiers[path]
+	if !ok {
+		val = new(mapElement)
+		val.q = q
+		q.modifiers[path] = val
+	}
+	var f = (*facetCreator)(val)
+	if op != nil {
+		op(f)
+	}
+	f.f.active = true
 	return q
 }
 
-//GroupBy sets groupby on the path.
-//TODO: Make this work properly.
-func (q *GeneratedQuery) GroupBy(path Predicate, value Predicate) *GeneratedQuery {
-	q.modifiers[path] = append(q.modifiers[path], groupBy(value))
-	return q
-}
-
-//Filter adds a subfilter to the edge specified by path.
-//If path is "Node.edge" then the first edge from Node will have a filter
-//applied alongside the "Node.edge" predicate. If path is "" it is applied at root.
-func (q *GeneratedQuery) Filter(f *Filter, path Predicate) *GeneratedQuery {
-	q.modifiers[path] = append(q.modifiers[path], f)
+/*
+GroupBy allows you to groupBy at a leaf field. Using op specify a list of variables and operations
+to be written as aggregation at this level. onWhich specifies what predicate to actually group on.
+*/
+func (q *GeneratedQuery) GroupBy(path Predicate, onWhich Predicate, op Operation) *GeneratedQuery {
+	val, ok := q.modifiers[path]
+	if !ok {
+		val = new(mapElement)
+		val.q = q
+		q.modifiers[path] = val
+	}
+	var g = (*groupCreator)(val)
+	if op != nil {
+		op(g)
+	}
+	g.g.p = onWhich
 	return q
 }
 
@@ -428,26 +411,6 @@ func (q *GeneratedQuery) Language(l Language, strict bool) *GeneratedQuery {
 //Returns all the query variables for this query in create form.
 func (q *GeneratedQuery) variables() string {
 	return q.varBuilder.String()
-}
-
-//Variable adds a value variable of the form name as value.
-//It is arguably the most important function to add expressions
-//to a generated query as it allows you to add value variables,
-//count variables, alias variables etc.
-//Value can be anything from a math expression to a count.
-//Example: if name is test and value is math(p+q) then
-//result is a variable 'test as math(p+q)' at the path given by path.
-//isAlias simply means that rather than a value variable it is
-//test : math(p+q)
-//Variable is also used for specifying count! Omitting name means it will be fetched
-//as a regular field.
-func (q *GeneratedQuery) Variable(name string, path Predicate, value string, isAlias bool) *GeneratedQuery {
-	q.modifiers[path] = append(q.modifiers[path], variable{
-		name:  name,
-		value: value,
-		alias: isAlias,
-	})
-	return q
 }
 
 //Var sets q as a var query with the variable name name.
@@ -494,10 +457,10 @@ func (q *GeneratedQuery) Static() StaticQuery {
 }
 
 //Function sets the function type for this function. It is used alongside
-//variables. Variables are automatically mapped to GraphQL variables as a way
+//variables. variables are automatically mapped to GraphQL variables as a way
 //of avoiding SQL injections.
 func (q *GeneratedQuery) Function(ft FunctionType) *GeneratedQuery {
-	q.function = function{Type: ft, Variables: make([]graphVariable, 0, 4)}
+	q.function = function{typ: ft}
 	return q
 }
 
@@ -505,51 +468,4 @@ func (q *GeneratedQuery) Function(ft FunctionType) *GeneratedQuery {
 func (q *GeneratedQuery) Values(v ...interface{}) *GeneratedQuery {
 	q.function.values(v)
 	return q
-}
-
-type Path struct {
-	p Predicate
-	q *GeneratedQuery
-}
-
-//OnPath returns an object for specifying modifiers on the same level.
-//Useful for constructing e.g. GroupBy when you need to specify multiple modifiers
-//on the same level.
-func (q *GeneratedQuery) Path(path Predicate) Path {
-	return Path{path, q}
-}
-
-func (p Path) Variable(name string, value string, isAlias bool) Path {
-	p.q.Variable(name, p.p, value, isAlias)
-	return p
-}
-
-func (p Path) Facets() Path {
-	p.q.Facets(p.p)
-	return p
-}
-
-func (p Path) Filter(f *Filter) Path {
-	p.q.Filter(f, p.p)
-	return p
-}
-
-func (p Path) Order(t OrderType, pred Predicate) Path {
-	p.q.Order(t, p.p, pred)
-	return p
-}
-
-func (p Path) Count(t CountType, val int) Path {
-	p.q.Paginate(t, p.p, val)
-	return p
-}
-
-func (p Path) Agg(typ AggregateType, variable string, name string) Path {
-	p.q.Agg(typ, p.p, variable, name)
-	return p
-}
-
-func (p Path) GroupBy(pred Predicate) Path {
-	p.q.GroupBy(p.p, pred)
-	return p
 }

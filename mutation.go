@@ -19,39 +19,39 @@ func (s SingleMutation) WithCond(cond string) SingleMutation {
 	return s
 }
 
-func (m SingleMutation) Type() MutationType {
-	return m.MutationType
+func (s SingleMutation) Type() MutationType {
+	return s.MutationType
 }
 
-func (m SingleMutation) Cond() string {
-	return m.Condition
+func (s SingleMutation) Cond() string {
+	return s.Condition
 }
 
-func (m SingleMutation) mutate() ([]byte, error) {
+func (s SingleMutation) mutate() ([]byte, error) {
 	//panic("do not Process a single mutation")
-	if m.Object == nil {
+	if s.Object == nil {
 		return nil, errors.New("nil value supplied to Process")
 	}
-	m.Object.Recurse()
+	s.Object.Recurse(0)
 	var b []byte
-	switch m.MutationType {
+	switch s.MutationType {
 	case MutateSet:
-		if val, ok := m.Object.(Saver); ok {
+		if val, ok := s.Object.(Saver); ok {
 			if val == nil {
 				return nil, errors.New("nil value supplied to Process")
 			}
 			b, _ = json.Marshal(val.Save())
 		} else {
-			b, _ = json.Marshal(m.Object)
+			b, _ = json.Marshal(s.Object)
 		}
 	case MutateDelete:
-		if val, ok := m.Object.(Deleter); ok {
+		if val, ok := s.Object.(Deleter); ok {
 			if val == nil {
 				return nil, errors.New("nil value supplied to Process")
 			}
 			b, _ = json.Marshal(val.Delete())
 		} else {
-			b, _ = json.Marshal(m.Object)
+			b, _ = json.Marshal(s.Object)
 		}
 	}
 	return b, nil
@@ -81,8 +81,9 @@ func (m *MutationQuery) Cond() string {
 }
 
 func (m *MutationQuery) mutate() ([]byte, error) {
+	var counter int
 	for k, v := range m.Values {
-		v.Recurse()
+		counter = v.Recurse(counter)
 		switch m.MutationType {
 		case MutateSet:
 			if val, ok := v.(Saver); ok {

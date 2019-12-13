@@ -1,0 +1,16 @@
+
+type Event {
+    name: String! @search(by: [hash])
+    attending: [User]! @hasInverse(field: attending) @source @count
+    prices: [Int]!
+    description: String!
+    premium: Int! @facet(edge: attending)
+}
+
+type User {
+    name: String! @search(by: [hash])
+    email: String!
+    fullName: String!
+    attending: [Event]! @hasInverse(field: attending)
+    premium: Int! @facet(edge: attending)
+}

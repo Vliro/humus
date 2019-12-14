@@ -129,7 +129,27 @@ func TestUpsertInsert(t *testing.T) {
 		t.Fail()
 		return
 	}
-	if len(resp.Uids) != 0{
+	if len(resp.Uids) != 0 {
+		t.Fail()
+		return
+	}
+}
+
+func TestInvertedUpsert(t *testing.T) {
+	var c User
+	c.Email = "email@email.com"
+	c.Name = "User"
+	txn := db.NewTxn(false)
+	defer txn.Discard(context.Background())
+	mut := humus.CreateMutation(&c, humus.MutateSet)
+	//Set the condition for update.
+	mut.Condition = "@if(eq(len(user),1))"
+	resp, err := txn.Upsert(context.Background(), humus.NewStaticQuery(fmt.Sprintf(upsertQuery, "User")), mut)
+	if err != nil {
+		t.Fail()
+		return
+	}
+	if len(resp.Uids) == 0 {
 		t.Fail()
 		return
 	}
@@ -138,14 +158,13 @@ func TestUpsertInsert(t *testing.T) {
 //Example in getting a question. We only need the username field from the user so just select it.
 var questionFields = QuestionFields.
 	Sub(QuestionCommentsField, CommentFields.
-		Sub(CommentFromField, UserFields.Select(UserNameField)))
+		Sub(CommentFromField, UserFields.Select(UserNameField))).
+	Sub(QuestionFromField, UserFields)
 
 func TestGet(t *testing.T) {
 	var q Question
 	var qu = humus.NewQueries()
-	quer := qu.NewQuery(questionFields).Function(humus.Equals).PredValues(QuestionTitleField, "First Question")
-	quer.Var("s")
-	qu.NewQuery(questionFields).Function(humus.Equals).PredValues(QuestionTitleField, "First Question")
+	qu.NewQuery(questionFields).Function(humus.Equals).Values(QuestionTitleField, "First Question")
 	err := db.Query(context.Background(), qu, &q)
 	if err != nil {
 		t.Error(err)
@@ -160,9 +179,9 @@ func TestGet(t *testing.T) {
 func BenchmarkGetQuery(b *testing.B) {
 	for i := 0; i < b.N; i++ {
 		var qu = humus.NewQueries()
-		query := qu.NewQuery(questionFields).Function(humus.Equals).PredValues(QuestionTitleField, "First Question")
+		query := qu.NewQuery(questionFields).Function(humus.Equals).Values(QuestionTitleField, "First Question")
 		query.Var("s")
-		qu.NewQuery(questionFields).Function(humus.Equals).PredValues(QuestionTitleField, "First Question")
+		qu.NewQuery(questionFields).Function(humus.Equals).Values(QuestionTitleField, "First Question")
 		_, _ = qu.Process()
 	}
 	b.ReportAllocs()

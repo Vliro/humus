@@ -2,6 +2,7 @@ package gen
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 	"github.com/Vliro/humus"
 	"github.com/dgraph-io/dgo/protos/api"
@@ -84,12 +85,14 @@ func TestMain(m *testing.M) {
 		panic(err)
 	}
 	makethousand()
-	q := humus.NewQuery(eventFields).Function(humus.Type).Values("Event")
+	q := humus.NewQuery(eventFields).Function(humus.Type).Values("Event").Facets(EventAttendingField, nil)
 	var ev []*Event
 	err = db.Query(context.Background(), q, &ev)
 	if err != nil {
 		panic(err)
 	}
+	b, _ := json.Marshal(ev[0])
+	fmt.Println(string(b))
 	us, err := GetUserWithAttending("User")
 	_ = us
 	m.Run()

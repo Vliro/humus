@@ -38,8 +38,8 @@ func (r *Question) recurse(counter int) int {
 
 //Recurse iterates through the node and allocates type and UID
 //to pointer nodes.
-func (r *Question) Recurse() {
-	r.recurse(0)
+func (r *Question) Recurse(counter int) int {
+	return r.recurse(counter)
 }
 func (r *Comment) recurse(counter int) int {
 	if r != nil {
@@ -61,8 +61,8 @@ func (r *Comment) recurse(counter int) int {
 
 //Recurse iterates through the node and allocates type and UID
 //to pointer nodes.
-func (r *Comment) Recurse() {
-	r.recurse(0)
+func (r *Comment) Recurse(counter int) int {
+	return r.recurse(counter)
 }
 func (r *User) recurse(counter int) int {
 	if r != nil {
@@ -80,8 +80,8 @@ func (r *User) recurse(counter int) int {
 
 //Recurse iterates through the node and allocates type and UID
 //to pointer nodes.
-func (r *User) Recurse() {
-	r.recurse(0)
+func (r *User) Recurse(counter int) int {
+	return r.recurse(counter)
 }
 func (r *Error) recurse(counter int) int {
 	if r != nil {
@@ -99,8 +99,8 @@ func (r *Error) recurse(counter int) int {
 
 //Recurse iterates through the node and allocates type and UID
 //to pointer nodes.
-func (r *Error) Recurse() {
-	r.recurse(0)
+func (r *Error) Recurse(counter int) int {
+	return r.recurse(counter)
 }
 func (r *Post) recurse(counter int) int {
 	if r != nil {
@@ -118,8 +118,8 @@ func (r *Post) recurse(counter int) int {
 
 //Recurse iterates through the node and allocates type and UID
 //to pointer nodes.
-func (r *Post) Recurse() {
-	r.recurse(0)
+func (r *Post) Recurse(counter int) int {
+	return r.recurse(counter)
 }
 
 //Beginning of field.template. General functions.

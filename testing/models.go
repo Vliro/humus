@@ -15,15 +15,14 @@ var _ humus.Fields
 var _ = strconv.IntSize
 
 //Created from a GraphQL interface.
-//easyjson:json
 type Post struct {
 	//This line declares basic properties for a database node.
 	humus.Node
-	Text          string     `json:"Post.text,omitempty"`
-	DatePublished *time.Time `json:"Post.datePublished,omitempty"`
+	Text          string     `json:"text" predicate:"Post.text,omitempty"`
+	DatePublished *time.Time `json:"datePublished" predicate:"Post.datePublished,omitempty"`
 }
 
-var PostFields humus.FieldList = []humus.Field{MakeField("Post.text", 0), MakeField("Post.datePublished", 0)}
+var PostFields humus.Fields = humus.FieldList([]humus.Field{MakeField("Post.text", 0), MakeField("Post.datePublished", 0)})
 
 //Generating constant field values.
 const (
@@ -45,14 +44,13 @@ func (r *Post) GetType() []string {
 	return _PostTypes
 }
 
-//Reset resets the node to only its UID
-//component. Useful for saving to the database.
-//Calling this function ensures that, at most,
-//the uid and type is serialized.
-func (r *Post) Reset() {
-	if r != nil {
-		*r = Post{Node: r.Node}
-	}
+//Relative returns a new Post containing
+//only the node component of it, useful in saving edges
+//while ensuring data stability.
+func (r *Post) Relative() *Post {
+	var x = new(Post)
+	x.Node = r.Node
+	return x
 }
 
 func (r *Post) Facets() []string {
@@ -60,7 +58,7 @@ func (r *Post) Facets() []string {
 }
 
 //Fields returns all Scalar fields for this value.
-func (r *Post) Fields() humus.FieldList {
+func (r *Post) Fields() humus.Fields {
 	return PostFields
 }
 
@@ -74,16 +72,17 @@ func (r *Post) SetType() {
 	r.Node.Type = _PostTypes
 }
 
+/*
 //Values returns all the scalar values for this node.
-func (r *Post) Values() humus.DNode {
-	var m PostScalars
-	m.Text = r.Text
-	m.DatePublished = r.DatePublished
-	r.SetType()
-	m.Node = r.Node
-	return &m
+func (r *Post) Values() humus.DNode{
+   var m PostScalars
+   m.Text= r.Text
+       m.DatePublished= r.DatePublished
+       r.SetType()
+   m.Node = r.Node
+   return &m
 }
-
+*/
 /*
 //Values returns all the scalar values for this node.
 //Note that this completely ignores any omitempty tags so use with care.
@@ -99,37 +98,37 @@ func (r *Post) MapValues() humus.Mapper {
     return m
 }
 */
-
+/*
 //PostScalars is simply to avoid a map[string]interface{}
 //It is a mirror of the previous struct with all scalar values.
 type PostScalars struct {
-	humus.Node
-	Text          string     `json:"Post.text,omitempty"`
-	DatePublished *time.Time `json:"Post.datePublished,omitempty"`
+    humus.Node
+    Text string `json:"Post.text,omitempty"`
+    DatePublished *time.Time `json:"Post.datePublished,omitempty"`
+
 }
 
 func (s *PostScalars) Values() humus.DNode {
-	return s
+    return s
 }
 
 func (s *PostScalars) Fields() humus.FieldList {
-	return PostFields
+    return PostFields
 }
-
+*/
 //End of model.template
-//easyjson:json
 type Question struct {
 	//This line declares basic properties for a database node.
 	humus.Node
 	//List of interfaces implemented.
 	Post
 	//Regular fields
-	Title    string     `json:"Question.title,omitempty"`
-	From     *User      `json:"Question.from,omitempty"`
-	Comments []*Comment `json:"Question.comments,omitempty"`
+	Title    string     `json:"title" predicate:"Question.title,omitempty"`
+	From     *User      `json:"from" predicate:"Question.from,omitempty"`
+	Comments []*Comment `json:"comments" predicate:"Question.comments,omitempty"`
 }
 
-var QuestionFields humus.FieldList = []humus.Field{MakeField("Question.title", 0), MakeField("Question.from", 0|humus.MetaObject), MakeField("Question.comments", 0|humus.MetaObject|humus.MetaList), MakeField("Post.text", 0), MakeField("Post.datePublished", 0)}
+var QuestionFields humus.Fields = humus.FieldList([]humus.Field{MakeField("Question.title", 0), MakeField("Question.from", 0|humus.MetaObject), MakeField("Question.comments", 0|humus.MetaObject|humus.MetaList), MakeField("Post.text", 0), MakeField("Post.datePublished", 0)})
 
 //Generating constant field values.
 const (
@@ -154,14 +153,13 @@ func (r *Question) GetType() []string {
 	return _QuestionTypes
 }
 
-//Reset resets the node to only its UID
-//component. Useful for saving to the database.
-//Calling this function ensures that, at most,
-//the uid and type is serialized.
-func (r *Question) Reset() {
-	if r != nil {
-		*r = Question{Node: r.Node}
-	}
+//Relative returns a new Question containing
+//only the node component of it, useful in saving edges
+//while ensuring data stability.
+func (r *Question) Relative() *Question {
+	var x = new(Question)
+	x.Node = r.Node
+	return x
 }
 
 func (r *Question) Facets() []string {
@@ -169,7 +167,7 @@ func (r *Question) Facets() []string {
 }
 
 //Fields returns all Scalar fields for this value.
-func (r *Question) Fields() humus.FieldList {
+func (r *Question) Fields() humus.Fields {
 	return QuestionFields
 }
 
@@ -189,17 +187,18 @@ func (r *Question) SetType() {
 	r.Node.Type = _QuestionTypes
 }
 
+/*
 //Values returns all the scalar values for this node.
-func (r *Question) Values() humus.DNode {
-	var m QuestionScalars
-	m.Title = r.Title
-	m.Text = r.Text
-	m.DatePublished = r.DatePublished
-	r.SetType()
-	m.Node = r.Node
-	return &m
+func (r *Question) Values() humus.DNode{
+   var m QuestionScalars
+   m.Title= r.Title
+       m.Text= r.Text
+       m.DatePublished= r.DatePublished
+       r.SetType()
+   m.Node = r.Node
+   return &m
 }
-
+*/
 /*
 //Values returns all the scalar values for this node.
 //Note that this completely ignores any omitempty tags so use with care.
@@ -216,36 +215,36 @@ func (r *Question) MapValues() humus.Mapper {
     return m
 }
 */
-
+/*
 //QuestionScalars is simply to avoid a map[string]interface{}
 //It is a mirror of the previous struct with all scalar values.
 type QuestionScalars struct {
-	humus.Node
-	Title         string     `json:"Question.title,omitempty"`
-	Text          string     `json:"Post.text,omitempty"`
-	DatePublished *time.Time `json:"Post.datePublished,omitempty"`
+    humus.Node
+    Title string `json:"Question.title,omitempty"`
+    Text string `json:"Post.text,omitempty"`
+    DatePublished *time.Time `json:"Post.datePublished,omitempty"`
+
 }
 
 func (s *QuestionScalars) Values() humus.DNode {
-	return s
+    return s
 }
 
 func (s *QuestionScalars) Fields() humus.FieldList {
-	return QuestionFields
+    return QuestionFields
 }
-
+*/
 //End of model.template
-//easyjson:json
 type Comment struct {
 	//This line declares basic properties for a database node.
 	humus.Node
 	//List of interfaces implemented.
 	Post
 	//Regular fields
-	From *User `json:"Comment.from,omitempty"`
+	From *User `json:"from" predicate:"Comment.from,omitempty"`
 }
 
-var CommentFields humus.FieldList = []humus.Field{MakeField("Comment.from", 0|humus.MetaObject), MakeField("Post.text", 0), MakeField("Post.datePublished", 0)}
+var CommentFields humus.Fields = humus.FieldList([]humus.Field{MakeField("Comment.from", 0|humus.MetaObject), MakeField("Post.text", 0), MakeField("Post.datePublished", 0)})
 
 //Generating constant field values.
 const (
@@ -268,14 +267,13 @@ func (r *Comment) GetType() []string {
 	return _CommentTypes
 }
 
-//Reset resets the node to only its UID
-//component. Useful for saving to the database.
-//Calling this function ensures that, at most,
-//the uid and type is serialized.
-func (r *Comment) Reset() {
-	if r != nil {
-		*r = Comment{Node: r.Node}
-	}
+//Relative returns a new Comment containing
+//only the node component of it, useful in saving edges
+//while ensuring data stability.
+func (r *Comment) Relative() *Comment {
+	var x = new(Comment)
+	x.Node = r.Node
+	return x
 }
 
 func (r *Comment) Facets() []string {
@@ -283,7 +281,7 @@ func (r *Comment) Facets() []string {
 }
 
 //Fields returns all Scalar fields for this value.
-func (r *Comment) Fields() humus.FieldList {
+func (r *Comment) Fields() humus.Fields {
 	return CommentFields
 }
 
@@ -303,16 +301,17 @@ func (r *Comment) SetType() {
 	r.Node.Type = _CommentTypes
 }
 
+/*
 //Values returns all the scalar values for this node.
-func (r *Comment) Values() humus.DNode {
-	var m CommentScalars
-	m.Text = r.Text
-	m.DatePublished = r.DatePublished
-	r.SetType()
-	m.Node = r.Node
-	return &m
+func (r *Comment) Values() humus.DNode{
+   var m CommentScalars
+   m.Text= r.Text
+       m.DatePublished= r.DatePublished
+       r.SetType()
+   m.Node = r.Node
+   return &m
 }
-
+*/
 /*
 //Values returns all the scalar values for this node.
 //Note that this completely ignores any omitempty tags so use with care.
@@ -328,34 +327,34 @@ func (r *Comment) MapValues() humus.Mapper {
     return m
 }
 */
-
+/*
 //CommentScalars is simply to avoid a map[string]interface{}
 //It is a mirror of the previous struct with all scalar values.
 type CommentScalars struct {
-	humus.Node
-	Text          string     `json:"Post.text,omitempty"`
-	DatePublished *time.Time `json:"Post.datePublished,omitempty"`
+    humus.Node
+    Text string `json:"Post.text,omitempty"`
+    DatePublished *time.Time `json:"Post.datePublished,omitempty"`
+
 }
 
 func (s *CommentScalars) Values() humus.DNode {
-	return s
+    return s
 }
 
 func (s *CommentScalars) Fields() humus.FieldList {
-	return CommentFields
+    return CommentFields
 }
-
+*/
 //End of model.template
-//easyjson:json
 type User struct {
 	//This line declares basic properties for a database node.
 	humus.Node
 	//Regular fields
-	Name  string `json:"User.name,omitempty"`
-	Email string `json:"User.email,omitempty"`
+	Name  string `json:"name" predicate:"User.name,omitempty"`
+	Email string `json:"email" predicate:"User.email,omitempty"`
 }
 
-var UserFields humus.FieldList = []humus.Field{MakeField("User.name", 0), MakeField("User.email", 0)}
+var UserFields humus.Fields = humus.FieldList([]humus.Field{MakeField("User.name", 0), MakeField("User.email", 0)})
 
 //Generating constant field values.
 const (
@@ -377,14 +376,13 @@ func (r *User) GetType() []string {
 	return _UserTypes
 }
 
-//Reset resets the node to only its UID
-//component. Useful for saving to the database.
-//Calling this function ensures that, at most,
-//the uid and type is serialized.
-func (r *User) Reset() {
-	if r != nil {
-		*r = User{Node: r.Node}
-	}
+//Relative returns a new User containing
+//only the node component of it, useful in saving edges
+//while ensuring data stability.
+func (r *User) Relative() *User {
+	var x = new(User)
+	x.Node = r.Node
+	return x
 }
 
 func (r *User) Facets() []string {
@@ -392,7 +390,7 @@ func (r *User) Facets() []string {
 }
 
 //Fields returns all Scalar fields for this value.
-func (r *User) Fields() humus.FieldList {
+func (r *User) Fields() humus.Fields {
 	return UserFields
 }
 
@@ -406,16 +404,17 @@ func (r *User) SetType() {
 	r.Node.Type = _UserTypes
 }
 
+/*
 //Values returns all the scalar values for this node.
-func (r *User) Values() humus.DNode {
-	var m UserScalars
-	m.Name = r.Name
-	m.Email = r.Email
-	r.SetType()
-	m.Node = r.Node
-	return &m
+func (r *User) Values() humus.DNode{
+   var m UserScalars
+   m.Name= r.Name
+       m.Email= r.Email
+       r.SetType()
+   m.Node = r.Node
+   return &m
 }
-
+*/
 /*
 //Values returns all the scalar values for this node.
 //Note that this completely ignores any omitempty tags so use with care.
@@ -431,35 +430,35 @@ func (r *User) MapValues() humus.Mapper {
     return m
 }
 */
-
+/*
 //UserScalars is simply to avoid a map[string]interface{}
 //It is a mirror of the previous struct with all scalar values.
 type UserScalars struct {
-	humus.Node
-	Name  string `json:"User.name,omitempty"`
-	Email string `json:"User.email,omitempty"`
+    humus.Node
+    Name string `json:"User.name,omitempty"`
+    Email string `json:"User.email,omitempty"`
+
 }
 
 func (s *UserScalars) Values() humus.DNode {
-	return s
+    return s
 }
 
 func (s *UserScalars) Fields() humus.FieldList {
-	return UserFields
+    return UserFields
 }
-
+*/
 //End of model.template
-//easyjson:json
 type Error struct {
 	//This line declares basic properties for a database node.
 	humus.Node
 	//Regular fields
-	Message   string     `json:"Error.message,omitempty"`
-	ErrorType string     `json:"Error.errorType,omitempty"`
-	Time      *time.Time `json:"Error.time,omitempty"`
+	Message   string     `json:"message" predicate:"Error.message,omitempty"`
+	ErrorType string     `json:"errorType" predicate:"Error.errorType,omitempty"`
+	Time      *time.Time `json:"time" predicate:"Error.time,omitempty"`
 }
 
-var ErrorFields humus.FieldList = []humus.Field{MakeField("Error.message", 0), MakeField("Error.errorType", 0), MakeField("Error.time", 0)}
+var ErrorFields humus.Fields = humus.FieldList([]humus.Field{MakeField("Error.message", 0), MakeField("Error.errorType", 0), MakeField("Error.time", 0)})
 
 //Generating constant field values.
 const (
@@ -482,14 +481,13 @@ func (r *Error) GetType() []string {
 	return _ErrorTypes
 }
 
-//Reset resets the node to only its UID
-//component. Useful for saving to the database.
-//Calling this function ensures that, at most,
-//the uid and type is serialized.
-func (r *Error) Reset() {
-	if r != nil {
-		*r = Error{Node: r.Node}
-	}
+//Relative returns a new Error containing
+//only the node component of it, useful in saving edges
+//while ensuring data stability.
+func (r *Error) Relative() *Error {
+	var x = new(Error)
+	x.Node = r.Node
+	return x
 }
 
 func (r *Error) Facets() []string {
@@ -497,7 +495,7 @@ func (r *Error) Facets() []string {
 }
 
 //Fields returns all Scalar fields for this value.
-func (r *Error) Fields() humus.FieldList {
+func (r *Error) Fields() humus.Fields {
 	return ErrorFields
 }
 
@@ -511,17 +509,18 @@ func (r *Error) SetType() {
 	r.Node.Type = _ErrorTypes
 }
 
+/*
 //Values returns all the scalar values for this node.
-func (r *Error) Values() humus.DNode {
-	var m ErrorScalars
-	m.Message = r.Message
-	m.ErrorType = r.ErrorType
-	m.Time = r.Time
-	r.SetType()
-	m.Node = r.Node
-	return &m
+func (r *Error) Values() humus.DNode{
+   var m ErrorScalars
+   m.Message= r.Message
+       m.ErrorType= r.ErrorType
+       m.Time= r.Time
+       r.SetType()
+   m.Node = r.Node
+   return &m
 }
-
+*/
 /*
 //Values returns all the scalar values for this node.
 //Note that this completely ignores any omitempty tags so use with care.
@@ -538,22 +537,23 @@ func (r *Error) MapValues() humus.Mapper {
     return m
 }
 */
-
+/*
 //ErrorScalars is simply to avoid a map[string]interface{}
 //It is a mirror of the previous struct with all scalar values.
 type ErrorScalars struct {
-	humus.Node
-	Message   string     `json:"Error.message,omitempty"`
-	ErrorType string     `json:"Error.errorType,omitempty"`
-	Time      *time.Time `json:"Error.time,omitempty"`
+    humus.Node
+    Message string `json:"Error.message,omitempty"`
+    ErrorType string `json:"Error.errorType,omitempty"`
+    Time *time.Time `json:"Error.time,omitempty"`
+
 }
 
 func (s *ErrorScalars) Values() humus.DNode {
-	return s
+    return s
 }
 
 func (s *ErrorScalars) Fields() humus.FieldList {
-	return ErrorFields
+    return ErrorFields
 }
-
+*/
 //End of model.template

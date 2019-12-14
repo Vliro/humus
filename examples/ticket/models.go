@@ -14,19 +14,18 @@ var _ time.Time
 var _ humus.Fields
 var _ = strconv.IntSize
 
-//easyjson:json
 type Event struct {
 	//This line declares basic properties for a database node.
 	humus.Node
 	//Regular fields
-	Name        string  `json:"Event.name,omitempty"`
-	Attending   []*User `json:"Event.attending,omitempty"`
-	Prices      []int   `json:"Event.prices,omitempty"`
-	Description string  `json:"Event.description,omitempty"`
-	Premium     int     `json:"~Event.attending|premium,omitempty"`
+	Name        string  `json:"name" predicate:"Event.name,omitempty"`
+	Attending   []*User `json:"attending" predicate:"Event.attending,omitempty"`
+	Prices      []int   `json:"prices" predicate:"Event.prices,omitempty"`
+	Description string  `json:"description" predicate:"Event.description,omitempty"`
+	Premium     int     `json:"premium" predicate:"~Event.attending|premium,omitempty"`
 }
 
-var EventFields humus.FieldList = []humus.Field{MakeField("Event.name", 0), MakeField("Event.attending", 0|humus.MetaObject|humus.MetaList|humus.MetaReverse), MakeField("Event.prices", 0|humus.MetaList), MakeField("Event.description", 0), MakeField("~Event.attending|premium", 0|humus.MetaFacet)}
+var EventFields humus.Fields = humus.FieldList([]humus.Field{MakeField("Event.name", 0), MakeField("Event.attending", 0|humus.MetaObject|humus.MetaList|humus.MetaReverse), MakeField("Event.prices", 0|humus.MetaList), MakeField("Event.description", 0), MakeField("~Event.attending|premium", 0|humus.MetaFacet)})
 
 //Generating constant field values.
 const (
@@ -66,7 +65,7 @@ func (r *Event) Facets() []string {
 }
 
 //Fields returns all Scalar fields for this value.
-func (r *Event) Fields() humus.FieldList {
+func (r *Event) Fields() humus.Fields {
 	return EventFields
 }
 
@@ -80,18 +79,19 @@ func (r *Event) SetType() {
 	r.Node.Type = _EventTypes
 }
 
+/*
 //Values returns all the scalar values for this node.
-func (r *Event) Values() humus.DNode {
-	var m EventScalars
-	m.Name = r.Name
-	m.Prices = r.Prices
-	m.Description = r.Description
-	m.Premium = r.Premium
-	r.SetType()
-	m.Node = r.Node
-	return &m
+func (r *Event) Values() humus.DNode{
+   var m EventScalars
+   m.Name= r.Name
+       m.Prices= r.Prices
+       m.Description= r.Description
+       m.Premium= r.Premium
+       r.SetType()
+   m.Node = r.Node
+   return &m
 }
-
+*/
 /*
 //Values returns all the scalar values for this node.
 //Note that this completely ignores any omitempty tags so use with care.
@@ -109,39 +109,39 @@ func (r *Event) MapValues() humus.Mapper {
     return m
 }
 */
-
+/*
 //EventScalars is simply to avoid a map[string]interface{}
 //It is a mirror of the previous struct with all scalar values.
 type EventScalars struct {
-	humus.Node
-	Name        string `json:"Event.name,omitempty"`
-	Prices      []int  `json:"Event.prices,omitempty"`
-	Description string `json:"Event.description,omitempty"`
-	Premium     int    `json:"~Event.attending|premium,omitempty"`
+    humus.Node
+    Name string `json:"Event.name,omitempty"`
+    Prices []int `json:"Event.prices,omitempty"`
+    Description string `json:"Event.description,omitempty"`
+    Premium int `json:"~Event.attending|premium,omitempty"`
+
 }
 
 func (s *EventScalars) Values() humus.DNode {
-	return s
+    return s
 }
 
 func (s *EventScalars) Fields() humus.FieldList {
-	return EventFields
+    return EventFields
 }
-
+*/
 //End of model.template
-//easyjson:json
 type User struct {
 	//This line declares basic properties for a database node.
 	humus.Node
 	//Regular fields
-	Name      string   `json:"User.name,omitempty"`
-	Email     string   `json:"User.email,omitempty"`
-	FullName  string   `json:"User.fullName,omitempty"`
-	Attending []*Event `json:"~Event.attending,omitempty"`
-	Premium   int      `json:"Event.attending|premium,omitempty"`
+	Name      string   `json:"name" predicate:"User.name,omitempty"`
+	Email     string   `json:"email" predicate:"User.email,omitempty"`
+	FullName  string   `json:"fullName" predicate:"User.fullName,omitempty"`
+	Attending []*Event `json:"attending" predicate:"~Event.attending,omitempty"`
+	Premium   int      `json:"premium" predicate:"Event.attending|premium,omitempty"`
 }
 
-var UserFields humus.FieldList = []humus.Field{MakeField("User.name", 0), MakeField("User.email", 0), MakeField("User.fullName", 0), MakeField("~Event.attending", 0|humus.MetaObject|humus.MetaList|humus.MetaReverse), MakeField("Event.attending|premium", 0|humus.MetaFacet)}
+var UserFields humus.Fields = humus.FieldList([]humus.Field{MakeField("User.name", 0), MakeField("User.email", 0), MakeField("User.fullName", 0), MakeField("~Event.attending", 0|humus.MetaObject|humus.MetaList|humus.MetaReverse), MakeField("Event.attending|premium", 0|humus.MetaFacet)})
 
 //Generating constant field values.
 const (
@@ -181,7 +181,7 @@ func (r *User) Facets() []string {
 }
 
 //Fields returns all Scalar fields for this value.
-func (r *User) Fields() humus.FieldList {
+func (r *User) Fields() humus.Fields {
 	return UserFields
 }
 
@@ -195,18 +195,19 @@ func (r *User) SetType() {
 	r.Node.Type = _UserTypes
 }
 
+/*
 //Values returns all the scalar values for this node.
-func (r *User) Values() humus.DNode {
-	var m UserScalars
-	m.Name = r.Name
-	m.Email = r.Email
-	m.FullName = r.FullName
-	m.Premium = r.Premium
-	r.SetType()
-	m.Node = r.Node
-	return &m
+func (r *User) Values() humus.DNode{
+   var m UserScalars
+   m.Name= r.Name
+       m.Email= r.Email
+       m.FullName= r.FullName
+       m.Premium= r.Premium
+       r.SetType()
+   m.Node = r.Node
+   return &m
 }
-
+*/
 /*
 //Values returns all the scalar values for this node.
 //Note that this completely ignores any omitempty tags so use with care.
@@ -224,37 +225,37 @@ func (r *User) MapValues() humus.Mapper {
     return m
 }
 */
-
+/*
 //UserScalars is simply to avoid a map[string]interface{}
 //It is a mirror of the previous struct with all scalar values.
 type UserScalars struct {
-	humus.Node
-	Name     string `json:"User.name,omitempty"`
-	Email    string `json:"User.email,omitempty"`
-	FullName string `json:"User.fullName,omitempty"`
-	Premium  int    `json:"Event.attending|premium,omitempty"`
+    humus.Node
+    Name string `json:"User.name,omitempty"`
+    Email string `json:"User.email,omitempty"`
+    FullName string `json:"User.fullName,omitempty"`
+    Premium int `json:"Event.attending|premium,omitempty"`
+
 }
 
 func (s *UserScalars) Values() humus.DNode {
-	return s
+    return s
 }
 
 func (s *UserScalars) Fields() humus.FieldList {
-	return UserFields
+    return UserFields
 }
-
+*/
 //End of model.template
-//easyjson:json
 type Error struct {
 	//This line declares basic properties for a database node.
 	humus.Node
 	//Regular fields
-	Message   string     `json:"Error.message,omitempty"`
-	ErrorType string     `json:"Error.errorType,omitempty"`
-	Time      *time.Time `json:"Error.time,omitempty"`
+	Message   string     `json:"message" predicate:"Error.message,omitempty"`
+	ErrorType string     `json:"errorType" predicate:"Error.errorType,omitempty"`
+	Time      *time.Time `json:"time" predicate:"Error.time,omitempty"`
 }
 
-var ErrorFields humus.FieldList = []humus.Field{MakeField("Error.message", 0), MakeField("Error.errorType", 0), MakeField("Error.time", 0)}
+var ErrorFields humus.Fields = humus.FieldList([]humus.Field{MakeField("Error.message", 0), MakeField("Error.errorType", 0), MakeField("Error.time", 0)})
 
 //Generating constant field values.
 const (
@@ -292,7 +293,7 @@ func (r *Error) Facets() []string {
 }
 
 //Fields returns all Scalar fields for this value.
-func (r *Error) Fields() humus.FieldList {
+func (r *Error) Fields() humus.Fields {
 	return ErrorFields
 }
 
@@ -306,17 +307,18 @@ func (r *Error) SetType() {
 	r.Node.Type = _ErrorTypes
 }
 
+/*
 //Values returns all the scalar values for this node.
-func (r *Error) Values() humus.DNode {
-	var m ErrorScalars
-	m.Message = r.Message
-	m.ErrorType = r.ErrorType
-	m.Time = r.Time
-	r.SetType()
-	m.Node = r.Node
-	return &m
+func (r *Error) Values() humus.DNode{
+   var m ErrorScalars
+   m.Message= r.Message
+       m.ErrorType= r.ErrorType
+       m.Time= r.Time
+       r.SetType()
+   m.Node = r.Node
+   return &m
 }
-
+*/
 /*
 //Values returns all the scalar values for this node.
 //Note that this completely ignores any omitempty tags so use with care.
@@ -333,22 +335,23 @@ func (r *Error) MapValues() humus.Mapper {
     return m
 }
 */
-
+/*
 //ErrorScalars is simply to avoid a map[string]interface{}
 //It is a mirror of the previous struct with all scalar values.
 type ErrorScalars struct {
-	humus.Node
-	Message   string     `json:"Error.message,omitempty"`
-	ErrorType string     `json:"Error.errorType,omitempty"`
-	Time      *time.Time `json:"Error.time,omitempty"`
+    humus.Node
+    Message string `json:"Error.message,omitempty"`
+    ErrorType string `json:"Error.errorType,omitempty"`
+    Time *time.Time `json:"Error.time,omitempty"`
+
 }
 
 func (s *ErrorScalars) Values() humus.DNode {
-	return s
+    return s
 }
 
 func (s *ErrorScalars) Fields() humus.FieldList {
-	return ErrorFields
+    return ErrorFields
 }
-
+*/
 //End of model.template

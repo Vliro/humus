@@ -18,14 +18,13 @@ func (r *{{.Name}}) GetType() []string {
     return _{{.Name}}Types
 }
 
-//Reset resets the node to only its UID
-//component. Useful for saving to the database.
-//Calling this function ensures that, at most,
-//the uid and type is serialized.
-func (r *{{.Name}}) Reset() {
-    if r != nil {
-        *r = {{.Name}}{Node: r.Node}
-    }
+//Relative returns a new {{.Name}} containing
+//only the node component of it, useful in saving edges
+//while ensuring data stability.
+func (r *{{.Name}}) Relative() *{{.Name}}{
+    var x = new({{.Name}})
+    x.Node = r.Node
+    return x
 }
 
 func (r *{{.Name}}) Facets() []string {

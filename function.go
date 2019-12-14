@@ -144,6 +144,23 @@ func (f *function) values(val []interface{}) *function {
 	}
 	return f
 }
+func (f *function) predValues(pred Predicate, values []interface{}) *function {
+	if f.variables == nil {
+		f.variables = make([]graphVariable, len(values)+1)
+		f.variables[0] = graphVariable{string(pred), typePred}
+		for k, v := range values {
+			val, typ := processInterface(v)
+			f.variables[k+1] = graphVariable{val, typ}
+		}
+	} else {
+		f.variables = append(f.variables, graphVariable{string(pred), typePred})
+		for _, v := range values {
+			val, typ := processInterface(v)
+			f.variables = append(f.variables, graphVariable{val, typ})
+		}
+	}
+	return f
+}
 
 func (f *function) mapVariables(q *GeneratedQuery) {
 	for k, v := range f.variables {

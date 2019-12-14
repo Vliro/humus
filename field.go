@@ -37,7 +37,9 @@ type Fields interface {
 func Select(sch SchemaList, names ...Predicate) Fields {
 	var fields = make(NewList, len(names))
 	for k, v := range names {
-		fields[k] = sch[v]
+		f := sch[v]
+		f.Meta &^= MetaIgnore
+		fields[k] = f
 	}
 	return fields
 }
@@ -320,6 +322,9 @@ func MakeField(name Predicate, meta FieldMeta) Field {
 // Returns whether this field is a facet field.
 // Parent is in-fact the current field name from the previous level.
 func (f *Field) create(q *GeneratedQuery, parent []byte, sb *strings.Builder) error {
+	if f.Meta.Ignore() {
+		return nil
+	}
 	//If a field is an object and has no fields do not use it.
 	val, ok := q.modifiers[Predicate(parent)]
 	var withGroup, withFacets, withFields bool
@@ -328,13 +333,11 @@ func (f *Field) create(q *GeneratedQuery, parent []byte, sb *strings.Builder) er
 		withFacets = val.f.active
 		withFields = withGroup || withFacets
 	}
-	if f.Meta.Object() && ((f.Fields != nil && f.Fields.Len() == 0) || f.Fields == nil) {
+	var fieldsExist = f.Fields != nil && f.Fields.Len() == 0
+	if f.Meta.Object() && (!fieldsExist || f.Fields == nil) {
 		if !withFields {
 			return nil
 		}
-	}
-	if f.Meta.Ignore() {
-		return nil
 	}
 	if f.Meta.Lang() {
 		sb.WriteString(string(f.Name))
@@ -348,7 +351,6 @@ func (f *Field) create(q *GeneratedQuery, parent []byte, sb *strings.Builder) er
 	}
 	//First part of modifiers, non-field generating.
 	if ok {
-		//Dont call sort for size 1,2 (common sizes)
 		val.m.sort()
 		err := val.m.runNormal(q, f.Meta, modifierField, sb)
 		if err != nil {
@@ -368,7 +370,7 @@ func (f *Field) create(q *GeneratedQuery, parent []byte, sb *strings.Builder) er
 		}
 	}
 
-	if f.Fields != nil && f.Fields.Len() > 0 {
+	if fieldsExist {
 		if f.Meta.Lang() {
 			return errors.New("cannot have language meta and children fields")
 		}
@@ -396,6 +398,7 @@ func (f *Field) create(q *GeneratedQuery, parent []byte, sb *strings.Builder) er
 		}
 		sb.WriteString(" uid}")
 	}
+	sb.WriteByte(' ')
 	//Always add the uid field. I don't think this will be very expensive in terms of dgraph performance.
 	return nil
 }

@@ -171,10 +171,14 @@ func (m Mapper) Set(child Predicate, all bool, obj DNode) Mapper {
 		//TODO: what should actually happen here?
 		return m
 	}
+	var err error
 	obj.Recurse(0)
 	if all {
 		if val, ok := obj.(Saver); ok {
-			m[string(child)] = val.Save()
+			m[string(child)], err = val.Save()
+			if err != nil {
+				return nil
+			}
 		} else {
 			m[string(child)] = obj
 		}
@@ -193,9 +197,13 @@ func (m Mapper) MustSet(child Predicate, all bool, obj DNode) Mapper {
 		panic("mapper MustSet nil value")
 	}
 	obj.Recurse(0)
+	var err error
 	if all {
 		if val, ok := obj.(Saver); ok {
-			m[string(child)] = val.Save()
+			m[string(child)], err = val.Save()
+			if err != nil {
+				return nil
+			}
 		} else {
 			m[string(child)] = obj
 		}
@@ -217,11 +225,15 @@ func checkNil(c DNode) bool {
 func (m Mapper) SetArray(child string, all bool, objs ...DNode) Mapper {
 	var output = make([]interface{}, len(objs))
 	var counter = 0
+	var err error
 	for k, v := range objs {
 		counter = v.Recurse(counter)
 		if all {
 			if val, ok := v.(Saver); ok {
-				output[k] = val.Save()
+				output[k], err = val.Save()
+				if err != nil {
+					return nil
+				}
 			} else {
 				output[k] = val
 			}
@@ -235,12 +247,12 @@ func (m Mapper) SetArray(child string, all bool, objs ...DNode) Mapper {
 
 //Saver allows you to implement a custom save method.
 type Saver interface {
-	Save() DNode
+	Save() (DNode, error)
 }
 
 //Deleter allows you to implement a custom delete method.
 type Deleter interface {
-	Delete() DNode
+	Delete() (DNode, error)
 }
 
 //Number of workers.
@@ -329,7 +341,7 @@ func (d *DB) QueryAsync(ctx context.Context, q Query, objs ...interface{}) chan 
 //SetValue is a simple wrapper to set a single value in the database
 //for a given node. It exists for convenience.
 func (d *DB) SetValue(node DNode, pred Predicate, value interface{}) error {
-	txn := d.NewTxn(true)
+	txn := d.NewTxn(false)
 	defer txn.Discard(context.Background())
 	var m = NewMapper(node.UID(), nil)
 	m[string(pred)] = value

@@ -68,6 +68,7 @@ func GetByUid(uid UID, fields Fields) *GeneratedQuery {
 //GetByPredicate is shorthand for generating a query for getting nodes
 //from multiple predicate values given by the fields.
 func GetByPredicate(pred Predicate, fields Fields, values ...interface{}) *GeneratedQuery {
-	q := NewQuery(fields).Function(Equals).Values(values...)
+	q := NewQuery(fields).Function(Equals)
+	q.predValues(pred, values)
 	return q
 }

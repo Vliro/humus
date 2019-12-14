@@ -40,7 +40,11 @@ func (s SingleMutation) mutate() ([]byte, error) {
 			if val == nil {
 				return nil, errors.New("nil value supplied to Process")
 			}
-			b, _ = json.Marshal(val.Save())
+			node, err := val.Save()
+			if err != nil {
+				return nil, err
+			}
+			b, _ = json.Marshal(node)
 		} else {
 			b, _ = json.Marshal(s.Object)
 		}
@@ -49,7 +53,11 @@ func (s SingleMutation) mutate() ([]byte, error) {
 			if val == nil {
 				return nil, errors.New("nil value supplied to Process")
 			}
-			b, _ = json.Marshal(val.Delete())
+			node, err := val.Delete()
+			if err != nil {
+				return nil, err
+			}
+			b, _ = json.Marshal(node)
 		} else {
 			b, _ = json.Marshal(s.Object)
 		}
@@ -82,6 +90,7 @@ func (m *MutationQuery) Cond() string {
 
 func (m *MutationQuery) mutate() ([]byte, error) {
 	var counter int
+	var err error
 	for k, v := range m.Values {
 		counter = v.Recurse(counter)
 		switch m.MutationType {
@@ -90,14 +99,20 @@ func (m *MutationQuery) mutate() ([]byte, error) {
 				if val == nil {
 					return nil, errors.New("nil DNode supplied to Process in mutationQuery")
 				}
-				m.Values[k] = val.Save()
+				m.Values[k], err = val.Save()
+				if err != nil {
+					return nil, err
+				}
 			}
 		case MutateDelete:
 			if val, ok := v.(Deleter); ok {
 				if val == nil {
 					return nil, errors.New("nil DNode supplied to Process in mutationQuery")
 				}
-				m.Values[k] = val.Delete()
+				m.Values[k], err = val.Delete()
+				if err != nil {
+					return nil, err
+				}
 			}
 		}
 	}

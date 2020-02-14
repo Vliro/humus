@@ -57,7 +57,7 @@ func (s *Schema) Objects() []*Object {
 }
 
 func (s *Schema) GetObject(name string) *Object {
-	for _,v := range s.objects {
+	for _, v := range s.objects {
 		if v.Name == name {
 			return v
 		}
@@ -66,7 +66,7 @@ func (s *Schema) GetObject(name string) *Object {
 }
 
 func (s *Schema) GetInterface(name string) *Interface {
-	for _,v := range s.interfaces {
+	for _, v := range s.interfaces {
 		if v.Name == name {
 			return v
 		}
@@ -126,9 +126,8 @@ type Object struct {
 	InterfaceNames []string
 }
 
-
 func (o *Object) GetField(name string) *Field {
-	for _,v := range o.Fields {
+	for _, v := range o.Fields {
 		if v.Name == name {
 			return v
 		}
@@ -159,14 +158,13 @@ func (i *Interface) GetName() string {
 }
 
 func (i *Interface) GetField(name string) *Field {
-	for _,v := range i.Fields {
+	for _, v := range i.Fields {
 		if v.Name == name {
 			return v
 		}
 	}
 	return nil
 }
-
 
 // Union types represent objects that could be one of a list of GraphQL object types, but provides no
 // guaranteed fields between those types.
@@ -317,7 +315,8 @@ func (f *Field) GetName() string {
 
 func (f *Field) IsArray() bool {
 	var t = f.Type
-	loop: for {
+loop:
+	for {
 		switch a := t.(type) {
 		case *common.NonNull:
 			t = a.OfType

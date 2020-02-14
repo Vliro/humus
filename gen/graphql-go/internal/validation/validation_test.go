@@ -22,6 +22,7 @@ type Test struct {
 	Vars   map[string]interface{}
 	Errors []*errors.QueryError
 }
+
 //TODO: Change input data to match current structure.
 func TestValidate(t *testing.T) {
 	return

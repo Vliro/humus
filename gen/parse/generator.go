@@ -11,7 +11,6 @@ import (
 	"path/filepath"
 )
 
-
 type Creator interface {
 	Create(i *Generator, w io.Writer)
 }
@@ -57,7 +56,7 @@ func (g *Generator) enums() []*schema.Enum {
 func (g *Generator) Run() {
 	var inter Creator
 	templ := getTemplate("All")
-	for _,v := range g.outputs {
+	for _, v := range g.outputs {
 		_ = templ.Execute(v, g.config.Package)
 	}
 	inter = ModelCreator{}
@@ -92,7 +91,7 @@ func (g *Generator) prepare() error {
 		}
 		if !info.IsDir() {
 			//This should be safe.
-			if fp := filepath.Ext(info.Name()); fp != ".graphql"{
+			if fp := filepath.Ext(info.Name()); fp != ".graphql" {
 				return nil
 			}
 			if info.Name() == "dgraph_schema.graphql" {
@@ -147,7 +146,7 @@ func (g *Generator) finish() {
 	}
 	defer dgraphSch.Close()
 	makeSchema(dgraphSch, g)
-	for k,v := range g.outputs {
+	for k, v := range g.outputs {
 		if v.Len() > 0 {
 			newbuf := goFmt(v.Bytes())
 			file, err := os.Create(g.config.Output + k)
@@ -158,7 +157,7 @@ func (g *Generator) finish() {
 			if err != nil {
 				panic(err)
 			}
-			_ =	file.Close()
+			_ = file.Close()
 		}
 	}
 }

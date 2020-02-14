@@ -13,8 +13,8 @@ func (e EnumCreator) Create(i *Generator, w io.Writer) {
 }
 
 type EnumValues struct {
-	Name string
-	Start string
+	Name   string
+	Start  string
 	Fields []string
 }
 
@@ -25,9 +25,9 @@ type EnumResult struct {
 func (e EnumCreator) makeEnums(enums []*schema.Enum, output io.Writer) {
 	var res EnumResult
 	templ := getTemplate("Enum")
-	for _,v := range enums {
+	for _, v := range enums {
 		var data EnumValues
-		for _,name := range v.Values {
+		for _, name := range v.Values {
 			if data.Start == "" {
 				data.Start = name.Name
 				continue

@@ -7,20 +7,13 @@ import (
 )
 
 /*
-var pool sync.Pool
-
-func init() {
-	pool.New = func() interface{} {
-		return new(GeneratedQuery)
-	}
-}
-*/
-/*
 	UID represents the primary UID class used in communication with DGraph.
 	This is used in code generation.
 */
 type UID string
 
+//Int returns an int64 representation of the UID that is of the form
+//0xvalue. Returns -1 on error.
 func (u UID) Int() int64 {
 	if len(u) < 2 {
 		return -1
@@ -32,6 +25,8 @@ func (u UID) Int() int64 {
 	return val
 }
 
+//IntString returns a string representation of the integer form of the
+//uid u.
 func (u UID) IntString() string {
 	val, err := strconv.ParseInt(string(u), 16, 64)
 	if err != nil {
@@ -61,6 +56,7 @@ const (
 	tokenFilter = "@filter"
 )
 
+//Queries represents multiple queries at once.
 type Queries struct {
 	q          []*GeneratedQuery
 	varCounter func() int

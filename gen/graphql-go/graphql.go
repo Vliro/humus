@@ -188,7 +188,7 @@ func (s *Schema) exec(ctx context.Context, queryString string, operationName str
 	}
 	if op.Type == query.Mutation {
 		if _, ok := s.Schema.EntryPoints["mutation"]; !ok {
-			return &Response{Errors: []*errors.QueryError{{ Message: "no mutations are offered by the Schema" }}}
+			return &Response{Errors: []*errors.QueryError{{Message: "no mutations are offered by the Schema"}}}
 		}
 	}
 

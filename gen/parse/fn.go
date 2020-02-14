@@ -14,10 +14,10 @@ func (f FnCreator) Create(i *Generator, w io.Writer) {
 }
 
 type recurseTemplate struct {
-	Fields []Field
+	Fields      []Field
 	ArrayFields []Field
-	Name   string
-	Interfaces []string
+	Name        string
+	Interfaces  []string
 }
 
 /*
@@ -27,7 +27,7 @@ type recurseTemplate struct {
 func (f FnCreator) processFunctions(sch *schema.Schema, writer io.Writer, m map[string][]Field) {
 	obj := sch.Objects()
 	for _, v := range obj {
-		processFieldTemplates(v.Name, writer,m, v.InterfaceNames)
+		processFieldTemplates(v.Name, writer, m, v.InterfaceNames)
 	}
 	interf := sch.Interfaces()
 	for _, v := range interf {
@@ -35,6 +35,7 @@ func (f FnCreator) processFunctions(sch *schema.Schema, writer io.Writer, m map[
 	}
 	makeGlobals(writer)
 }
+
 //creates global field functions.
 func makeGlobals(writer io.Writer) {
 	templ := getTemplate("Field")
@@ -56,14 +57,14 @@ func processFieldTemplates(name string, w io.Writer, m map[string][]Field, intf 
 	for _, v := range m[name] {
 		//Fill the data with appropriate data values.
 		//Only non-scalar values.
-		if v.flags & flagScalar != 0 || v.flags & flagEnum != 0{
+		if v.flags&flagScalar != 0 || v.flags&flagEnum != 0 {
 			continue
 		}
 		var data Field
 		data.Type = v.Type
 		data.Name = v.Name
 		data.Parent = name
-		data.IsArray = v.flags & flagArray > 0
+		data.IsArray = v.flags&flagArray > 0
 		data.Tag = v.Tag
 		data.TypeLabel = v.TypeLabel
 		if data.IsArray {

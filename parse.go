@@ -12,8 +12,8 @@ var json = jsoniter.Config{
 	EscapeHTML:             true,
 	SortMapKeys:            true,
 	ValidateJsonRawMessage: true,
-	MaxDepth:               -1,
-	TagKey:                 "predicate",
+	//MaxDepth:               -1,
+	TagKey: "predicate",
 }.Froze()
 
 //handleResponse takes the raw input from Dgraph and deserializes into the interfaces
@@ -39,6 +39,8 @@ func handleResponse(res []byte, inp []interface{}, names []string) error {
 	})
 }
 
+//singleResponse deserializes the json in value into the pointer value
+//represented by inp.
 func singleResponse(value []byte, inp interface{}) error {
 	if len(value) == 0 {
 		return nil

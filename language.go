@@ -1,5 +1,6 @@
 package humus
 
+//Language represents a language that sets relevant queries to the language as specified.
 type Language string
 
 //A list of possible languages.

@@ -6,19 +6,19 @@ import (
 	"crypto/x509"
 	"errors"
 	"fmt"
+	"io/ioutil"
+	"log"
+	"reflect"
+	"strconv"
+	"sync"
+	"time"
+
 	"github.com/dgraph-io/dgo"
 	"github.com/dgraph-io/dgo/protos/api"
 	"github.com/gammazero/workerpool"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials"
 	"google.golang.org/grpc/encoding/gzip"
-	"io/ioutil"
-	"log"
-	"reflect"
-	"strconv"
-	"strings"
-	"sync"
-	"time"
 )
 
 //Deprecated information but useful.
@@ -43,6 +43,29 @@ type Config struct {
 	NodeKey string
 	//Log queries in stdout along their result.
 	LogQueries bool
+}
+
+//Number of workers for the asynchronous DB pool.
+const workers = 5
+
+//DB is the root object for using humus. It is used to immediately communicate with Dgraph
+//as well as spawning new transactions. It handles a pool of dgraph clients as well as the active schema
+//for the database.
+type DB struct {
+	//The api to graph.
+	d *dgo.Dgraph
+	//Config.
+	c *Config
+	//Schema list.
+	schema SchemaList
+	//The pool of asynchronous workers.
+	pool *workerpool.WorkerPool
+	//The endpoint for possible GraphQL.
+	//gplPoint      string
+	interruptFunc func(i interface{})
+	//errorFunc is called with the given query/mutation and the error
+	//returned by dgraph.
+	errorFunc func(err error, value interface{})
 }
 
 //DNode represents an object that can be safely stored
@@ -86,6 +109,16 @@ type AsyncQuerier interface {
 	Querier
 	QueryAsync(context.Context, Query, ...interface{}) chan Result
 	MutateAsync(context.Context, Query) chan Result
+}
+
+//Saver allows you to implement a custom save method.
+type Saver interface {
+	Save() (DNode, error)
+}
+
+//Deleter allows you to implement a custom delete method.
+type Deleter interface {
+	Delete() (DNode, error)
 }
 
 //NewMapper returns a map as a Dnode. This is useful for building up
@@ -155,15 +188,6 @@ func (m Mapper) Recurse(counter int) int {
 	return counter
 }
 
-/*
-func (m Mapper) Values() DNode {
-	return m
-}
-
-func (m Mapper) MapValues() Mapper {
-	return m
-}
-*/
 //Set sets a singular regulation, i.e. 1-1.
 //If all uses saver interface or the entire object. Otherwise, only uid is used.
 func (m Mapper) Set(child Predicate, all bool, obj DNode) Mapper {
@@ -245,36 +269,6 @@ func (m Mapper) SetArray(child string, all bool, objs ...DNode) Mapper {
 	return m
 }
 
-//Saver allows you to implement a custom save method.
-type Saver interface {
-	Save() (DNode, error)
-}
-
-//Deleter allows you to implement a custom delete method.
-type Deleter interface {
-	Delete() (DNode, error)
-}
-
-//Number of workers.
-const workers = 5
-
-//DB is the root object for using humus. It is used to immediately communicate with Dgraph
-//as well as spawning new transactions. It handles a pool of dgraph clients as well as the active schema
-//for the database.
-type DB struct {
-	//The api to graph.
-	d *dgo.Dgraph
-	//Config.
-	c *Config
-	//Schema list.
-	schema SchemaList
-	//The pool of asynchronous workers.
-	pool *workerpool.WorkerPool
-	//The endpoint for possible GraphQL.
-	gplPoint      string
-	interruptFunc func(i interface{})
-}
-
 //Schema returns the active schema for this database.
 func (d *DB) Schema() SchemaList {
 	return d.schema
@@ -286,6 +280,11 @@ func (d *DB) Schema() SchemaList {
 //be handled accordingly.
 func (d *DB) OnAborted(f func(query interface{})) {
 	d.interruptFunc = f
+}
+
+//OnError sets the function to be called on error from dgraph.
+func (d *DB) OnError(f func(err error, val interface{})) {
+	d.errorFunc = f
 }
 
 //NewTxn creates a new txn for interacting with database.
@@ -388,29 +387,6 @@ func (d *DB) Alter(ctx context.Context, op *api.Operation) error {
 	return err
 }
 
-func (d *DB) logError(ctx context.Context, err error) {
-	f := func() {
-		//Get the type name.
-		if strings.Contains(err.Error(), "connection") {
-			fmt.Println(err)
-			return
-		}
-		errorName := fmt.Sprintf("%T", err)
-		value := err.Error()
-		var result dbError
-		result.Recurse(0)
-		result.Message = value
-		result.Time = time.Now()
-		result.ErrorType = errorName
-		_, err := d.Mutate(context.Background(), CreateMutation(&result, MutateSet))
-		if err != nil {
-			fmt.Printf("Error logging %s \n", err.Error())
-		}
-	}
-	d.pool.Submit(f)
-	return
-}
-
 //Query is the humus interface for a query. GeneratedQuery, Queries, StaticQuery all satisfy this
 //interface and is used in generating all necessary information
 //to send the query to the database.
@@ -472,10 +448,10 @@ func connect(conf *Config, sch SchemaList) *DB {
 	//TODO: For multiple DGraph servers append multiple connections here.
 	var c = dgo.NewDgraphClient(api.NewDgraphClient(conn))
 	db := &DB{
-		d:        c,
-		gplPoint: conf.IP + ":" + strconv.Itoa(conf.Port) + "/graphql",
-		c:        conf,
-		schema:   sch,
+		d: c,
+		//gplPoint: conf.IP + ":" + strconv.Itoa(conf.Port) + "/graphql",
+		c:      conf,
+		schema: sch,
 	}
 	//Run an empty query to ensure connection.
 	db.pool = workerpool.New(workers)
@@ -483,7 +459,8 @@ func connect(conf *Config, sch SchemaList) *DB {
 	return db
 }
 
-//Txn is a non thread-safe API for interacting with the database.
+//Txn is an abstraction over a dgraph transaction.
+//In order to perform multiple queries & mutations use this.
 //TODO: Should it be thread-safe?
 //TODO: Do not keep a storage of previous queries and reuse GeneratedQuery with sync.Pool?
 type Txn struct {
@@ -499,10 +476,13 @@ type Txn struct {
 	commitNow bool
 }
 
+//Commit commits the transaction to the database.
 func (t *Txn) Commit(ctx context.Context) error {
 	return t.txn.Commit(ctx)
 }
 
+//Discard discards the given transaction. Any further queries
+//on this txn results in an error.
 func (t *Txn) Discard(ctx context.Context) error {
 	return t.txn.Discard(ctx)
 }
@@ -530,7 +510,7 @@ func (t *Txn) mutate(ctx context.Context, q Mutate) (*api.Response, error) {
 	m.CommitNow = t.commitNow
 	a, err := t.txn.Mutate(ctx, &m)
 	if err != nil {
-		t.db.logError(context.Background(), err)
+		//	t.db.logError(context.Background(), err)
 	}
 	if err == dgo.ErrAborted && t.db.interruptFunc != nil {
 		t.db.interruptFunc(q)
@@ -612,6 +592,7 @@ func (t *Txn) query(ctx context.Context, q Query, objs []interface{}) error {
 	return nil
 }
 
+//Result represents a result from an asynchronous operation.
 type Result struct {
 	Err error
 	Res *api.Response
@@ -639,6 +620,7 @@ func (t *Txn) Query(ctx context.Context, q Query, objs ...interface{}) error {
 	return Error(t.query(ctx, q, objs))
 }
 
+//Mutate runs a single mutation inside this transaction object.
 func (t *Txn) Mutate(ctx context.Context, q Mutate) (*api.Response, error) {
 	t.Lock()
 	defer t.Unlock()
@@ -646,6 +628,7 @@ func (t *Txn) Mutate(ctx context.Context, q Mutate) (*api.Response, error) {
 	return t.mutate(ctx, q)
 }
 
+//MutateAsync runs a single mutation asynchronously inside this transaction.
 func (t *Txn) MutateAsync(ctx context.Context, q Mutate) chan Result {
 	var ch = make(chan Result)
 	f := func() {

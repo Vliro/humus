@@ -4,16 +4,7 @@ const (
 {{range .Fields}}
     {{$.Name}}{{.Name}}Field humus.Predicate = "{{.Tag}}"{{end}}
 )
-//SaveValues saves the node values that
-//do not contain any references to other objects.
-//Not needed for now.
-/*
-func (r *{{.Name}}) SaveValues(ctx context.Context, txn *humus.Txn) error {
-    mut := humus.CreateMutation(r.Values(), humus.MutateSet)
-    _,err := txn.Mutate(ctx, mut)
-    return err
-}
-*/
+
 func (r *{{.Name}}) GetType() []string {
     return _{{.Name}}Types
 }
@@ -27,15 +18,13 @@ func (r *{{.Name}}) Relative() *{{.Name}}{
     return x
 }
 
-func (r *{{.Name}}) Facets() []string {
-    {{if eq (len .Facets) 0 -}}
-        return nil
-    {{else}}return []string{
-        {{range .Facets -}}
-            "{{.}}",
-        {{end -}}
-        }
-    {{end -}}
+//New{{.Name}} creates a new {{.Name}} with the given uid
+//as well as properly set types.
+func New{{.Name}}(uid humus.UID) *{{.Name}} {
+    var n = new({{.Name}})
+    n.Node.Uid = uid
+    n.Node.Type = _{{.Name}}Types
+    return n
 }
 
 //Fields returns all Scalar fields for this value.
@@ -72,41 +61,5 @@ func (r *{{.Name}}) Values() humus.DNode{
    m.Node = r.Node
    return &m
 }
-*/
-/*
-//Values returns all the scalar values for this node.
-//Note that this completely ignores any omitempty tags so use with care.
-func (r *{{.Name}}) MapValues() humus.Mapper {
-   var m = make(map[string]interface{})
-   {{range .ScalarFields -}}
-      {{if not .Nosave -}}
-m["{{.Tag}}"]= r.{{.Name}}
-      {{end -}}
-   {{end -}}
-   if r.Uid != "" {
-      m["uid"] = r.Uid
-   }
-    r.SetType()
-    m["dgraph.type"] = r.Type
-    return m
-}
-*/
-/*
-//{{.Name}}Scalars is simply to avoid a map[string]interface{}
-//It is a mirror of the previous struct with all scalar values.
-type {{.Name}}Scalars struct {
-    humus.Node
-    {{range .ScalarFields -}}
-        {{.Name}} {{.TypeLabel}} `json:"{{.WrittenTag}}"`
-    {{end}}
-}
 
-func (s *{{.Name}}Scalars) Values() humus.DNode {
-    return s
-}
-
-func (s *{{.Name}}Scalars) Fields() humus.FieldList {
-    return {{.Name}}Fields
-}
-*/
 //End of model.template

@@ -1,4 +1,4 @@
 package humus
 
-//Represents a schema.
+//SchemaList represents a schema.
 type SchemaList map[Predicate]Field

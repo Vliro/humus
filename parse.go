@@ -1,11 +1,11 @@
 package humus
 
 import (
-	"errors"
 	"fmt"
+	"reflect"
+
 	"github.com/Vliro/humus/parse"
 	jsoniter "github.com/json-iterator/go"
-	"reflect"
 )
 
 var json = jsoniter.Config{
@@ -33,7 +33,7 @@ func handleResponse(res []byte, inp []interface{}, names []string) error {
 			return nil
 		}
 		if string(key) != names[i] {
-			return errors.New(fmt.Sprintf("mismatch between query name and key: %s : %s", string(key), names[i]))
+			return fmt.Errorf("mismatch between query name and key: %s : %s", string(key), names[i])
 		}
 		return singleResponse(value, inp[i])
 	})

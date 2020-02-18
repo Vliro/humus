@@ -6,10 +6,8 @@ import (
 	"strings"
 )
 
-/*
-	UID represents the primary UID class used in communication with DGraph.
-	This is used in code generation.
-*/
+//UID represents the primary UID class used in communication with DGraph.
+//This is used in code generation and for type safety.
 type UID string
 
 //Int returns an int64 representation of the UID that is of the form

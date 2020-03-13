@@ -83,7 +83,7 @@ func makeSchema(output io.Writer, g *Generator) {
 					directives.WriteString("@index(")
 					for _, v := range dir.Args {
 						str := v.Value.String()
-						directives.WriteString(str[1 : len(str)-1])
+						directives.WriteString(str)
 					}
 					directives.WriteString(") ")
 				case "facet":
